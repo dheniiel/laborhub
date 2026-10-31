@@ -5,13 +5,13 @@ final String usuarios_email;
 final String usuarios_imagem;
 final String usuarios_telefone;
 final String usuarios_senha_hash;
-final boolean usuarios_ativo;
-final boolean usuarios_is_admin;
-final Datetime usuarios_reset_hash;
-final Datetime usuarios_expira_em;
-final Datetime usuarios_criado_em;
-final Datetime usuarios_atualizado_em;
-final Datetime usuarios_deletado_em;
+final bool usuarios_ativo;
+final bool usuarios_is_admin;
+final String? usuarios_reset_hash;
+final DateTime? usuarios_expira_em;
+final DateTime usuarios_criado_em;
+final DateTime? usuarios_atualizado_em;
+final DateTime? usuarios_deletado_em;
 
 
 
@@ -29,7 +29,7 @@ const Usuarios({
 
 Map<String, Object?> toMap() {
     return {
-        if(id != null) 'usuarios_id': usuarios_id,
+        if(usuarios_id != null) 'usuarios_id': usuarios_id,
             'usuarios_email': usuarios_email,
             'usuarios_imagem': usuarios_imagem,
             'usuarios_telefone': usuarios_telefone,

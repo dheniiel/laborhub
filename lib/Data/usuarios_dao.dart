@@ -8,7 +8,7 @@ class UsuariosDao {
     //create
     Future<int> inserir(Usuarios usuarios) async {
         final db = await _db;
-        return db.insert('usuarios', usuarios.toMap);
+        return db.insert('usuarios', usuarios.toMap();
 
     }
 
