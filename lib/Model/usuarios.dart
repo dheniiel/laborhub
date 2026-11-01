@@ -3,7 +3,7 @@ class Usuarios {
 final int? usuarios_id;
 final String usuarios_email;
 final String usuarios_imagem;
-final String usuarios_telefone;
+final String? usuarios_telefone;
 final String usuarios_senha_hash;
 final bool usuarios_ativo;
 final bool usuarios_is_admin;
@@ -16,16 +16,20 @@ final DateTime? usuarios_deletado_em;
 
 
 const Usuarios({
-    this.id;
+    this.usuarios_id,
     required this.usuarios_email,
     required this.usuarios_imagem,
     required this.usuarios_telefone,
     required this.usuarios_senha_hash,
     required this.usuarios_ativo,
     required this.usuarios_is_admin,
+    this.usuarios_reset_hash,
+    this.usuarios_expira_em,
     required this.usuarios_criado_em,
+    this.usuarios_atualizado_em,
+    this.usuarios_deletado_em,
 
-})
+});
 
 Map<String, Object?> toMap() {
     return {
@@ -38,7 +42,7 @@ Map<String, Object?> toMap() {
             'usuarios_is_admin': usuarios_is_admin ? 1 : 0,
             'usuarios_criado_em': usuarios_criado_em.toIso8601String(),
 
-    }
+    };
 
 }
 
@@ -47,7 +51,7 @@ factory Usuarios.fromMap(Map<String, Object?> map) {
   return Usuarios(
     usuarios_id: map['usuarios_id'] as int?,
     usuarios_email: map['usuarios_email'] as String,
-    usuarios_imagem: map['usuarios_imagem'] as String?,
+    usuarios_imagem: map['usuarios_imagem'] as String,
     usuarios_telefone: map['usuarios_telefone'] as String?,
     usuarios_senha_hash: map['usuarios_senha_hash'] as String,
     usuarios_ativo: map['usuarios_ativo'] == 1,

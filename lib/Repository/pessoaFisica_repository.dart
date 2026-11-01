@@ -1,5 +1,5 @@
-import '../Data/PessoaFisica_dao.dart';
-import '../Model/PessoaFisica.dart';
+import '../Data/pessoaFisica_dao.dart';
+import '../Model/pessoaFisica.dart';
 
 
 class PessoaFisicaRepository {

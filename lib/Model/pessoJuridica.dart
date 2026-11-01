@@ -10,7 +10,7 @@ final int pj_usuarios_id;
 
 
 const PessoaJuridica ({
-    this.id,
+    this.pj_id,
     required this.pj_razaoSocial,
     required this.pj_nomeFantasia,
     required this.pj_dataFundacao,
@@ -30,21 +30,21 @@ Map<String, Object?> toMap() {
         'pj_tipo' : pj_tipo,
         'pj_usuarios_id' : pj_usuarios_id,
 
-    }
+    };
 
 }
 
-Factory PessoaJuridica.fromMap(Map<String, Object?> map) {
-    return PessoaJuridica {
-         'pj_id' : map['pj_id'] as int?,
-         'pj_razaoSocial' : map['pj_razaoSocial'] as String,
-         'pj_nomeFantasia' : map['pj_nomeFantasia'] as String,
-         'pj_cnpj' : map['pj_cnpj'] as String,
-         'pj_tipo' : map['pj_tipo'] as String,
-         'pj_usuarios_id' : map['pj_usuarios_id'] as int,
+factory PessoaJuridica.fromMap(Map<String, Object?> map) {
+  return PessoaJuridica(
+    pj_id: map['pj_id'] as int?,
+    pj_razaoSocial: map['pj_razaoSocial'] as String,
+    pj_nomeFantasia: map['pj_nomeFantasia'] as String,
+    pj_dataFundacao: map['pj_dataFundacao'] as String,
+    pj_cnpj: map['pj_cnpj'] as String,
+    pj_tipo: map['pj_tipo'] as String,
+    pj_usuarios_id: map['pj_usuarios_id'] as int,
 
-    }
-
+  );
 }
 
 

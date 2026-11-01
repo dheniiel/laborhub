@@ -1,10 +1,10 @@
 import '../Data/pessoaJuridica_dao.dart';
-import '../Model/pessoaJuridica.dart';
+import '../Model/pessoJuridica.dart';
 
 
 class UsuariosRepository {
 
-       final PessoaJuridicaDao _dao = PessoaJuridicaDao();
+       final PessoajuridicaDao _dao = PessoajuridicaDao();
 
        //Cadastro
        Future<void> Cadastrar(PessoaJuridica pj) async {
