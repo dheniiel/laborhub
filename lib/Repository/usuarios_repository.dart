@@ -14,7 +14,7 @@ class UsuariosRepository {
 
       //Login
       Future<Usuarios?> Autenticar(String email, String senha) async {
-        final usuari = await _dao.buscarPorEmail(email.trim());
+        final usuario = await _dao.buscarPorEmail(email.trim());
 
         if (usuario == null) return null;
         if (!usuario.usuarios_ativo) return null;
@@ -22,7 +22,7 @@ class UsuariosRepository {
         if (usuario.usuarios_senha_hash != senha) return null;
 
         return usuario;
-        
+
       }
 
 

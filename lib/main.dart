@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'Telas/escolhaUsuario.dart';
+import 'Telas/login.dart';
 
 
 void main() {
@@ -16,7 +17,7 @@ class LaborHUBapp extends StatelessWidget {
     // TODO: implement build
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: EscolhaUsuario(),
+      home: Login(),
     );
   }
 

@@ -1,12 +1,12 @@
-
 import 'package:flutter/material.dart';
 
-class Forms extends StatelessWidget {
+class Forms extends StatefulWidget {
   final TextEditingController controlador;
   final TextInputType tipagemValor;
   final String rotulo;
   final String? Function(String?)? validador;
   final bool ocultarTexto;
+  final String? dica;
 
   const Forms({
     super.key,
@@ -15,7 +15,25 @@ class Forms extends StatelessWidget {
     required this.rotulo,
     this.validador,
     this.ocultarTexto = false,
+    this.dica,
   });
+
+  @override
+  State<Forms> createState() => _FormsState();
+}
+
+class _FormsState extends State<Forms> {
+  late bool _textoOculto;
+
+  @override
+  void initState() {
+    super.initState();
+    _textoOculto = widget.ocultarTexto;
+  }
+
+  void _alternarVisibilidade() {
+    setState(() => _textoOculto = !_textoOculto);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +49,7 @@ class Forms extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 4),
           child: Text(
-            rotulo,
+            widget.rotulo,
             style: const TextStyle(
               fontSize: 15,
               fontFamily: 'Montserrat',
@@ -44,10 +62,12 @@ class Forms extends StatelessWidget {
         const SizedBox(height: 4),
 
         TextFormField(
-          controller: controlador,
-          keyboardType: tipagemValor,
-          validator: validador,
-          obscureText: ocultarTexto,
+          controller: widget.controlador,
+          keyboardType: widget.tipagemValor,
+          validator: widget.validador,
+          obscureText: _textoOculto,
+          enableSuggestions: !widget.ocultarTexto,
+          autocorrect: !widget.ocultarTexto,
           autovalidateMode: AutovalidateMode.onUserInteraction,
           cursorColor: const Color(0xFF3B82F6),
 
@@ -58,10 +78,41 @@ class Forms extends StatelessWidget {
           ),
 
           decoration: InputDecoration(
+            hintText: widget.dica,
+            hintStyle: const TextStyle(
+              fontSize: 15,
+              fontFamily: 'Montserrat',
+              color: Color(0xFFA6A6A6),
+            ),
+
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 7,
               vertical: 11,
+            ),
+
+            // Olho para exibir/ocultar (somente em campos com ocultarTexto)
+            suffixIcon: widget.ocultarTexto
+                ? InkWell(
+                    onTap: _alternarVisibilidade,
+                    borderRadius: BorderRadius.circular(4),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Icon(
+                        _textoOculto
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        size: 20,
+                        color: const Color(0xFF7F7F7F),
+                        semanticLabel:
+                            _textoOculto ? 'Exibir senha' : 'Ocultar senha',
+                      ),
+                    ),
+                  )
+                : null,
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 20,
             ),
 
             filled: true,

@@ -17,7 +17,7 @@ class UsuariosDao {
             'usuarios',
             where: 'usuarios_email = ? AND usuarios_deletado_em IS NULL',
             whereArgs: [email],
-            limit 1,
+            limit: 1,
         );
 
         if (resultado.isEmpty) return null;
