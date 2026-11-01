@@ -10,4 +10,17 @@ class UsuariosDao {
         final db = await _db;
         return db.insert('usuarios', usuarios.toMap());
     }
+    
+    Future<Usuarios?> buscarPorEmail(String email) async {
+        final db = await _db;
+        final resultado = await db.query(
+            'usuarios',
+            where: 'usuarios_email = ? AND usuarios_deletado_em IS NULL',
+            whereArgs: [email],
+            limit 1,
+        );
+
+        if (resultado.isEmpty) return null;
+        return Usuarios.fromMap(resultado.first);
+    }
 }
