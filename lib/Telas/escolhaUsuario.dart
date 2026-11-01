@@ -25,6 +25,8 @@ class _EscolhaUsuarioState extends State<EscolhaUsuario> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        child: Center (
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 500),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Column(
@@ -37,7 +39,8 @@ class _EscolhaUsuarioState extends State<EscolhaUsuario> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 28,
-                  fontWeight: FontWeight(400),
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w700,
                   color: Colors.black,
                 ),
               ),
@@ -50,7 +53,7 @@ class _EscolhaUsuarioState extends State<EscolhaUsuario> {
                   Expanded(
                     child: _OpcaoUsuario(
                       titulo: 'Cliente',
-                      icone: Icons.person_outline,
+                      imagem: 'lib/Assets/Images/cliente.png',
                       onTap:() {
                         //Navegação para tela de cadastro de cliente
                       },
@@ -62,7 +65,7 @@ class _EscolhaUsuarioState extends State<EscolhaUsuario> {
                   Expanded(
                     child: _OpcaoUsuario(
                       titulo: "Profissional",
-                      icone: Icons.business_center_sharp,
+                      imagem: 'lib/Assets/Images/profissional.png',
                       onTap: () {
                         //     Navegação para tela de profissional
                       },
@@ -87,7 +90,8 @@ class _EscolhaUsuarioState extends State<EscolhaUsuario> {
             ],
           ),
         ),
-        
+        )
+        ),
       ),
 
     );
@@ -97,13 +101,13 @@ class _EscolhaUsuarioState extends State<EscolhaUsuario> {
 class _OpcaoUsuario extends StatelessWidget {
 
   final String titulo;
-  final IconData icone;
+  final String imagem;
   final VoidCallback onTap;
 
 
   const _OpcaoUsuario({
     required this.titulo,
-    required this.icone,
+    required this.imagem,
     required this.onTap,
 });
 
@@ -117,17 +121,18 @@ class _OpcaoUsuario extends StatelessWidget {
           child: Material(
             color: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(5),
               side: const BorderSide(color: Colors.grey),
             ),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: onTap,
-              child: Icon(
-                icone,
-                size: 80,
-                color: const Color(0xFF226477),
-              ),
+              child: Image.asset(
+                imagem,
+                width: 60,
+                height: 60,
+                fit: BoxFit.contain,
+              )
             ),
           ),
         ),
@@ -139,7 +144,7 @@ class _OpcaoUsuario extends StatelessWidget {
           child: ElevatedButton(
             onPressed: onTap,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF387FFC),
+              backgroundColor: const Color(0xFF3B82F6),
               foregroundColor: Colors.white,
               padding: EdgeInsets.zero,
               elevation: 0,
