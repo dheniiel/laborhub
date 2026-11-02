@@ -8,6 +8,6 @@ class EnderecoDao {
 
     Future<int> inserir(Endereco endereco) async {
         final db = await _db;
-        return db.insert('endereco', endereco.toMap());
+        return db.insert('endereco.dart', endereco.toMap());
     }
 }

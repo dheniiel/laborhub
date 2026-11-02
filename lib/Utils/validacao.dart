@@ -263,4 +263,77 @@ class Validacao {
   }
 
 
+  static String? rua(String? valor){
+    if(valor == null || valor.trim().isEmpty) {
+      return "Informe sua rua/avenida";
+
+    }
+
+    if(valor.length < 3 || valor.length >= 100) {
+      return "O campo rua não possui caracter suficiente!";
+    }
+
+
+  }
+
+  static String? bairro(String? valor){
+    if(valor == null || valor.trim().isEmpty) {
+      return "Informe seu bairro";
+
+    }
+
+    if(valor.length < 3 || valor.length >= 50) {
+      return "O campo bairro não possui caracter suficiente!";
+    }
+
+
+  }
+
+  static String? cep(String? valor) {
+    if (valor == null || valor.trim().isEmpty) {
+      return 'Informe o CEP';
+    }
+
+    if (!RegExp(r'^\d{5}-?\d{3}$').hasMatch(valor.trim())) {
+      return 'Informe um CEP válido com 8 números';
+    }
+
+    return null;
+  }
+
+  static String? cidade(String? valor) {
+    if (valor == null || valor.trim().isEmpty) {
+      return 'Informe a cidade';
+    }
+
+    // Aceita letras, acentos, espaços, apóstrofos e hífens.
+    if (!RegExp(r"^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '\u2019-][A-Za-zÀ-ÖØ-öø-ÿ]+)*$")
+        .hasMatch(valor.trim())) {
+      return 'Informe um nome de cidade válido';
+    }
+
+    return null;
+  }
+
+  static String? uf(String? valor) {
+    if (valor == null || valor.trim().isEmpty) {
+      return 'Informe a UF';
+    }
+
+    const ufs = {
+      'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF',
+      'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA',
+      'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS',
+      'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+    };
+
+    if (!ufs.contains(valor.trim().toUpperCase())) {
+      return 'Informe uma UF válida, como GO';
+    }
+
+    return null;
+  }
+
+
+
 }

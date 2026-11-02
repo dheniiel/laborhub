@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'Telas/escolhaUsuario.dart';
 import 'Telas/login.dart';
+import 'Telas/enderecoTela.dart';
 
 
 void main() {
@@ -17,7 +18,7 @@ class LaborHUBapp extends StatelessWidget {
     // TODO: implement build
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Login(),
+      home: EnderecoTela(),
     );
   }
 

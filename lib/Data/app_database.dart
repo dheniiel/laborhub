@@ -65,7 +65,7 @@ class AppDatabase {
         ''');
 
         await db.execute('''
-          CREATE TABLE endereco (
+          CREATE TABLE endereco.dart (
             endereco_id INTEGER PRIMARY KEY AUTOINCREMENT,
             endereco_nome TEXT NOT NULL,
             endereco_rua TEXT NOT NULL,
