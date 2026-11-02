@@ -8,6 +8,6 @@ class PessoaFisicaDao {
 
     Future<int> inserir(PessoaFisica pf) async {
         final db = await _db;
-        return db.insert('pessoaJuridica', pf.toMap());
+        return db.insert('pessoaFisica', pf.toMap());
     }
 }
