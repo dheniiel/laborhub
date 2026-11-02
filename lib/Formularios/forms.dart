@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 
-class Forms extends StatelessWidget {
+class Forms extends StatefulWidget {
 
   final TextEditingController? controlador;
 
@@ -39,52 +39,143 @@ class Forms extends StatelessWidget {
         ocultarTexto = false;
 
 
+  @override
+  State<Forms> createState() => _FormsState();
+
+}
+
+
+class _FormsState extends State<Forms> {
+
+  late bool _textoOculto;
+
+  static const _estiloTexto = TextStyle(
+    fontSize: 15,
+    fontFamily: 'Montserrat',
+    color: Colors.black,
+  );
+
+  static const _bordaCampo = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(4)),
+    borderSide: BorderSide(color: Color(0xFF7F7F7F)),
+  );
+
+  static const _bordaFoco = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(4)),
+    borderSide: BorderSide(color: Color(0xFF3B82F6)),
+  );
+
+  static const _bordaErro = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(4)),
+    borderSide: BorderSide(color: Colors.red),
+  );
+
+
+  @override
+  void initState() {
+    super.initState();
+    _textoOculto = widget.ocultarTexto;
+  }
+
+
+  void _alternarVisibilidade() {
+    setState(() => _textoOculto = !_textoOculto);
+  }
+
+
+  InputDecoration _decoracao({Widget? sufixo}) {
+    return InputDecoration(
+      hintText: widget.rotulo,
+      hintStyle: const TextStyle(
+        fontSize: 15,
+        fontFamily: 'Montserrat',
+        color: Color(0xFFA6A6A6),
+      ),
+
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 7,
+        vertical: 11,
+      ),
+
+      suffixIcon: sufixo,
+      suffixIconConstraints: const BoxConstraints(
+        minWidth: 40,
+        minHeight: 20,
+      ),
+
+      filled: true,
+      fillColor: const Color(0xFFF4F4F4),
+
+      border: _bordaCampo,
+      enabledBorder: _bordaCampo,
+      focusedBorder: _bordaFoco,
+      errorBorder: _bordaErro,
+      focusedErrorBorder: _bordaErro,
+
+      errorStyle: const TextStyle(
+        fontSize: 12,
+        fontFamily: 'Montserrat',
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
-    final decoration = InputDecoration(
-      hintText: rotulo,
-      border: const OutlineInputBorder(),
-    );
 
-    if (opcao != null) {
+    if (widget.opcao != null) {
       return DropdownButtonFormField<String>(
         isExpanded: true,
-        decoration: decoration,
-        items: opcao!.map((opcoes) {
+        decoration: _decoracao(),
+        style: _estiloTexto,
+        items: widget.opcao!.map((opcoes) {
           return DropdownMenuItem<String>(
             value: opcoes,
             child: Text(opcoes),
           );
         }).toList(),
-        onChanged: onChanged,
-        validator: validador,
+        onChanged: widget.onChanged,
+        validator: widget.validador,
         autovalidateMode: AutovalidateMode.onUserInteraction,
       );
     }
 
 
     return TextFormField(
-      controller: controlador,
-      keyboardType: tipagemValor,
-      inputFormatters: formatadores,
-      validator: validador,
-      obscureText: ocultarTexto,
-      autocorrect: !ocultarTexto,
-      enableSuggestions: !ocultarTexto,
+      controller: widget.controlador,
+      keyboardType: widget.tipagemValor,
+      inputFormatters: widget.formatadores,
+      validator: widget.validador,
+      obscureText: _textoOculto,
+      autocorrect: !widget.ocultarTexto,
+      enableSuggestions: !widget.ocultarTexto,
       autovalidateMode: AutovalidateMode.onUserInteraction,
-      decoration: InputDecoration(
-        hintText: rotulo,
-        border: const OutlineInputBorder(),
-          fillColor: Color.fromARGB(1000, 59, 130, 246),
+      cursorColor: const Color(0xFF3B82F6),
+      style: _estiloTexto,
+      decoration: _decoracao(
+        // Olho para exibir/ocultar (somente em campos com ocultarTexto)
+        sufixo: widget.ocultarTexto
+            ? InkWell(
+                onTap: _alternarVisibilidade,
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Icon(
+                    _textoOculto
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 20,
+                    color: const Color(0xFF7F7F7F),
+                    semanticLabel:
+                        _textoOculto ? 'Exibir senha' : 'Ocultar senha',
+                  ),
+                ),
+              )
+            : null,
       ),
     );
 
   }
-
-
-
-
 
 }

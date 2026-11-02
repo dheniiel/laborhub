@@ -129,21 +129,49 @@ class _LoginState extends State<Login> {
                               const Spacer(flex: 6),
 
 
+                              const Padding(
+                                padding: EdgeInsets.only(left: 4),
+                                child: Text(
+                                  'Email',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontFamily: 'Montserrat',
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 4),
+
                               Forms(
                                 controlador: _emailController,
                                 tipagemValor: TextInputType.emailAddress,
-                                rotulo: 'Email',
-                                dica: 'Digite seu email',
+                                rotulo: 'Digite seu email',
                                 validador: _validarEmail,
                               ),
 
                               const SizedBox(height: 28),
 
+                              const Padding(
+                                padding: EdgeInsets.only(left: 4),
+                                child: Text(
+                                  'Senha',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontFamily: 'Montserrat',
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 4),
+
                               Forms(
                                 controlador: _senhaController,
                                 tipagemValor: TextInputType.visiblePassword,
-                                rotulo: 'Senha',
-                                dica: 'Digite sua senha',
+                                rotulo: 'Digite sua senha',
                                 ocultarTexto: true,
                                 validador: _validarSenha,
                               ),
