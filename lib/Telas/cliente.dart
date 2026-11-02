@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:laborhub/Formularios/forms.dart';
+import 'package:laborhub/Model/endereco.dart';
 import '../Utils/validacao.dart';
 import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
@@ -91,6 +92,18 @@ class _ClienteTelas() extends State<Cliente> {
     // TODO: implement build
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Voltar',
+          onPressed: (){
+            Navigator.pop(context);
+          },
+        ),
+      ),
+
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -98,7 +111,9 @@ class _ClienteTelas() extends State<Cliente> {
             child: SingleChildScrollView(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 14),
-                child: Column(
+                child: Form(
+                  key: _formKey,
+                   child: Column(
                   children: [
                     // const Spacer(flex: 2),
                     const SizedBox(height: 10),
@@ -343,6 +358,32 @@ class _ClienteTelas() extends State<Cliente> {
                               const Padding(
                                   padding: EdgeInsets.only(left: 12),
                                   child: Text(
+                                    "Telefone/Celular",
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                              ),
+
+                              const SizedBox(height: 5),
+
+                              Forms(
+                                controlador: _usuarios_telefone,
+                                tipagemValor: TextInputType.phone,
+                                rotulo: "(99) 99999-9999",
+                                formatadores: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(11),
+                                ],
+                                validador: Validacao.telefone,
+
+                              ),
+                              const SizedBox(height: 24),
+
+                              const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: Text(
                                     "Email",
                                     style: TextStyle(
                                       fontSize: 15,
@@ -357,7 +398,7 @@ class _ClienteTelas() extends State<Cliente> {
                                 controlador: _usuarios_email,
                                 tipagemValor: TextInputType.text,
                                 rotulo: "email@gmail.com",
-                                // validador: Validacao.email,
+                                validador: Validacao.email,
 
                               ),
 
@@ -382,27 +423,99 @@ class _ClienteTelas() extends State<Cliente> {
                                 tipagemValor: TextInputType.visiblePassword,
                                 rotulo: "Sua senha",
                                 ocultarTexto: true,
-                                // validador: Validacao.email,
+                                validador: Validacao.senha,
 
                               ),
 
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 54),
+
+                              FilledButton(
+                                  onPressed: () async {
+                                    final valido = _formKey.currentState?.validate() ?? false;
+
+                                    if(!valido) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("Erro ao preencher o formulario!")),
+                                      );
+                                    }
+
+                                    if(_generoSelecionado == null) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text("Selecione seu gênero!")),
+                                      );
+                                    }
+
+                                    // Navigator.push(
+                                    //   context,
+                                    //   MaterialPageRoute(
+                                    //     builder: ((context) => Cliente(
+                                    //       nome: _pf_nome.text.trim(),
+                                    //       sobrenome: _pf_sobrenome.text.trim(),
+                                    //       dataNascimento: _pf_dataNascimento.text,
+                                    //       genero: _generoSelecionado!,
+                                    //       cpf: _mascaraCpf.getUnmaskedText(),
+                                    //       email: _usuarios_email.text.trim(),
+                                    //       telefone: _usuarios_telefone.text.trim(),
+                                    //       fotoPerfil: _usuarios_imagem,
+                                    //       senha: _usuarios_senha_hash.text.
+                                    //
+                                    //     )),
+                                    //   )
+                                    // );
+                                  },
+
+                                  child: const Text("Avançar"),
 
 
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Color.fromARGB(1000, 59, 130, 246),
+                                  minimumSize: const Size(500, 35),
+                                  padding: EdgeInsets.all(20),
+                                  textStyle: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadiusGeometry.circular(5),
 
+                                  )
+                                ),
+                              ),
+                              const SizedBox(height: 40),
+
+                              const SizedBox(
+                                width: double.infinity,
+                                child: Text(
+                                  'Todos os direitos reservados © 2026',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
 
                             ],
                           ),
 
 
 
+                        } else ... {
+
+
                         }
                   ],
+                ),
+
                 ),
               ),
 
             ),
           ),
+
+
         ),
       ),
     );

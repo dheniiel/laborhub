@@ -1,4 +1,4 @@
-import 'dart:ffi';
+
 
 class Validacao {
 
@@ -126,5 +126,51 @@ class Validacao {
 
     return null;
   }
+  //Validação usada em tela de cadastro
+  static String? telefone(String? valor) {
+    if (valor == null || valor.trim().isEmpty) {
+      return 'Informe o telefone';
+    }
+
+    final numeros = valor.replaceAll(RegExp(r'\D'), '');
+
+    // DDD + fixo com 8 dígitos ou celular com 9 dígitos.
+    final formato = RegExp(r'^[1-9]{2}(?:[2-5]\d{7}|9\d{8})$');
+
+    if (!formato.hasMatch(numeros)) {
+      return 'Informe um telefone válido com DDD';
+    }
+
+    return null;
+  }
+
+  static String? email(String? valor) {
+    if (valor == null || valor.trim().isEmpty) {
+      return 'Informe o email';
+    }
+
+    final email = valor.trim();
+    final formato = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+
+    if (!formato.hasMatch(email)) {
+      return 'Informe um email válido';
+    }
+
+    return null;
+  }
+
+
+  static String? senha(String? valor) {
+    if (valor == null || valor.trim().isEmpty) {
+      return 'Informe uma senha';
+    }
+
+   if(valor.length <= 6){
+     return "Sua senha precisa ter mais 6 caracteres!";
+   }
+
+    return null;
+  }
+
 
 }

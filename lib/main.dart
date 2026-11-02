@@ -17,7 +17,7 @@ class LaborHUBapp extends StatelessWidget {
     // TODO: implement build
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Cliente(),
+      home: EscolhaUsuario(),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:laborhub/Telas/cliente.dart';
 
 
 
@@ -56,6 +57,10 @@ class _EscolhaUsuarioState extends State<EscolhaUsuario> {
                       imagem: 'lib/Assets/Images/cliente.png',
                       onTap:() {
                         //Navegação para tela de cadastro de cliente
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: ((context) => const Cliente())));
                       },
                     ),
                   ),
