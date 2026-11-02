@@ -119,9 +119,9 @@ class _LoginState extends State<Login> {
                                 'Login',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 32,
+                                  fontSize: 28,
                                   fontFamily: 'Montserrat',
-                                  fontWeight: FontWeight.w400,
+                                  fontWeight: FontWeight.w700,
                                   color: Colors.black,
                                 ),
                               ),
@@ -136,7 +136,7 @@ class _LoginState extends State<Login> {
                                   style: TextStyle(
                                     fontSize: 15,
                                     fontFamily: 'Montserrat',
-                                    fontWeight: FontWeight.w400,
+                                    fontWeight: FontWeight.w600,
                                     color: Colors.black,
                                   ),
                                 ),
@@ -160,7 +160,7 @@ class _LoginState extends State<Login> {
                                   style: TextStyle(
                                     fontSize: 15,
                                     fontFamily: 'Montserrat',
-                                    fontWeight: FontWeight.w400,
+                                    fontWeight: FontWeight.w600,
                                     color: Colors.black,
                                   ),
                                 ),
@@ -273,12 +273,12 @@ class _LoginState extends State<Login> {
                               const Spacer(flex: 6),
 
                               const Text(
-                                'Direito Reservado 2026',
+                                'Direito reservado 2026',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontFamily: 'Montserrat',
-                                  color: Color(0xFFB0B0B0),
+                                  color: Colors.grey,
                                 ),
                               ),
 
