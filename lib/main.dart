@@ -18,7 +18,7 @@ class LaborHUBapp extends StatelessWidget {
     // TODO: implement build
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: EnderecoTela(),
+      home: Login(),
     );
   }
 

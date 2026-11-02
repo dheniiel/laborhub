@@ -1,5 +1,8 @@
 import 'dart:typed_data';
 
+import 'dart:io';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:laborhub/Formularios/forms.dart';
@@ -7,6 +10,7 @@ import 'package:laborhub/Model/endereco.dart';
 import '../Utils/validacao.dart';
 import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'enderecoTela.dart';
 
 import '../Model/pessoaFisica.dart';
 import '../Model/pessoJuridica.dart';
@@ -65,6 +69,33 @@ class _ClienteTelas extends State<Cliente> {
     filter: {'#': RegExp(r'[0-9]')},
   );
 
+
+  Future<String?> _salvarFotoPerfil() async {
+    final foto = _foto;
+
+    if (foto == null) {
+      return null;
+    }
+
+    final diretorio = await getApplicationDocumentsDirectory();
+
+    final pasta = Directory(
+      p.join(diretorio.path, 'fotos_perfil'),
+    );
+
+    await pasta.create(recursive: true);
+
+    final nomeArquivo =
+        'perfil_${DateTime.now().microsecondsSinceEpoch}.jpg';
+
+    final arquivo = File(
+      p.join(pasta.path, nomeArquivo),
+    );
+
+    await arquivo.writeAsBytes(foto, flush: true);
+
+    return nomeArquivo;
+  }
 
 
   Future<void> _selecionarFoto() async {
@@ -456,23 +487,36 @@ class _ClienteTelas extends State<Cliente> {
                                       );
                                     }
 
-                                    // Navigator.push(
-                                    //   context,
-                                    //   MaterialPageRoute(
-                                    //     builder: ((context) => Cliente(
-                                    //       nome: _pf_nome.text.trim(),
-                                    //       sobrenome: _pf_sobrenome.text.trim(),
-                                    //       dataNascimento: _pf_dataNascimento.text,
-                                    //       genero: _generoSelecionado!,
-                                    //       cpf: _mascaraCpf.getUnmaskedText(),
-                                    //       email: _usuarios_email.text.trim(),
-                                    //       telefone: _usuarios_telefone.text.trim(),
-                                    //       fotoPerfil: _usuarios_imagem,
-                                    //       senha: _usuarios_senha_hash.text.
-                                    //
-                                    //     )),
-                                    //   )
-                                    // );
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => EnderecoTela(
+                                          pessoaFisica: _pessoaFisica,
+
+                                          email: _usuarios_email.text.trim(),
+                                          telefone: _usuarios_telefone.text.trim(),
+                                          senha: _usuarios_senha_hash.text,
+                                          fotoPerfil: _foto,
+
+                                          nome: _pessoaFisica ? _pf_nome.text.trim() : null,
+                                          sobrenome: _pessoaFisica ? _pf_sobrenome.text.trim() : null,
+                                          dataNascimento:
+                                          _pessoaFisica ? _pf_dataNascimento.text.trim() : null,
+                                          genero: _pessoaFisica ? _generoSelecionado : null,
+                                          cpf: _pessoaFisica ? _mascaraCpf.getUnmaskedText() : null,
+
+                                          razaoSocial:
+                                          !_pessoaFisica ? _pj_razaoSocial.text.trim() : null,
+                                          nomeFantasia:
+                                          !_pessoaFisica ? _pj_nomeFantasia.text.trim() : null,
+                                          dataFundacao:
+                                          !_pessoaFisica ? _pj_dataFundacao.text.trim() : null,
+                                          cnpj: !_pessoaFisica
+                                              ? _pj_cnpj.text.replaceAll(RegExp(r'\D'), '')
+                                              : null,
+                                        ),
+                                      ),
+                                    );
                                   },
 
                                   child: const Text("Avançar"),

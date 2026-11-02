@@ -6,12 +6,49 @@ import 'package:laborhub/Model/endereco.dart';
 import '../Utils/validacao.dart';
 import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import '../Repository/cadastro_repository.dart';
 
 
 
 class EnderecoTela  extends StatefulWidget{
 
-  const EnderecoTela({super.key});
+  final String email;
+  final String telefone;
+  final String senha;
+  final Uint8List? fotoPerfil;
+  final bool pessoaFisica;
+
+  // Pessoa física.
+  final String? nome;
+  final String? sobrenome;
+  final String? dataNascimento;
+  final String? genero;
+  final String? cpf;
+
+  // Pessoa jurídica.
+  final String? razaoSocial;
+  final String? nomeFantasia;
+  final String? dataFundacao;
+  final String? cnpj;
+
+  const EnderecoTela({
+    super.key,
+    required this.pessoaFisica,
+    required this.email,
+    required this.telefone,
+    required this.senha,
+    this.fotoPerfil,
+    this.nome,
+    this.sobrenome,
+    this.dataNascimento,
+    this.genero,
+    this.cpf,
+    this.razaoSocial,
+    this.nomeFantasia,
+    this.dataFundacao,
+    this.cnpj,
+  });
+
 
   @override
     State<EnderecoTela> createState() => _EnderecoTelaState();
@@ -19,6 +56,7 @@ class EnderecoTela  extends StatefulWidget{
 }
 
 class _EnderecoTelaState extends State<EnderecoTela> {
+
   final _formKey = GlobalKey<FormState>();
 
   final _endereco_rua = TextEditingController();
@@ -29,10 +67,72 @@ class _EnderecoTelaState extends State<EnderecoTela> {
   final _endereco_cidade = TextEditingController();
   final _endereco_uf = TextEditingController();
 
+  @override
+  void dispose() {
+    _endereco_rua.dispose();
+    _endereco_numero.dispose();
+    _endereco_bairro.dispose();
+    _endereco_cep.dispose();
+    _endereco_complemento.dispose();
+    _endereco_cidade.dispose();
+    _endereco_uf.dispose();
+    super.dispose();
+  }
+
+
   final _mascaraCep = MaskTextInputFormatter(
     mask: '#####-###',
     filter: {'#': RegExp(r'[0-9]')},
   );
+
+  Future<void> _finalizarCadastro() async {
+    // Dados comuns:
+    final email = widget.email;
+    final telefone = widget.telefone;
+    final senha = widget.senha;
+    final foto = widget.fotoPerfil;
+
+    // Endereço:
+    final rua = _endereco_rua.text.trim();
+    final numero = _endereco_numero.text.trim();
+    final bairro = _endereco_bairro.text.trim();
+    final cep = _mascaraCep.getUnmaskedText();
+    final complemento = _endereco_complemento.text.trim();
+    final cidade = _endereco_cidade.text.trim();
+    final uf = _endereco_uf.text.trim().toUpperCase();
+
+    if (widget.pessoaFisica) {
+      // Dados da pessoa física:
+      final nome = widget.nome;
+      final sobrenome = widget.sobrenome;
+      final nascimento = widget.dataNascimento;
+      final genero = widget.genero;
+      final cpf = widget.cpf;
+
+      // Montar o model PessoaFisica.
+    } else {
+      // Dados da pessoa jurídica:
+      final razaoSocial = widget.razaoSocial;
+      final nomeFantasia = widget.nomeFantasia;
+      final dataFundacao = widget.dataFundacao;
+      final cnpj = widget.cnpj;
+
+      // Montar o model PessoaJuridica.
+    }
+
+    final repository = CadastroRepository();
+
+    final usuarioId = await repository.cadastrar(
+      usuario: usuario.toMap(),
+      endereco: endereco.toMap(),
+      pessoaFisica: widget.pessoaFisica
+          ? pessoaFisica.toMap()
+          : null,
+      pessoaJuridica: !widget.pessoaFisica
+          ? pessoaJuridica.toMap()
+          : null,
+    );
+  }
 
    @override
   Widget build(BuildContext context) {
@@ -232,33 +332,22 @@ class _EnderecoTelaState extends State<EnderecoTela> {
                      const SizedBox(height: 54),
 
                      FilledButton(
-                       onPressed: () async {
-                         final valido = _formKey.currentState?.validate() ?? false;
+                         onPressed: () async {
+                           final valido = _formKey.currentState?.validate() ?? false;
 
-                         if(!valido) {
-                           ScaffoldMessenger.of(context).showSnackBar(
-                             const SnackBar(content: Text("Erro ao preencher o formulario!")),
-                           );
-                         }
+                           if (!valido) {
+                             ScaffoldMessenger.of(context).showSnackBar(
+                               const SnackBar(
+                                 content: Text('Erro ao preencher o formulário!'),
+                               ),
+                             );
+                             return;
+                           }
 
-                         // Navigator.push(
-                         //   context,
-                         //   MaterialPageRoute(
-                         //     builder: ((context) => Cliente(
-                         //       nome: _pf_nome.text.trim(),
-                         //       sobrenome: _pf_sobrenome.text.trim(),
-                         //       dataNascimento: _pf_dataNascimento.text,
-                         //       genero: _generoSelecionado!,
-                         //       cpf: _mascaraCpf.getUnmaskedText(),
-                         //       email: _usuarios_email.text.trim(),
-                         //       telefone: _usuarios_telefone.text.trim(),
-                         //       fotoPerfil: _usuarios_imagem,
-                         //       senha: _usuarios_senha_hash.text.
-                         //
-                         //     )),
-                         //   )
-                         // );
-                       },
+                           await _finalizarCadastro();
+                         },
+
+
 
                        child: const Text("Finalizar"),
 
@@ -292,8 +381,6 @@ class _EnderecoTelaState extends State<EnderecoTela> {
                      ),
 
                      const SizedBox(height: 16),
-
-
 
                    ],
                  ),

@@ -20,6 +20,11 @@ class AppDatabase {
     return openDatabase(
       caminho,
       version: 1,
+
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
+
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE usuarios (
@@ -48,7 +53,10 @@ class AppDatabase {
             pf_genero TEXT,
             pf_cpf TEXT,
             pf_tipo TEXT,
-            pf_usuarios_id INTEGER
+            pf_usuarios_id INTEGER,pf_usuarios_id INTEGER,
+            FOREIGN KEY (pf_usuarios_id) REFERENCES usuarios(usuarios_id)
+            
+            
           )
         ''');
 
@@ -61,6 +69,8 @@ class AppDatabase {
             pj_cnpj TEXT NOT NULL,
             pj_tipo TEXT NOT NULL,
             pj_usuarios_id INTEGER
+            FOREIGN KEY (pj_usuarios_id) REFERENCES usuarios(usuarios_id)
+            
           )
         ''');
 
@@ -71,12 +81,13 @@ class AppDatabase {
             endereco_rua TEXT NOT NULL,
             endereco_bairro TEXT,
             endereco_cep TEXT NOT NULL,
-            endereco_complemento TEXT NOT NULL,
+            endereco_complemento TEXT,
             endereco_numero TEXT NOT NULL,
             endereco_descricao TEXT,
             endereco_cidade TEXT NOT NULL,
             endereco_uf TEXT NOT NULL,
             endereco_usuarios_id INTEGER
+            FOREIGN KEY (endereco_usuarios_id) REFERENCES usuarios(usuarios_id)
           )
         ''');
       },
