@@ -388,12 +388,11 @@ class _ClienteTelas() extends State<Cliente> {
 
                               const SizedBox(height: 24),
 
-                              
+
 
 
                             ],
                           ),
-
 
 
 
