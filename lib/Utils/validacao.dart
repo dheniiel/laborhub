@@ -2,14 +2,16 @@
 
 class Validacao {
 
-  //Função usada em Telas->Clientes (Tela de cadastro)
+  //Função usada para cadastro de pessoa fisica
   static String? nome(String? valor){
     if(valor == null || valor.trim().isEmpty) {
       return "Informe um nome!";
 
     }
 
-    if(RegExp('r[0-9]').hasMatch(valor)){
+    final contemNumero = RegExp(r'\d').hasMatch(valor);
+
+    if(contemNumero){
       return "Seu nome não pode conter números!";
     }
 
@@ -20,15 +22,17 @@ class Validacao {
 
   }
 
-  //Validaçao usada em Telas->Clientes (TELA DE CADASTRO)
+  //Validaçao usada para cadastro de pessoa fisica
   static String? sobrenome(String? valor){
     if(valor == null || valor.trim().isEmpty) {
       return "Informe seu sobrenome!";
 
     }
 
-    if(RegExp('r[0-9]').hasMatch(valor)){
-      return "Seu sobrenome não pode conter números!";
+    final contemNumero = RegExp(r'\d').hasMatch(valor);
+
+    if(contemNumero){
+      return "Seu nome não pode conter números!";
     }
 
     if(valor.length < 3 || valor.length >= 45) {
@@ -39,7 +43,7 @@ class Validacao {
   }
 
 
-  // Validação para data de nasccimente Usada em cadastro de clientes
+  // Validação para data de nascimento em cadastro de pessoas fisica
   static String? data(String? valor) {
     if (valor == null || valor.trim().isEmpty) {
       return 'Informe sua data de nascimento!';
@@ -168,6 +172,92 @@ class Validacao {
    if(valor.length <= 6){
      return "Sua senha precisa ter mais 6 caracteres!";
    }
+
+    return null;
+  }
+
+
+  static String? razaoSocial(String? valor){
+    if(valor == null || valor.trim().isEmpty) {
+      return "Informe a Razão Social!";
+
+    }
+
+    final contemNumero = RegExp(r'\d').hasMatch(valor);
+
+    if(valor.length < 3 || valor.length >= 20) {
+      return "Sua Razão Social não possui caracter suficiente!";
+    }
+
+
+  }
+
+  static String? nomeFantasia(String? valor){
+    if(valor == null || valor.trim().isEmpty) {
+      return "Informe o nome fantasia!";
+
+    }
+
+    final contemNumero = RegExp(r'\d').hasMatch(valor);
+
+    if(valor.length < 3 || valor.length >= 15) {
+      return "O nome fanstasia não possui caracter suficiente!";
+    }
+
+
+
+
+  }
+
+  static String? cnpj(String? valor) {
+    if (valor == null || valor.trim().isEmpty) {
+      return 'Informe o CNPJ';
+    }
+
+    final texto = valor.trim();
+
+    if (!RegExp(r'^[0-9./\-\s]+$').hasMatch(texto)) {
+      return 'Informe um CNPJ numérico válido';
+    }
+
+    final numeros = texto.replaceAll(RegExp(r'\D'), '');
+
+    if (numeros.length != 14) {
+      return 'O CNPJ deve ter 14 dígitos';
+    }
+
+    if (RegExp(r'^(\d)\1{13}$').hasMatch(numeros)) {
+      return 'CNPJ inválido';
+    }
+
+    final digitos = numeros.split('').map(int.parse).toList();
+
+    int calcularDigito(List<int> pesos) {
+      var soma = 0;
+
+      for (var i = 0; i < pesos.length; i++) {
+        soma += digitos[i] * pesos[i];
+      }
+
+      final resto = soma % 11;
+      return resto < 2 ? 0 : 11 - resto;
+    }
+
+    final primeiro = calcularDigito(
+      [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2],
+    );
+
+    if (digitos[12] != primeiro) {
+      return 'CNPJ inválido';
+    }
+
+    final segundo = calcularDigito(
+      [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2],
+    );
+
+    if (digitos[13] != segundo) {
+      return 'CNPJ inválido';
+    }
 
     return null;
   }

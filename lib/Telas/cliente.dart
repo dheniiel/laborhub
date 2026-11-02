@@ -22,7 +22,7 @@ class Cliente extends StatefulWidget {
   State<Cliente> createState() => _ClienteTelas();
 }
 
-class _ClienteTelas() extends State<Cliente> {
+class _ClienteTelas extends State<Cliente> {
   Uint8List? _foto; //para foto de perfil
   bool _pessoaFisica = true; // para mudar o botao ao escolher o tipo de usuario
 
@@ -52,6 +52,16 @@ class _ClienteTelas() extends State<Cliente> {
 
   final _mascaraCpf = MaskTextInputFormatter(
     mask: '###.###.###-##',
+    filter: {'#': RegExp(r'[0-9]')},
+  );
+
+  final _mascaraData = MaskTextInputFormatter(
+    mask: '##/##/####',
+    filter: {'#': RegExp(r'[0-9]')},
+  );
+
+  final _mascaraCNPJ = MaskTextInputFormatter(
+    mask: '##.###.###/####-##',
     filter: {'#': RegExp(r'[0-9]')},
   );
 
@@ -297,6 +307,7 @@ class _ClienteTelas() extends State<Cliente> {
                                 controlador: _pf_dataNascimento,
                                 tipagemValor: TextInputType.datetime,
                                 rotulo: "dd/mm/YYYY",
+                                formatadores: [_mascaraData],
                                 validador: Validacao.data,
 
                               ),
@@ -486,7 +497,7 @@ class _ClienteTelas() extends State<Cliente> {
                               const SizedBox(
                                 width: double.infinity,
                                 child: Text(
-                                  'Todos os direitos reservados © 2026',
+                                  'Direitos reservados © 2026',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 12,
@@ -503,6 +514,246 @@ class _ClienteTelas() extends State<Cliente> {
 
 
                         } else ... {
+
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: Text(
+                                    "Razão Social",
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                              ),
+                              const SizedBox(height: 5),
+
+                              Forms(
+                                controlador: _pj_razaoSocial,
+                                tipagemValor: TextInputType.text,
+                                rotulo: "Digite sua razão social",
+                                validador: Validacao.razaoSocial,
+
+                              ),
+                              const SizedBox(height: 24),
+
+                              const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: Text(
+                                    "Nome fantasia",
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                              ),
+
+                              const SizedBox(height: 5),
+
+                              Forms(
+                                controlador: _pj_nomeFantasia,
+                                tipagemValor: TextInputType.text,
+                                rotulo: "Digite o nome fantasia",
+                                validador: Validacao.nomeFantasia,
+
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: Text(
+                                    "Data Fundação",
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                              ),
+
+                              const SizedBox(height: 5),
+
+                              Forms(
+                                controlador: _pj_dataFundacao,
+                                tipagemValor: TextInputType.datetime,
+                                rotulo: "dd/mm/YYYY",
+                                formatadores: [_mascaraData],
+                                validador: Validacao.data,
+
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: Text(
+                                    "CNPJ",
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                              ),
+
+                              const SizedBox(height: 5),
+
+                              Forms(
+                                controlador: _pj_cnpj,
+                                tipagemValor: TextInputType.text,
+                                rotulo: "00.000.000/0000-00",
+                                formatadores: [_mascaraCNPJ],
+                                validador: Validacao.cnpj,
+
+                              ),
+                              const SizedBox(height: 24),
+
+                              const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: Text(
+                                    "Telefone/Celular",
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                              ),
+
+                              const SizedBox(height: 5),
+
+                              Forms(
+                                controlador: _usuarios_telefone,
+                                tipagemValor: TextInputType.phone,
+                                rotulo: "(99) 99999-9999",
+                                formatadores: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(11),
+                                ],
+                                validador: Validacao.telefone,
+
+                              ),
+                              const SizedBox(height: 24),
+
+                              const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: Text(
+                                    "Email",
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                              ),
+
+                              const SizedBox(height: 5),
+
+                              Forms(
+                                controlador: _usuarios_email,
+                                tipagemValor: TextInputType.text,
+                                rotulo: "email@gmail.com",
+                                validador: Validacao.email,
+
+                              ),
+
+                              const SizedBox(height: 24),
+
+
+                              const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: Text(
+                                    "Senha",
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                              ),
+
+                              const SizedBox(height: 5),
+
+                              Forms(
+                                controlador: _usuarios_senha_hash,
+                                tipagemValor: TextInputType.visiblePassword,
+                                rotulo: "Sua senha",
+                                ocultarTexto: true,
+                                validador: Validacao.senha,
+
+                              ),
+
+                              const SizedBox(height: 54),
+
+                              FilledButton(
+                                onPressed: () async {
+                                  final valido = _formKey.currentState?.validate() ?? false;
+
+                                  if(!valido) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text("Erro ao preencher o formulario!")),
+                                    );
+                                  }
+
+                                  if(_generoSelecionado == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text("Selecione seu gênero!")),
+                                    );
+                                  }
+
+                                  // Navigator.push(
+                                  //   context,
+                                  //   MaterialPageRoute(
+                                  //     builder: ((context) => Cliente(
+                                  //       nome: _pf_nome.text.trim(),
+                                  //       sobrenome: _pf_sobrenome.text.trim(),
+                                  //       dataNascimento: _pf_dataNascimento.text,
+                                  //       genero: _generoSelecionado!,
+                                  //       cpf: _mascaraCpf.getUnmaskedText(),
+                                  //       email: _usuarios_email.text.trim(),
+                                  //       telefone: _usuarios_telefone.text.trim(),
+                                  //       fotoPerfil: _usuarios_imagem,
+                                  //       senha: _usuarios_senha_hash.text.
+                                  //
+                                  //     )),
+                                  //   )
+                                  // );
+                                },
+
+                                child: const Text("Avançar"),
+
+
+                                style: FilledButton.styleFrom(
+                                    backgroundColor: Color.fromARGB(1000, 59, 130, 246),
+                                    minimumSize: const Size(500, 35),
+                                    padding: EdgeInsets.all(20),
+                                    textStyle: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadiusGeometry.circular(5),
+
+                                    )
+                                ),
+                              ),
+                              const SizedBox(height: 40),
+
+                              const SizedBox(
+                                width: double.infinity,
+                                child: Text(
+                                  'Direitos reservados © 2026',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                            ],
+                          ),
 
 
                         }
