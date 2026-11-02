@@ -25,6 +25,19 @@ class _EscolhaUsuarioState extends State<EscolhaUsuario> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Voltar',
+          onPressed: (){
+            Navigator.pop(context);
+          },
+        ),
+      ),
+
       body: SafeArea(
         child: Center (
         child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 500),
