@@ -1,0 +1,12 @@
+name: laborhub_server
+publish_to: none
+environment:
+  sdk: ^3.13.0
+dependencies:
+  shelf: ^1.4.2
+  sqlite3: ^3.1.0
+  crypto: ^3.0.6
+  cryptography: ^2.7.0
+  mailer: ^6.5.0
+dev_dependencies:
+  test: ^1.25.0
