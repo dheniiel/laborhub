@@ -2,7 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:laborhub/Formularios/forms.dart';
-import 'package:laborhub/Model/endereco.dart';
+import 'dart:convert';
+import '../Repository/auth_api.dart';
 import '../Utils/validacao.dart';
 import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
@@ -58,6 +59,7 @@ class EnderecoTela  extends StatefulWidget{
 class _EnderecoTelaState extends State<EnderecoTela> {
 
   final _formKey = GlobalKey<FormState>();
+  bool _salvando = false;
 
   final _endereco_rua = TextEditingController();
   final _endereco_bairro = TextEditingController();
@@ -86,52 +88,72 @@ class _EnderecoTelaState extends State<EnderecoTela> {
   );
 
   Future<void> _finalizarCadastro() async {
-    // Dados comuns:
-    final email = widget.email;
-    final telefone = widget.telefone;
-    final senha = widget.senha;
-    final foto = widget.fotoPerfil;
-
-    // Endereço:
-    final rua = _endereco_rua.text.trim();
-    final numero = _endereco_numero.text.trim();
-    final bairro = _endereco_bairro.text.trim();
-    final cep = _mascaraCep.getUnmaskedText();
-    final complemento = _endereco_complemento.text.trim();
-    final cidade = _endereco_cidade.text.trim();
-    final uf = _endereco_uf.text.trim().toUpperCase();
-
-    if (widget.pessoaFisica) {
-      // Dados da pessoa física:
-      final nome = widget.nome;
-      final sobrenome = widget.sobrenome;
-      final nascimento = widget.dataNascimento;
-      final genero = widget.genero;
-      final cpf = widget.cpf;
-
-      // Montar o model PessoaFisica.
-    } else {
-      // Dados da pessoa jurídica:
-      final razaoSocial = widget.razaoSocial;
-      final nomeFantasia = widget.nomeFantasia;
-      final dataFundacao = widget.dataFundacao;
-      final cnpj = widget.cnpj;
-
-      // Montar o model PessoaJuridica.
+    if (_salvando) return;
+    setState(() => _salvando = true);
+    try {
+      await CadastroRepository().cadastrar(
+        usuario: {
+          'usuarios_email': widget.email.trim().toLowerCase(),
+          'usuarios_telefone': widget.telefone,
+          'usuarios_senha_hash': widget.senha,
+          'usuarios_imagem': widget.fotoPerfil == null
+              ? ''
+              : base64Encode(widget.fotoPerfil!),
+          'usuarios_ativo': 1,
+          'usuarios_is_admin': 0,
+          'usuarios_criado_em': DateTime.now().toUtc().toIso8601String(),
+        },
+        endereco: {
+          'endereco_nome': 'Principal',
+          'endereco_rua': _endereco_rua.text.trim(),
+          'endereco_numero': _endereco_numero.text.trim(),
+          'endereco_bairro': _endereco_bairro.text.trim(),
+          'endereco_cep': _mascaraCep.getUnmaskedText(),
+          'endereco_complemento': _endereco_complemento.text.trim(),
+          'endereco_cidade': _endereco_cidade.text.trim(),
+          'endereco_uf': _endereco_uf.text.trim().toUpperCase(),
+        },
+        pessoaFisica: widget.pessoaFisica
+            ? {
+                'pf_nome': widget.nome,
+                'pf_sobrenome': widget.sobrenome,
+                'pf_dataNascimento': widget.dataNascimento,
+                'pf_genero': widget.genero,
+                'pf_cpf': widget.cpf,
+                'pf_tipo': 'cliente',
+              }
+            : null,
+        pessoaJuridica: !widget.pessoaFisica
+            ? {
+                'pj_razaoSocial': widget.razaoSocial,
+                'pj_nomeFantasia': widget.nomeFantasia,
+                'pj_dataFundacao': widget.dataFundacao,
+                'pj_cnpj': widget.cnpj,
+                'pj_tipo': 'cliente',
+              }
+            : null,
+      );
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cadastro realizado. Entre com seu email e senha.'),
+        ),
+      );
+    } catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error is AuthException
+                  ? error.mensagem
+                  : 'Não foi possível cadastrar. Tente novamente.',
+            ),
+          ),
+        );
+    } finally {
+      if (mounted) setState(() => _salvando = false);
     }
-
-    final repository = CadastroRepository();
-
-    final usuarioId = await repository.cadastrar(
-      usuario: usuario.toMap(),
-      endereco: endereco.toMap(),
-      pessoaFisica: widget.pessoaFisica
-          ? pessoaFisica.toMap()
-          : null,
-      pessoaJuridica: !widget.pessoaFisica
-          ? pessoaJuridica.toMap()
-          : null,
-    );
   }
 
    @override
@@ -332,7 +354,7 @@ class _EnderecoTelaState extends State<EnderecoTela> {
                      const SizedBox(height: 54),
 
                      FilledButton(
-                         onPressed: () async {
+                         onPressed: _salvando ? null : () async {
                            final valido = _formKey.currentState?.validate() ?? false;
 
                            if (!valido) {

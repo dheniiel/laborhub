@@ -1,22 +1,19 @@
 import 'package:flutter/material.dart';
+
 import '../Formularios/forms.dart';
 import '../Repository/usuarios_repository.dart';
 import 'escolhaUsuario.dart';
-
-
+import 'recuperarSenha.dart';
+import '../Repository/auth_api.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
 
   @override
   State<Login> createState() => _LoginState();
-
-
-
 }
 
 class _LoginState extends State<Login> {
-
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _senhaController = TextEditingController();
@@ -24,14 +21,12 @@ class _LoginState extends State<Login> {
 
   bool _carregando = false;
 
-
   @override
   void dispose() {
     _emailController.dispose();
     _senhaController.dispose();
     super.dispose();
   }
-
 
   String? _validarEmail(String? valor) {
     if (valor == null || valor.trim().isEmpty) {
@@ -50,7 +45,6 @@ class _LoginState extends State<Login> {
     }
     return null;
   }
-
 
   Future<void> _entrar() async {
     FocusScope.of(context).unfocus();
@@ -73,7 +67,8 @@ class _LoginState extends State<Login> {
 
       _mostrarMensagem('Login realizado com sucesso');
       // Navegação para a tela inicial do usuário autenticado
-
+    } on AuthException catch (error) {
+      if (mounted) _mostrarMensagem(error.mensagem);
     } catch (_) {
       if (!mounted) return;
       _mostrarMensagem('Não foi possível realizar o login. Tente novamente.');
@@ -82,17 +77,14 @@ class _LoginState extends State<Login> {
     }
   }
 
-
   void _mostrarMensagem(String mensagem) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
-
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -103,7 +95,9 @@ class _LoginState extends State<Login> {
               builder: (context, constraints) {
                 return SingleChildScrollView(
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
                     child: IntrinsicHeight(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -113,7 +107,6 @@ class _LoginState extends State<Login> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               const Spacer(flex: 5),
-
 
                               const Text(
                                 'Login',
@@ -127,7 +120,6 @@ class _LoginState extends State<Login> {
                               ),
 
                               const Spacer(flex: 6),
-
 
                               const Padding(
                                 padding: EdgeInsets.only(left: 4),
@@ -181,9 +173,25 @@ class _LoginState extends State<Login> {
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: InkWell(
-                                  onTap: () {
-                                    // Navegação para tela de recuperação de senha
-                                  },
+                                  onTap: _carregando
+                                      ? null
+                                      : () async {
+                                          final sucesso =
+                                              await Navigator.push<bool>(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      const RecuperarSenha(),
+                                                ),
+                                              );
+                                          if (!mounted) return;
+                                          if (sucesso == true) {
+                                            _senhaController.clear();
+                                            _mostrarMensagem(
+                                              'Senha redefinida com sucesso. Entre com sua nova senha.',
+                                            );
+                                          }
+                                        },
                                   child: const Text(
                                     'Esqueci minha senha',
                                     style: TextStyle(
@@ -197,9 +205,7 @@ class _LoginState extends State<Login> {
                                 ),
                               ),
 
-
                               const Spacer(flex: 3),
-
 
                               SizedBox(
                                 height: 40,
@@ -208,7 +214,9 @@ class _LoginState extends State<Login> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF3B82F6),
                                     foregroundColor: Colors.white,
-                                    disabledBackgroundColor: const Color(0xFF3B82F6),
+                                    disabledBackgroundColor: const Color(
+                                      0xFF3B82F6,
+                                    ),
                                     disabledForegroundColor: Colors.white,
                                     padding: EdgeInsets.zero,
                                     elevation: 0,
@@ -245,7 +253,8 @@ class _LoginState extends State<Login> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const EscolhaUsuario(),
+                                        builder: (context) =>
+                                            const EscolhaUsuario(),
                                       ),
                                     );
                                   },
@@ -253,7 +262,9 @@ class _LoginState extends State<Login> {
                                     backgroundColor: Colors.white,
                                     foregroundColor: Colors.black,
                                     padding: EdgeInsets.zero,
-                                    side: const BorderSide(color: Color(0xFF858585)),
+                                    side: const BorderSide(
+                                      color: Color(0xFF858585),
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(4),
                                     ),
@@ -268,7 +279,6 @@ class _LoginState extends State<Login> {
                                   ),
                                 ),
                               ),
-
 
                               const Spacer(flex: 6),
 
@@ -295,7 +305,6 @@ class _LoginState extends State<Login> {
           ),
         ),
       ),
-
     );
   }
 }

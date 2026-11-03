@@ -19,7 +19,16 @@ class AppDatabase {
 
     return openDatabase(
       caminho,
-      version: 1,
+      version: 2,
+
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Import legacy accounts on the trusted server BEFORE distributing this update.
+          await db.execute(
+            "UPDATE usuarios SET usuarios_senha_hash = 'remote-managed', usuarios_reset_hash = NULL, usuarios_expira_em = NULL",
+          );
+        }
+      },
 
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
@@ -53,7 +62,7 @@ class AppDatabase {
             pf_genero TEXT,
             pf_cpf TEXT,
             pf_tipo TEXT,
-            pf_usuarios_id INTEGER,pf_usuarios_id INTEGER,
+            pf_usuarios_id INTEGER,
             FOREIGN KEY (pf_usuarios_id) REFERENCES usuarios(usuarios_id)
             
             
@@ -68,14 +77,14 @@ class AppDatabase {
             pj_dataFundacao TEXT,
             pj_cnpj TEXT NOT NULL,
             pj_tipo TEXT NOT NULL,
-            pj_usuarios_id INTEGER
+            pj_usuarios_id INTEGER,
             FOREIGN KEY (pj_usuarios_id) REFERENCES usuarios(usuarios_id)
             
           )
         ''');
 
         await db.execute('''
-          CREATE TABLE endereco.dart (
+          CREATE TABLE endereco (
             endereco_id INTEGER PRIMARY KEY AUTOINCREMENT,
             endereco_nome TEXT NOT NULL,
             endereco_rua TEXT NOT NULL,
@@ -86,7 +95,7 @@ class AppDatabase {
             endereco_descricao TEXT,
             endereco_cidade TEXT NOT NULL,
             endereco_uf TEXT NOT NULL,
-            endereco_usuarios_id INTEGER
+            endereco_usuarios_id INTEGER,
             FOREIGN KEY (endereco_usuarios_id) REFERENCES usuarios(usuarios_id)
           )
         ''');
