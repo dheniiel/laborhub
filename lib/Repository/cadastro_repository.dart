@@ -2,7 +2,11 @@ import '../Data/app_database.dart';
 import 'auth_api.dart';
 
 class CadastroRepository {
+  final AuthApi _api;
+  CadastroRepository({AuthApi? api}) : _api = api ?? AuthApi();
+
   Future<int> cadastrar({
+    required String senha,
     required Map<String, Object?> usuario,
     required Map<String, Object?> endereco,
     Map<String, Object?>? pessoaFisica,
@@ -46,9 +50,11 @@ class CadastroRepository {
 
       // Validate local writes before creating remote credentials. The server accepts
       // retries only when the existing password matches, covering a lost response.
-      await AuthApi().post('auth/register', {
+      // Send the entered password separately from any hash in the local model.
+      // The server alone derives the credential used by login.
+      await _api.post('auth/register', {
         'email': usuario['usuarios_email'] as String,
-        'password': usuario['usuarios_senha_hash'] as String,
+        'password': senha,
       });
 
       return usuarioId;
