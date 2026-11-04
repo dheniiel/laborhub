@@ -744,23 +744,36 @@ class _ClienteTelas extends State<Cliente> {
                                     );
                                   }
 
-                                  // Navigator.push(
-                                  //   context,
-                                  //   MaterialPageRoute(
-                                  //     builder: ((context) => Cliente(
-                                  //       nome: _pf_nome.text.trim(),
-                                  //       sobrenome: _pf_sobrenome.text.trim(),
-                                  //       dataNascimento: _pf_dataNascimento.text,
-                                  //       genero: _generoSelecionado!,
-                                  //       cpf: _mascaraCpf.getUnmaskedText(),
-                                  //       email: _usuarios_email.text.trim(),
-                                  //       telefone: _usuarios_telefone.text.trim(),
-                                  //       fotoPerfil: _usuarios_imagem,
-                                  //       senha: _usuarios_senha_hash.text.
-                                  //
-                                  //     )),
-                                  //   )
-                                  // );
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => EnderecoTela(
+                                        pessoaFisica: _pessoaFisica,
+
+                                        email: _usuarios_email.text.trim(),
+                                        telefone: _usuarios_telefone.text.trim(),
+                                        senha: _usuarios_senha_hash.text,
+                                        fotoPerfil: _foto,
+
+                                        nome: _pessoaFisica ? _pf_nome.text.trim() : null,
+                                        sobrenome: _pessoaFisica ? _pf_sobrenome.text.trim() : null,
+                                        dataNascimento:
+                                        _pessoaFisica ? _pf_dataNascimento.text.trim() : null,
+                                        genero: _pessoaFisica ? _generoSelecionado : null,
+                                        cpf: _pessoaFisica ? _mascaraCpf.getUnmaskedText() : null,
+
+                                        razaoSocial:
+                                        !_pessoaFisica ? _pj_razaoSocial.text.trim() : null,
+                                        nomeFantasia:
+                                        !_pessoaFisica ? _pj_nomeFantasia.text.trim() : null,
+                                        dataFundacao:
+                                        !_pessoaFisica ? _pj_dataFundacao.text.trim() : null,
+                                        cnpj: !_pessoaFisica
+                                            ? _pj_cnpj.text.replaceAll(RegExp(r'\D'), '')
+                                            : null,
+                                      ),
+                                    ),
+                                  );
                                 },
 
                                 child: const Text("Avançar"),
