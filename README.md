@@ -1,5 +1,7 @@
 # laborhub
 
+Configuração da API, SMTP, migração de contas e testes: [Recuperação de senha](docs/recuperacao-senha.md).
+
 A new Flutter project.
 
 ## Getting Started

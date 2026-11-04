@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:laborhub/Formularios/forms.dart';
@@ -8,13 +7,6 @@ import '../Utils/validacao.dart';
 import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../Repository/cadastro_repository.dart';
-import '../Model/usuarios.dart';
-import '../Model/pessoJuridica.dart';
-import '../Model/pessoaFisica.dart';
-import 'package:bcrypt/bcrypt.dart';
-import 'package:path_provider/path_provider.dart';
-import 'login.dart';
-
 
 
 
@@ -281,8 +273,6 @@ class _EnderecoTelaState extends State<EnderecoTela> {
       );
     }
   }
-
-
 
    @override
   Widget build(BuildContext context) {

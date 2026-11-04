@@ -1,29 +1,23 @@
-import '../Data/usuarios_dao.dart';
+import 'auth_api.dart';
 import '../Model/usuarios.dart';
 
-
 class UsuariosRepository {
+  final AuthApi _api = AuthApi();
 
-       final UsuariosDao _dao = UsuariosDao();
+  //Cadastro
+  Future<void> Cadastrar(Usuarios usuarios) async {
+    await _api.post('auth/register', {
+      'email': usuarios.usuarios_email,
+      'password': usuarios.usuarios_senha_hash,
+    });
+  }
 
-       //Cadastro
-       Future<void> Cadastrar(Usuarios usuarios) async {
-         await _dao.inserir(usuarios);
-
-       }
-
-      //Login
-      Future<Usuarios?> Autenticar(String email, String senha) async {
-        final usuario = await _dao.buscarPorEmail(email.trim());
-
-        if (usuario == null) return null;
-        if (!usuario.usuarios_ativo) return null;
-
-        if (usuario.usuarios_senha_hash != senha) return null;
-
-        return usuario;
-
-      }
-
-
+  //Login
+  Future<Usuarios?> Autenticar(String email, String senha) async {
+    final body = await _api.post('auth/login', {
+      'email': email.trim(),
+      'password': senha,
+    });
+    return Usuarios.fromMap(body);
+  }
 }
