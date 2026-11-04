@@ -1,13 +1,21 @@
 import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:laborhub/Formularios/forms.dart';
-import 'package:laborhub/Model/endereco.dart';
+import 'dart:convert';
+import '../Repository/auth_api.dart';
+import '../Model/endereco.dart';
 import '../Utils/validacao.dart';
 import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../Repository/cadastro_repository.dart';
-
+import '../Model/usuarios.dart';
+import '../Model/pessoJuridica.dart';
+import '../Model/pessoaFisica.dart';
+import 'package:bcrypt/bcrypt.dart';
+import 'package:path_provider/path_provider.dart';
+import 'login.dart';
 
 
 class EnderecoTela  extends StatefulWidget{
@@ -85,9 +93,6 @@ class _EnderecoTelaState extends State<EnderecoTela> {
     filter: {'#': RegExp(r'[0-9]')},
   );
 
-
-
-
   Future<String> _salvarFotoPerfil() async {
     final foto = widget.fotoPerfil;
 
@@ -118,6 +123,7 @@ class _EnderecoTelaState extends State<EnderecoTela> {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
+
     String caminhoFoto = '';
     bool cadastroSalvo = false;
 
@@ -187,8 +193,10 @@ class _EnderecoTelaState extends State<EnderecoTela> {
             widget.dataFundacao,
             'a data de fundação',
           ),
-          pj_cnpj: obrigatorio(widget.cnpj, 'o CNPJ')
-              .replaceAll(RegExp(r'\D'), ''),
+          pj_cnpj: obrigatorio(
+            widget.cnpj,
+            'o CNPJ',
+          ).replaceAll(RegExp(r'\D'), ''),
           pj_tipo: 'Cliente',
           pj_usuarios_id: 0,
         );
@@ -251,8 +259,6 @@ class _EnderecoTelaState extends State<EnderecoTela> {
         ),
             (route) => false,
       );
-
-
     } catch (erro) {
       // Se o banco falhar, remove a foto criada nesta tentativa.
       if (!cadastroSalvo && caminhoFoto.isNotEmpty) {
