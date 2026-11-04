@@ -170,41 +170,41 @@ class _LoginState extends State<Login> {
 
                               const SizedBox(height: 12),
 
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: InkWell(
-                                  onTap: _carregando
-                                      ? null
-                                      : () async {
-                                          final sucesso =
-                                              await Navigator.push<bool>(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      const RecuperarSenha(),
-                                                ),
-                                              );
-                                          if (!mounted) return;
-                                          if (sucesso == true) {
-                                            _senhaController.clear();
-                                            _mostrarMensagem(
-                                              'Senha redefinida com sucesso. Entre com sua nova senha.',
-                                            );
-                                          }
-                                        },
-                                  child: const Text(
-                                    'Esqueci minha senha',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontFamily: 'Montserrat',
-                                      color: Color(0xFF3B82F6),
-                                      decoration: TextDecoration.underline,
-                                      decorationColor: Color(0xFF3B82F6),
-                                    ),
-                                  ),
-                                ),
-                              ),
-
+                              // Align(
+                              //   alignment: Alignment.centerRight,
+                              //   child: InkWell(
+                              //     onTap: _carregando
+                              //         ? null
+                              //         : () async {
+                              //             final sucesso =
+                              //                 await Navigator.push<bool>(
+                              //                   context,
+                              //                   // MaterialPageRoute(
+                              //                   //   builder: (_) =>
+                              //                   //       // const RecuperarSenha(),
+                              //                   // ),
+                              //                 );
+                              //             if (!mounted) return;
+                              //             if (sucesso == true) {
+                              //               _senhaController.clear();
+                              //               _mostrarMensagem(
+                              //                 'Senha redefinida com sucesso. Entre com sua nova senha.',
+                              //               );
+                              //             }
+                              //           },
+                              //     child: const Text(
+                              //       'Esqueci minha senha',
+                              //       style: TextStyle(
+                              //         fontSize: 15,
+                              //         fontFamily: 'Montserrat',
+                              //         color: Color(0xFF3B82F6),
+                              //         decoration: TextDecoration.underline,
+                              //         decorationColor: Color(0xFF3B82F6),
+                              //       ),
+                              //     ),
+                              //   ),
+                              // ),
+                              //
                               const Spacer(flex: 3),
 
                               SizedBox(
