@@ -236,6 +236,7 @@ class _EnderecoTelaState extends State<EnderecoTela> {
 
       // O repository grava os dados e preenche as chaves estrangeiras.
       await CadastroRepository().cadastrar(
+        senha: widget.senha,
         usuario: usuario.toMap(),
         endereco: endereco.toMap(),
         pessoaFisica: pessoaFisica?.toMap(),
