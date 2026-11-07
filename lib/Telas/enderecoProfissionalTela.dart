@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:laborhub/Formularios/forms.dart';
+import 'package:laborhub/Model/servico.dart';
 import 'dart:convert';
 import '../Repository/auth_api.dart';
 import '../Model/endereco.dart';
@@ -16,6 +17,7 @@ import '../Model/pessoaFisica.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:path_provider/path_provider.dart';
 import 'login.dart';
+import 'servico.dart';
 
 
 class EnderecoProfissionalTela  extends StatefulWidget{
@@ -93,194 +95,6 @@ class _EnderecoProfissionalTelaState extends State<EnderecoProfissionalTela> {
     mask: '#####-###',
     filter: {'#': RegExp(r'[0-9]')},
   );
-
-  Future<String> _salvarFotoPerfil() async {
-    final foto = widget.fotoPerfil;
-
-    // Sem foto, guarda um texto vazio no banco.
-    if (foto == null || foto.isEmpty) {
-      return '';
-    }
-
-    // Local de armazenamento do aplicativo.
-    final diretorio = await getApplicationDocumentsDirectory();
-
-    // Cria a pasta de fotos, caso ainda não exista.
-    final pasta = Directory('${diretorio.path}/fotos_perfil');
-    await pasta.create(recursive: true);
-
-    // Nome único. Os bytes da imagem são preservados.
-    final nome = 'perfil_${DateTime.now().microsecondsSinceEpoch}.img';
-    final arquivo = File('${pasta.path}/$nome');
-
-    // Salva a foto recebida da tela anterior.
-    await arquivo.writeAsBytes(foto, flush: true);
-
-    // Retorna somente o caminho para guardar no banco.
-    return arquivo.path;
-  }
-
-  Future<void> _finalizarCadastro() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
-
-    String caminhoFoto = '';
-    bool cadastroSalvo = false;
-
-    try {
-      // Confere os dados obrigatórios recebidos da outra tela.
-      String obrigatorio(String? valor, String campo) {
-        if (valor == null || valor.trim().isEmpty) {
-          throw FormatException('Informe $campo.');
-        }
-
-        return valor.trim();
-      }
-
-      // Aceita nascimento em dd/MM/yyyy ou yyyy-MM-dd.
-      DateTime converterNascimento(String texto) {
-        final valor = texto.trim();
-
-        int dia;
-        int mes;
-        int ano;
-
-        if (RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(valor)) {
-          final partes = valor.split('/');
-          dia = int.parse(partes[0]);
-          mes = int.parse(partes[1]);
-          ano = int.parse(partes[2]);
-        } else if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(valor)) {
-          final partes = valor.split('-');
-          ano = int.parse(partes[0]);
-          mes = int.parse(partes[1]);
-          dia = int.parse(partes[2]);
-        } else {
-          throw const FormatException(
-            'Data de nascimento inválida. Use dd/MM/yyyy.',
-          );
-        }
-
-        final data = DateTime(ano, mes, dia);
-
-        if (data.year != ano || data.month != mes || data.day != dia) {
-          throw const FormatException('Data de nascimento inválida.');
-        }
-
-        return data;
-      }
-
-      PessoaFisica? pessoaFisica;
-      PessoaJuridica? pessoaJuridica;
-
-      // Cria apenas o model correspondente ao tipo escolhido.
-      if (widget.pessoaFisica) {
-        pessoaFisica = PessoaFisica(
-          pf_nome: obrigatorio(widget.nome, 'o nome'),
-          pf_sobrenome: obrigatorio(widget.sobrenome, 'o sobrenome'),
-          pf_dataNascimento: converterNascimento(
-            obrigatorio(widget.dataNascimento, 'a data de nascimento'),
-          ),
-          pf_genero: obrigatorio(widget.genero, 'o gênero'),
-          pf_tipo: 'Cliente',
-          pf_usuarios_id: 0,
-        );
-      } else {
-        pessoaJuridica = PessoaJuridica(
-          pj_razaoSocial: obrigatorio(widget.razaoSocial, 'a razão social'),
-          pj_nomeFantasia: obrigatorio(widget.nomeFantasia, 'o nome fantasia'),
-          pj_dataFundacao: obrigatorio(
-            widget.dataFundacao,
-            'a data de fundação',
-          ),
-          pj_cnpj: obrigatorio(
-            widget.cnpj,
-            'o CNPJ',
-          ).replaceAll(RegExp(r'\D'), ''),
-          pj_tipo: 'Cliente',
-          pj_usuarios_id: 0,
-        );
-      }
-
-      // Cria o model com os dados digitados nesta tela.
-      final endereco = Endereco(
-        endereco_nome: _endereco_nome.text.trim(),
-        endereco_rua: _endereco_rua.text.trim(),
-        endereco_bairro: _endereco_bairro.text.trim(),
-        endereco_cep: _mascaraCep.getUnmaskedText(),
-        endereco_complemento: _endereco_complemento.text.trim(),
-        endereco_numero: _endereco_numero.text.trim(),
-        endereco_descricao: null,
-        endereco_cidade: _endereco_cidade.text.trim(),
-        endereco_uf: _endereco_uf.text.trim().toUpperCase(),
-        endereco_usuarios_id: 0,
-      );
-
-      final senhaHash = BCrypt.hashpw(
-        widget.senha,
-        BCrypt.gensalt(),
-      );
-
-      // Salva o arquivo da foto e recebe somente seu caminho.
-      caminhoFoto = await _salvarFotoPerfil();
-
-      final usuario = Usuarios(
-        usuarios_email: widget.email.trim(),
-        usuarios_imagem: caminhoFoto,
-        usuarios_telefone: widget.telefone,
-        usuarios_senha_hash: senhaHash,
-        usuarios_ativo: true,
-        usuarios_is_admin: false,
-        usuarios_criado_em: DateTime.now(),
-      );
-
-      // O repository grava os dados e preenche as chaves estrangeiras.
-      await CadastroRepository().cadastrar(
-        senha: widget.senha,
-        usuario: usuario.toMap(),
-        endereco: endereco.toMap(),
-        pessoaFisica: pessoaFisica?.toMap(),
-        pessoaJuridica: pessoaJuridica?.toMap(),
-      );
-
-      cadastroSalvo = true;
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cadastro realizado com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => Login(),
-        ),
-            (route) => false,
-      );
-    } catch (erro) {
-      // Se o banco falhar, remove a foto criada nesta tentativa.
-      if (!cadastroSalvo && caminhoFoto.isNotEmpty) {
-        try {
-          await File(caminhoFoto).delete();
-        } catch (_) {
-          // Mantém o erro original do cadastro.
-        }
-      }
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Não foi possível cadastrar: $erro'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 
    @override
   Widget build(BuildContext context) {
@@ -490,7 +304,7 @@ class _EnderecoProfissionalTelaState extends State<EnderecoProfissionalTela> {
                      const SizedBox(height: 5),
 
                      Forms(
-                       controlador: _endereco_cidade,
+                       controlador: _endereco_nome,
                        tipagemValor: TextInputType.text,
                        rotulo: "Ex.: Minha casa",
 
@@ -511,7 +325,42 @@ class _EnderecoProfissionalTelaState extends State<EnderecoProfissionalTela> {
                              return;
                            }
 
-                           await _finalizarCadastro();
+                           Navigator.push(
+                             context,
+                             MaterialPageRoute(
+                               builder: (context) => ServicoTela(
+                                 // Dados recebidos da tela anterior.
+                                 pessoaFisica: widget.pessoaFisica,
+                                 email: widget.email,
+                                 telefone: widget.telefone,
+                                 senha: widget.senha,
+                                 fotoPerfil: widget.fotoPerfil,
+
+                                 nome: widget.nome,
+                                 sobrenome: widget.sobrenome,
+                                 dataNascimento: widget.dataNascimento,
+                                 genero: widget.genero,
+                                 cpf: widget.cpf,
+
+                                 razaoSocial: widget.razaoSocial,
+                                 nomeFantasia: widget.nomeFantasia,
+                                 dataFundacao: widget.dataFundacao,
+                                 cnpj: widget.cnpj,
+
+                                 // Dados digitados na tela de endereço.
+                                 endereco_rua: _endereco_rua.text.trim(),
+                                 endereco_bairro: _endereco_bairro.text.trim(),
+                                 endereco_cep: _endereco_cep.text.trim(),
+                                 endereco_numero: _endereco_numero.text.trim(),
+                                 endereco_complemento: _endereco_complemento.text.trim(),
+                                 endereco_cidade: _endereco_cidade.text.trim(),
+                                 endereco_uf: _endereco_uf.text.trim().toUpperCase(),
+                                 endereco_nome: _endereco_nome.text.trim(),
+                               ),
+                             ),
+                           );
+
+
                          },
 
 

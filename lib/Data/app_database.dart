@@ -99,6 +99,22 @@ class AppDatabase {
             FOREIGN KEY (endereco_usuarios_id) REFERENCES usuarios(usuarios_id)
           )
         ''');
+
+
+        await db.execute('''
+          CREATE TABLE servicos (
+            servicos_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            servicos_nome TEXT NOT NULL,
+            servicos_data TEXT NOT NULL,
+            servicos_valor Decimal(9,2),
+            endereco_cep TEXT NOT NULL,
+            servicos_tipo_cobranca` TEXT,
+            servicos_nivel_experiencia TEXT NOT NULL,
+            servicos_descricao TEXT,
+            servicos_usuarios_id INTEGER,
+            FOREIGN KEY (servicos_usuarios_id) REFERENCES usuarios(usuarios_id)
+          )
+        ''');
       },
     );
   }

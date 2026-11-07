@@ -172,7 +172,7 @@ class _LoginState extends State<Login> {
                                 child: Text(
                                   'Senha',
                                   style: TextStyle(
-                                    fontSize: 15,
+                                    fontSize: 13,
                                     fontFamily: 'Montserrat',
                                     fontWeight: FontWeight.w600,
                                     color: Colors.black,

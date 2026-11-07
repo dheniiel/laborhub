@@ -336,4 +336,25 @@ class Validacao {
 
 
 
+  static String? servicosNome(String? valor){
+    if(valor == null || valor.trim().isEmpty) {
+      return "Informe seu serviço!";
+
+    }
+
+    final contemNumero = RegExp(r'\d').hasMatch(valor);
+
+    if(contemNumero){
+      return "O campo de serviço não pode conter números!";
+    }
+
+    if(valor.length < 3 || valor.length >= 15) {
+      return "O campo de serviço não possui caracter suficiente!";
+    }
+
+
+  }
+
+
+
 }

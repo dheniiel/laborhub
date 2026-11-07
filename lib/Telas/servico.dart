@@ -13,8 +13,10 @@ import '../Repository/cadastro_repository.dart';
 import '../Model/usuarios.dart';
 import '../Model/pessoJuridica.dart';
 import '../Model/pessoaFisica.dart';
+import '../Model/servico.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
 import 'login.dart';
 
 
@@ -64,14 +66,14 @@ class ServicoTela  extends StatefulWidget{
     this.nomeFantasia,
     this.dataFundacao,
     this.cnpj,
-    this.endereco_rua,
-    this.endereco_bairro,
-    this.endereco_cep,
-    this.endereco_numero,
-    this.endereco_complemento,
-    this.endereco_cidade,
-    this.endereco_uf,
-    this.endereco_nome,
+    required this.endereco_rua,
+    required this.endereco_bairro,
+    required this.endereco_cep,
+    required this.endereco_numero,
+    required this.endereco_complemento,
+    required this.endereco_cidade,
+    required this.endereco_uf,
+    required this.endereco_nome,
   });
 
 
@@ -88,8 +90,12 @@ class _ServicoTelaState extends State<ServicoTela> {
   final _servicos_data = TextEditingController();
   final _servicos_valor = TextEditingController();
   final _servicos_tipo_cobranca = TextEditingController();
-  final _servicos_nive_experiencia = TextEditingController();
+  final _servicos_nivel_experiencia = TextEditingController();
   final _servicos_descricao = TextEditingController();
+
+   String? _servicoDataSelecionado;
+   String? _servicoValor;
+   String? _nivelCobranca;
 
   @override
   void dispose() {
@@ -97,7 +103,7 @@ class _ServicoTelaState extends State<ServicoTela> {
     _servicos_data.dispose();
     _servicos_valor.dispose();
     _servicos_tipo_cobranca.dispose();
-    _servicos_nive_experiencia.dispose();
+    _servicos_nivel_experiencia.dispose();
     _servicos_descricao.dispose();
     super.dispose();
   }
@@ -106,6 +112,12 @@ class _ServicoTelaState extends State<ServicoTela> {
   final _mascaraCep = MaskTextInputFormatter(
     mask: '#####-###',
     filter: {'#': RegExp(r'[0-9]')},
+  );
+
+  final _mascaraValor = CurrencyTextInputFormatter.currency(
+    locale: 'pt_BR',
+    decimalDigits: 2,
+    symbol: 'R\$',
   );
 
   Future<String> _salvarFotoPerfil() async {
@@ -197,7 +209,7 @@ class _ServicoTelaState extends State<ServicoTela> {
             obrigatorio(widget.dataNascimento, 'a data de nascimento'),
           ),
           pf_genero: obrigatorio(widget.genero, 'o gênero'),
-          pf_tipo: 'Cliente',
+          pf_tipo: 'Profissional',
           pf_usuarios_id: 0,
         );
       } else {
@@ -212,7 +224,7 @@ class _ServicoTelaState extends State<ServicoTela> {
             widget.cnpj,
             'o CNPJ',
           ).replaceAll(RegExp(r'\D'), ''),
-          pj_tipo: 'Cliente',
+          pj_tipo: 'Profissional',
           pj_usuarios_id: 0,
         );
       }
@@ -231,7 +243,17 @@ class _ServicoTelaState extends State<ServicoTela> {
         endereco_usuarios_id: 0,
       );
 
-      final servico = Servico
+
+      final servico = Servico(
+        servicos_nome: _servicos_nome.text.trim(),
+        servicos_data: _servicos_data.text.trim(),
+        servicos_valor:  _mascaraValor.getUnformattedValue().toDouble(),
+        servicos_tipo_cobranca: _servicos_tipo_cobranca.text.trim(),
+        servicos_nivel_experiencia: _servicos_nivel_experiencia.text.trim(),
+        servicos_descricao: _servicos_descricao.text.trim(),
+        servicos_usuarios_id: 0,
+
+      );
 
       final senhaHash = BCrypt.hashpw(
         widget.senha,
@@ -344,7 +366,7 @@ class _ServicoTelaState extends State<ServicoTela> {
                       const Padding(
                           padding: EdgeInsets.only(left: 12),
                           child: Text(
-                            "Rua",
+                            "Serviços nome",
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -354,10 +376,10 @@ class _ServicoTelaState extends State<ServicoTela> {
                       const SizedBox(height: 5),
 
                       Forms(
-                        controlador: _endereco_rua,
+                        controlador: _servicos_nome,
                         tipagemValor: TextInputType.text,
-                        rotulo: "Digite sua rua/avenida",
-                        validador: Validacao.rua,
+                        rotulo: "Ex.: Pedreiro,pintor...",
+                        validador: Validacao.servicosNome,
 
                       ),
                       const SizedBox(height: 24),
@@ -365,138 +387,120 @@ class _ServicoTelaState extends State<ServicoTela> {
                       const Padding(
                           padding: EdgeInsets.only(left: 12),
                           child: Text(
-                            "Bairro",
+                            "Data de serviços",
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                             ),
                           )
                       ),
+
                       const SizedBox(height: 5),
 
-                      Forms(
-                        controlador: _endereco_bairro,
-                        tipagemValor: TextInputType.text,
-                        rotulo: "Digite seu bairro",
-                        validador: Validacao.bairro,
-
-                      ),
-                      const SizedBox(height: 24),
-
-                      const Padding(
-                        padding: EdgeInsets.only(left: 12),
-                        child: Text(
-                          "Complemento",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-
-                      Forms(
-                        controlador: _endereco_complemento,
-                        tipagemValor: TextInputType.text,
-                        rotulo: "Complemento",
-
-                      ),
-                      const SizedBox(height: 24),
-
-
-                      const Padding(
-                        padding: EdgeInsets.only(left: 12),
-                        child: Text(
-                          "CEP",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-
-                      Forms(
-                        controlador: _endereco_cep,
-                        tipagemValor: TextInputType.text,
-                        validador: Validacao.cep,
-                        formatadores: [_mascaraCep],
-                        rotulo: "000000-000",
-
-                      ),
-                      const SizedBox(height: 24),
-
-                      const Padding(
-                        padding: EdgeInsets.only(left: 12),
-                        child: Text(
-                          "Numero",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-
-                      Forms(
-                        controlador: _endereco_numero,
-                        tipagemValor: TextInputType.text,
-                        rotulo: "Informe sua rua",
-
-                      ),
-                      const SizedBox(height: 24),
-
-                      const Padding(
-                        padding: EdgeInsets.only(left: 12),
-                        child: Text(
-                          "Cidade",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-
-                      Forms(
-                        controlador: _endereco_cidade,
-                        tipagemValor: TextInputType.text,
-                        rotulo: "Informe sua cidade",
-                        validador: Validacao.cidade,
-
-                      ),
-                      const SizedBox(height: 24),
-
-
-                      const Padding(
-                        padding: EdgeInsets.only(left: 12),
-                        child: Text(
-                          "UF",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-
-                      Forms(
-                        controlador: _endereco_uf,
-                        tipagemValor: TextInputType.text,
-                        rotulo: "Ex.: GO",
-                        formatadores: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z]')),
-                          LengthLimitingTextInputFormatter(2),
+                      Forms.select(
+                        rotulo: "Selecione",
+                        opcao: [
+                          'Segunda à sexta',
+                          'Segunda à Sábado',
+                          'Finais de semana'
+                          'Todos os dias',
                         ],
-                        validador: Validacao.uf,
-
+                        onChanged: (valor){
+                          setState(() {
+                            _servicoDataSelecionado = valor;
+                          });
+                        },
                       ),
+
+                      const SizedBox(height: 24),
+
+
+                      const Padding(
+                          padding: EdgeInsets.only(left: 12),
+                          child: Text(
+                            "Tipo de cobrança",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                      ),
+
+                      const SizedBox(height: 5),
+
+                      Forms.select(
+                        rotulo: "Selecione",
+                        opcao: [
+                          'Total',
+                          'Negociar',
+                          'Diária',
+                          'Hora',
+                        ],
+                        onChanged: (valor){
+                          setState(() {
+                            _servicoValor = valor;
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      if(_servicoValor != 'Negociar')... [
+                        const Padding(
+                          padding: EdgeInsets.only(left: 12),
+                          child: Text(
+                            "Valor do serviço",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+
+                        Forms(
+                          controlador: _servicos_valor,
+                          tipagemValor: TextInputType.number,
+                          formatadores: [_mascaraValor],
+                          rotulo: "R\$ 0,00",
+
+                        ),
+                        const SizedBox(height: 24),
+
+                      ],
+                      const Padding(
+                          padding: EdgeInsets.only(left: 12),
+                          child: Text(
+                            "Nível de expêriencia",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                      ),
+
+                      const SizedBox(height: 5),
+
+                      Forms.select(
+                        rotulo: "Selecione",
+                        opcao: [
+                          'Iniciante',
+                          'Intermediário',
+                          'Avançado',
+                        ],
+                        onChanged: (valor){
+                          setState(() {
+                            _nivelCobranca = valor;
+                          });
+                        },
+                      ),
+
                       const SizedBox(height: 24),
 
                       const Padding(
                         padding: EdgeInsets.only(left: 12),
                         child: Text(
-                          "Nome do endereço",
+                          "Descrição",
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -506,13 +510,12 @@ class _ServicoTelaState extends State<ServicoTela> {
                       const SizedBox(height: 5),
 
                       Forms(
-                        controlador: _endereco_cidade,
+                        controlador: _servicos_descricao,
                         tipagemValor: TextInputType.text,
-                        rotulo: "Ex.: Minha casa",
+                        rotulo: "Descreva mais sobre seu serviço (opcional)",
 
                       ),
-
-                      const SizedBox(height: 54),
+                      const SizedBox(height: 24),
 
                       FilledButton(
                         onPressed: () async {
@@ -532,7 +535,7 @@ class _ServicoTelaState extends State<ServicoTela> {
 
 
 
-                        child: const Text("Avançar"),
+                        child: const Text("Finalizar"),
 
 
                         style: FilledButton.styleFrom(
