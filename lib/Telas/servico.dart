@@ -379,7 +379,7 @@ class _ServicoTelaState extends State<ServicoTela> {
                       Forms(
                         controlador: _servicos_nome,
                         tipagemValor: TextInputType.text,
-                        rotulo: "Ex.: Pedreiro,pintor...",
+                        rotulo: "Ex.: Pedreiro, pintor...",
                         validador: Validacao.servicosNome,
 
                       ),
@@ -403,7 +403,7 @@ class _ServicoTelaState extends State<ServicoTela> {
                         opcao: [
                           'Segunda à sexta',
                           'Segunda à Sábado',
-                          'Finais de semana'
+                          'Finais de semana',
                           'Todos os dias',
                         ],
                         onChanged: (valor){
@@ -512,8 +512,9 @@ class _ServicoTelaState extends State<ServicoTela> {
 
                       Forms(
                         controlador: _servicos_descricao,
-                        tipagemValor: TextInputType.text,
+                        tipagemValor: TextInputType.multiline,
                         rotulo: "Descreva mais sobre seu serviço (opcional)",
+                        maxLinha: 5 ,
 
                       ),
                       const SizedBox(height: 54),

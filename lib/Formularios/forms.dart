@@ -11,6 +11,7 @@ class Forms extends StatefulWidget {
   final String? Function(String?)? validador;
   final List<TextInputFormatter>? formatadores;
   final bool ocultarTexto;
+  final int maxLinha;
 
   final List<String>? opcao;
   final ValueChanged<String?>? onChanged;
@@ -24,6 +25,7 @@ class Forms extends StatefulWidget {
     this.validador,
     this.formatadores,
     this.ocultarTexto = false,
+    this.maxLinha = 1,
   }) : opcao = null, onChanged = null;
 
 
@@ -36,7 +38,8 @@ class Forms extends StatefulWidget {
   }) : controlador = null,
         tipagemValor = null,
         formatadores = null,
-        ocultarTexto = false;
+        ocultarTexto = false,
+        maxLinha = 1;
 
 
   @override
@@ -145,6 +148,8 @@ class _FormsState extends State<Forms> {
     return TextFormField(
       controller: widget.controlador,
       keyboardType: widget.tipagemValor,
+      minLines: widget.ocultarTexto ? 1 : widget.maxLinha,
+      maxLines: widget.ocultarTexto ? 1 : widget.maxLinha,
       inputFormatters: widget.formatadores,
       validator: widget.validador,
       obscureText: _textoOculto,
