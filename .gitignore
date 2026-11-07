@@ -49,3 +49,8 @@ app.*.map.json
 
 # Configuração local do Docker (segredos)
 .env
+
+# Bancos locais
+*.sqlite
+*.sqlite-*
+*.db
