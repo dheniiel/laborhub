@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:laborhub/Telas/cliente.dart';
+import 'package:laborhub/Telas/profissional.dart';
 
 
 
@@ -86,6 +87,10 @@ class _EscolhaUsuarioState extends State<EscolhaUsuario> {
                       imagem: 'lib/Assets/Images/profissional.png',
                       onTap: () {
                         //     Navegação para tela de profissional
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: ((context) => const Profissional())));
                       },
                     ),
 

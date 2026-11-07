@@ -10,7 +10,7 @@ import 'package:laborhub/Model/endereco.dart';
 import '../Utils/validacao.dart';
 import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import 'enderecoTela.dart';
+import 'package:laborhub/Telas/enderecoProfissionalTela.dart';
 
 import '../Model/pessoaFisica.dart';
 import '../Model/pessoJuridica.dart';
@@ -19,14 +19,14 @@ import '../Repository/pessoaFisica_repository.dart';
 import '../Repository/pessoaJuridica_Repository.dart';
 import '../Repository/usuarios_repository.dart';
 
-class Cliente extends StatefulWidget {
-  const Cliente({super.key});
+class Profissional extends StatefulWidget {
+  const Profissional({super.key});
 
   @override
-  State<Cliente> createState() => _ClienteTelas();
+  State<Profissional> createState() => _ProfissionalTelas();
 }
 
-class _ClienteTelas extends State<Cliente> {
+class _ProfissionalTelas extends State<Profissional> {
   Uint8List? _foto; //para foto de perfil
   bool _pessoaFisica = true; // para mudar o botao ao escolher o tipo de usuario
 
@@ -490,7 +490,7 @@ class _ClienteTelas extends State<Cliente> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => EnderecoTela(
+                                    builder: (context) => EnderecoProfissionalTela(
                                       pessoaFisica: _pessoaFisica,
 
                                       email: _usuarios_email.text.trim(),
@@ -525,7 +525,7 @@ class _ClienteTelas extends State<Cliente> {
                               style: FilledButton.styleFrom(
                                   backgroundColor: Color.fromARGB(1000, 59, 130, 246),
                                   minimumSize: const Size(500, 35),
-                                  padding: EdgeInsets.all(20),
+                                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                                   textStyle: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w500,
@@ -747,7 +747,7 @@ class _ClienteTelas extends State<Cliente> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => EnderecoTela(
+                                    builder: (context) => EnderecoProfissionalTela(
                                       pessoaFisica: _pessoaFisica,
 
                                       email: _usuarios_email.text.trim(),
@@ -782,7 +782,7 @@ class _ClienteTelas extends State<Cliente> {
                               style: FilledButton.styleFrom(
                                   backgroundColor: Color.fromARGB(1000, 59, 130, 246),
                                   minimumSize: const Size(500, 35),
-                                  padding: EdgeInsets.all(20),
+                                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                                   textStyle: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w500,

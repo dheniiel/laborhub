@@ -74,6 +74,7 @@ class _EnderecoTelaState extends State<EnderecoTela> {
   final _endereco_complemento = TextEditingController();
   final _endereco_cidade = TextEditingController();
   final _endereco_uf = TextEditingController();
+  final _endereco_nome = TextEditingController();
 
   @override
   void dispose() {
@@ -204,10 +205,10 @@ class _EnderecoTelaState extends State<EnderecoTela> {
 
       // Cria o model com os dados digitados nesta tela.
       final endereco = Endereco(
-        endereco_nome: 'Principal',
+        endereco_nome: _endereco_nome.text.trim(),
         endereco_rua: _endereco_rua.text.trim(),
         endereco_bairro: _endereco_bairro.text.trim(),
-        endereco_cep: _mascaraCep.getUnmaskedText(),
+        endereco_cep: _endereco_cep.text.trim(),
         endereco_complemento: _endereco_complemento.text.trim(),
         endereco_numero: _endereco_numero.text.trim(),
         endereco_descricao: null,
@@ -476,6 +477,25 @@ class _EnderecoTelaState extends State<EnderecoTela> {
                      ),
                      const SizedBox(height: 24),
 
+                     const Padding(
+                       padding: EdgeInsets.only(left: 12),
+                       child: Text(
+                         "Nome do endereço",
+                         style: TextStyle(
+                           fontSize: 15,
+                           fontWeight: FontWeight.w600,
+                         ),
+                       ),
+                     ),
+                     const SizedBox(height: 5),
+
+                     Forms(
+                       controlador: _endereco_cidade,
+                       tipagemValor: TextInputType.text,
+                       rotulo: "Ex.: Minha casa",
+
+                     ),
+
                      const SizedBox(height: 54),
 
                      FilledButton(
@@ -502,7 +522,7 @@ class _EnderecoTelaState extends State<EnderecoTela> {
                        style: FilledButton.styleFrom(
                            backgroundColor: Color.fromARGB(1000, 59, 130, 246),
                            minimumSize: const Size(500, 25),
-                           padding: EdgeInsets.all(20),
+                           padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                            textStyle: TextStyle(
                              fontSize: 18,
                              fontWeight: FontWeight.w500,
