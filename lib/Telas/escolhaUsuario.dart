@@ -49,7 +49,7 @@ class _EscolhaUsuarioState extends State<EscolhaUsuario> {
 
 
               const Text(
-                'Escolha seu usuário',
+                'Escolha seu perfil',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 28,
