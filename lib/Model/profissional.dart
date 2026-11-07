@@ -20,4 +20,18 @@ class Profissional{
     required this.profissional_preco,
     required this.profissional_imagem,
   });
+
+  factory Profissional.fromMap(Map<String, Object?> map){
+    return Profissional(
+      profissional_nome: map['profissional_nome'] as String,
+      profissional_profissao: map['profissional_profissao'] as String,
+      profissional_cidade: map['profissional_cidade'] as String,
+      profissional_uf: map['profissional_uf'] as String,
+      profissional_avaliacao: (map['profissional_avaliacao'] as num).toDouble(),
+      profissional_total_avaliacoes: map['profissional_total_avaliacoes'] as int,
+      profissional_observacao: map['profissional_observacao'] as String,
+      profissional_preco: (map['profissional_preco'] as num).toDouble(),
+      profissional_imagem: map['profissional_imagem'] as String? ?? '',
+    );
+  }
 }
