@@ -1,17 +1,14 @@
-name: Password recovery
+name: API e app
 on: [push, pull_request]
 jobs:
-  server:
+  api:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: server
     steps:
       - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
-      - run: dart pub get
-      - run: dart analyze --fatal-infos
-      - run: dart test
+      - name: Sintaxe PHP
+        run: for f in api/src/*.php api/public/*.php; do php -l "$f"; done
+      - name: Docker Compose válido
+        run: cp .env.example .env && sed -i "s/^APP_SECRET=.*/APP_SECRET=$(openssl rand -hex 32)/" .env && docker compose config -q
   flutter:
     runs-on: ubuntu-latest
     steps:

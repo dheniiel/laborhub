@@ -15,8 +15,6 @@ import 'package:laborhub/Telas/enderecoProfissionalTela.dart';
 import '../Model/pessoaFisica.dart';
 import '../Model/pessoJuridica.dart';
 import '../Model/usuarios.dart';
-import '../Repository/pessoaFisica_repository.dart';
-import '../Repository/pessoaJuridica_Repository.dart';
 import '../Repository/usuarios_repository.dart';
 
 class Profissional extends StatefulWidget {

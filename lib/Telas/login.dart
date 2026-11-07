@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../Formularios/forms.dart';
 import '../Repository/usuarios_repository.dart';
+import '../Repository/sessao_repository.dart';
+import '../Model/usuarios.dart';
 import 'escolhaUsuario.dart';
 import 'recuperarSenha.dart';
 import '../Repository/auth_api.dart';
@@ -19,8 +21,35 @@ class _LoginState extends State<Login> {
   final _emailController = TextEditingController();
   final _senhaController = TextEditingController();
   final UsuariosRepository _repository = UsuariosRepository();
+  final SessaoRepository _sessao = SessaoRepository();
 
   bool _carregando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restaurarSessao();
+  }
+
+  // Sessão salva no SQLite: entra direto, mesmo sem internet.
+  Future<void> _restaurarSessao() async {
+    try {
+      final sessao = await _sessao.restaurar();
+      if (!mounted || sessao == null || sessao.tipo != 'Cliente') return;
+      _abrirHome(sessao.usuario);
+    } catch (_) {
+      // Banco local indisponível: segue no login normal.
+    }
+  }
+
+  void _abrirHome(Usuarios usuario) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (context) => HomeCliente(usuario: usuario),
+      ),
+      (route) => false,
+    );
+  }
 
   @override
   void dispose() {
@@ -54,41 +83,24 @@ class _LoginState extends State<Login> {
     setState(() => _carregando = true);
 
     try {
-      final usuario = await _repository.Autenticar(
+      final (usuario, tipo) = await _repository.Autenticar(
         _emailController.text,
         _senhaController.text,
       );
 
       if (!mounted) return;
 
-      if (usuario == null) {
-        _mostrarMensagem('Email ou senha inválidos');
-        return;
-      }
-
-      final local = await _repository.BuscarLocal(usuario.usuarios_email);
-      final tipo = local?.usuarios_id == null
-          ? null
-          : await _repository.BuscarTipo(local!.usuarios_id!);
-
-      if (!mounted) return;
-
-      if (local == null || tipo == null) {
-        _mostrarMensagem('Perfil não encontrado neste aparelho.');
-        return;
-      }
-
       if (tipo != 'Cliente') {
-        _mostrarMensagem('Esta área está disponível apenas para clientes.');
+        // Sem área para este perfil no app: não mantém a sessão aberta.
+        await _sessao.sair();
+        if (!mounted) return;
+        _mostrarMensagem(tipo == null
+            ? 'Perfil não encontrado.'
+            : 'Esta área está disponível apenas para clientes.');
         return;
       }
 
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => HomeCliente(usuario: local),
-        ),
-        (route) => false,
-      );
+      _abrirHome(usuario);
     } on AuthException catch (error) {
       if (mounted) _mostrarMensagem(error.mensagem);
     } catch (_) {

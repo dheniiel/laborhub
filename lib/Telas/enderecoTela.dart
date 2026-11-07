@@ -183,6 +183,7 @@ class _EnderecoTelaState extends State<EnderecoTela> {
             obrigatorio(widget.dataNascimento, 'a data de nascimento'),
           ),
           pf_genero: obrigatorio(widget.genero, 'o gênero'),
+          pf_cpf: widget.cpf,
           pf_tipo: 'Cliente',
           pf_usuarios_id: 0,
         );
