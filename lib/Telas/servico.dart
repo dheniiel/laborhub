@@ -9,7 +9,7 @@ import '../Model/endereco.dart';
 import '../Utils/validacao.dart';
 import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import '../Repository/cadastro_repository.dart';
+import '../Repository/cadastroProfissional_repository.dart';
 import '../Model/usuarios.dart';
 import '../Model/pessoJuridica.dart';
 import '../Model/pessoaFisica.dart';
@@ -274,10 +274,11 @@ class _ServicoTelaState extends State<ServicoTela> {
       );
 
       // O repository grava os dados e preenche as chaves estrangeiras.
-      await CadastroRepository().cadastrar(
+      await CadastroProfissionalRepository().cadastrar(
         senha: widget.senha,
         usuario: usuario.toMap(),
         endereco: endereco.toMap(),
+        servico: servico.toMap(),
         pessoaFisica: pessoaFisica?.toMap(),
         pessoaJuridica: pessoaJuridica?.toMap(),
       );
@@ -331,7 +332,7 @@ class _ServicoTelaState extends State<ServicoTela> {
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
         title: const Text(
-          'Informe seu endereço',
+          'Informe seu serviço',
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontFamily: 'MontSerrat',
@@ -515,7 +516,7 @@ class _ServicoTelaState extends State<ServicoTela> {
                         rotulo: "Descreva mais sobre seu serviço (opcional)",
 
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 54),
 
                       FilledButton(
                         onPressed: () async {

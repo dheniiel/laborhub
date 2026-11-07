@@ -95,7 +95,7 @@ class _EnderecoProfissionalTelaState extends State<EnderecoProfissionalTela> {
     mask: '#####-###',
     filter: {'#': RegExp(r'[0-9]')},
   );
-  
+
 
 
    @override

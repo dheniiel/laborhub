@@ -26,87 +26,25 @@ class AppDatabase {
     return openDatabase(
       caminho,
       version: 3,
-
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
-
       onCreate: (db, version) => _criarTabelas(db),
-
-<<<<<<< HEAD
-        await db.execute('''
-          CREATE TABLE pessoaFisica (
-            pf_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pf_nome TEXT NOT NULL,
-            pf_sobrenome TEXT NOT NULL,
-            pf_dataNascimento TEXT,
-            pf_genero TEXT,
-            pf_cpf TEXT,
-            pf_tipo TEXT,
-            pf_usuarios_id INTEGER,
-            FOREIGN KEY (pf_usuarios_id) REFERENCES usuarios(usuarios_id)
-            
-            
-          )
-        ''');
-
-        await db.execute('''
-          CREATE TABLE pessoaJuridica (
-            pj_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pj_razaoSocial TEXT NOT NULL,
-            pj_nomeFantasia TEXT NOT NULL,
-            pj_dataFundacao TEXT,
-            pj_cnpj TEXT NOT NULL,
-            pj_tipo TEXT NOT NULL,
-            pj_usuarios_id INTEGER,
-            FOREIGN KEY (pj_usuarios_id) REFERENCES usuarios(usuarios_id)
-            
-          )
-        ''');
-
-        await db.execute('''
-          CREATE TABLE endereco (
-            endereco_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            endereco_nome TEXT NOT NULL,
-            endereco_rua TEXT NOT NULL,
-            endereco_bairro TEXT,
-            endereco_cep TEXT NOT NULL,
-            endereco_complemento TEXT,
-            endereco_numero TEXT NOT NULL,
-            endereco_descricao TEXT,
-            endereco_cidade TEXT NOT NULL,
-            endereco_uf TEXT NOT NULL,
-            endereco_usuarios_id INTEGER,
-            FOREIGN KEY (endereco_usuarios_id) REFERENCES usuarios(usuarios_id)
-          )
-        ''');
-
-
-        await db.execute('''
-          CREATE TABLE servicos (
-            servicos_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            servicos_nome TEXT NOT NULL,
-            servicos_data TEXT NOT NULL,
-            servicos_valor Decimal(9,2),
-            endereco_cep TEXT NOT NULL,
-            servicos_tipo_cobranca` TEXT,
-            servicos_nivel_experiencia TEXT NOT NULL,
-            servicos_descricao TEXT,
-            servicos_usuarios_id INTEGER,
-            FOREIGN KEY (servicos_usuarios_id) REFERENCES usuarios(usuarios_id)
-          )
-        ''');
-=======
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 3) {
-          // As versões 1 e 2 guardavam perfis criados só no aparelho, sem vínculo com o MySQL.
-          // A partir da versão 3 o SQLite é a cópia offline dos dados da API: recria as tabelas.
-          for (final tabela in ['endereco', 'pessoaFisica', 'pessoaJuridica', 'usuarios']) {
+          for (final tabela in [
+            'sessao',
+            'endereco',
+            'pessoaFisica',
+            'pessoaJuridica',
+            'usuarios',
+            'servicos'
+          ]) {
             await db.execute('DROP TABLE IF EXISTS $tabela');
           }
+
           await _criarTabelas(db);
         }
->>>>>>> f662486355a83660d1e54f667d2244531de3343c
       },
     );
   }
