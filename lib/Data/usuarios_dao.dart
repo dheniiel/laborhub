@@ -15,7 +15,7 @@ class UsuariosDao {
         final db = await _db;
         final resultado = await db.query(
             'usuarios',
-            where: 'usuarios_email = ? AND usuarios_deletado_em IS NULL',
+            where: 'LOWER(usuarios_email) = LOWER(?) AND usuarios_deletado_em IS NULL',
             whereArgs: [email],
             limit: 1,
         );

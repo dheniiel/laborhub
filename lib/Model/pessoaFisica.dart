@@ -38,7 +38,7 @@ factory PessoaFisica.fromMap(Map<String, Object?> map) {
     pf_id: map['pf_id'] as int?,
     pf_nome : map['pf_nome'] as String,
     pf_sobrenome : map['pf_sobrenome'] as String,
-    pf_dataNascimento : DateTime.parse(['pf_dataNascimento'] as String),
+    pf_dataNascimento : DateTime.parse(map['pf_dataNascimento'] as String),
     pf_genero : map['pf_genero'] as String,
     pf_tipo : map['pf_tipo'] as String,
     pf_usuarios_id : map['pf_usuarios_id'] as int,

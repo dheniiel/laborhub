@@ -5,6 +5,7 @@ import '../Repository/usuarios_repository.dart';
 import 'escolhaUsuario.dart';
 import 'recuperarSenha.dart';
 import '../Repository/auth_api.dart';
+import 'homeCliente.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -65,8 +66,29 @@ class _LoginState extends State<Login> {
         return;
       }
 
-      _mostrarMensagem('Login realizado com sucesso');
-      // Navegação para a tela inicial do usuário autenticado
+      final local = await _repository.BuscarLocal(usuario.usuarios_email);
+      final tipo = local?.usuarios_id == null
+          ? null
+          : await _repository.BuscarTipo(local!.usuarios_id!);
+
+      if (!mounted) return;
+
+      if (local == null || tipo == null) {
+        _mostrarMensagem('Perfil não encontrado neste aparelho.');
+        return;
+      }
+
+      if (tipo != 'Cliente') {
+        _mostrarMensagem('Esta área está disponível apenas para clientes.');
+        return;
+      }
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => HomeCliente(usuario: local),
+        ),
+        (route) => false,
+      );
     } on AuthException catch (error) {
       if (mounted) _mostrarMensagem(error.mensagem);
     } catch (_) {
