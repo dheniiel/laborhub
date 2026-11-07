@@ -5,6 +5,7 @@ final String pf_nome;
 final String pf_sobrenome;
 final DateTime pf_dataNascimento;
 final String pf_genero;
+final String? pf_cpf;
 final String pf_tipo;
 final int pf_usuarios_id; // chave estrangeira de usuarios
 
@@ -14,6 +15,7 @@ const PessoaFisica({
     required this.pf_sobrenome,
     required this.pf_dataNascimento,
     required this.pf_genero,
+    this.pf_cpf,
     required this.pf_tipo,
     required this.pf_usuarios_id
 
@@ -27,6 +29,7 @@ Map<String, Object?> toMap() {
         'pf_sobrenome' : pf_sobrenome,
         'pf_dataNascimento' : pf_dataNascimento.toIso8601String(),
         'pf_genero' : pf_genero,
+        'pf_cpf' : pf_cpf,
         'pf_tipo' : pf_tipo,
         'pf_usuarios_id': pf_usuarios_id,
     };
@@ -40,6 +43,7 @@ factory PessoaFisica.fromMap(Map<String, Object?> map) {
     pf_sobrenome : map['pf_sobrenome'] as String,
     pf_dataNascimento : DateTime.parse(map['pf_dataNascimento'] as String),
     pf_genero : map['pf_genero'] as String,
+    pf_cpf : map['pf_cpf'] as String?,
     pf_tipo : map['pf_tipo'] as String,
     pf_usuarios_id : map['pf_usuarios_id'] as int,
 

@@ -46,3 +46,11 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Configuração local do Docker (segredos)
+.env
+
+# Bancos locais
+*.sqlite
+*.sqlite-*
+*.db

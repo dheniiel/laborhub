@@ -1,6 +1,6 @@
 # laborhub
 
-Configuração da API, SMTP, migração de contas e testes: [Recuperação de senha](docs/recuperacao-senha.md).
+Ambiente local (Docker com API PHP, MySQL, phpMyAdmin e SMTP), contrato da API e testes: [Ambiente e API](docs/ambiente.md).
 
 A new Flutter project.
 
