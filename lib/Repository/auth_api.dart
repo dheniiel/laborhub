@@ -4,7 +4,8 @@ import 'package:http/http.dart' as http;
 
 class AuthException implements Exception {
   final String mensagem;
-  const AuthException(this.mensagem);
+  final int? status; // código HTTP; null quando não houve resposta (sem conexão)
+  const AuthException(this.mensagem, [this.status]);
   @override
   String toString() => mensagem;
 }
@@ -18,8 +19,9 @@ class AuthApi {
 
   Future<Map<String, dynamic>> post(
     String path,
-    Map<String, String> data,
-  ) async {
+    Map<String, Object?> data, {
+    String? token,
+  }) async {
     final uri = Uri.tryParse(baseUrl);
     const local = bool.fromEnvironment('ALLOW_LOCAL_HTTP');
     if (uri == null ||
@@ -33,7 +35,10 @@ class AuthApi {
       final response = await _client
           .post(
             Uri.parse('${baseUrl.replaceAll(RegExp(r'/+$'), '')}/$path'),
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null) 'Authorization': 'Bearer $token',
+            },
             body: jsonEncode(data),
           )
           .timeout(const Duration(seconds: 30));
@@ -42,6 +47,7 @@ class AuthApi {
       if (response.statusCode >= 400) {
         throw AuthException(
           body['message'] as String? ?? 'Não foi possível concluir.',
+          response.statusCode,
         );
       }
       return body;

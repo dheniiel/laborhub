@@ -1,0 +1,477 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Cadastro, login e recuperação de senha do LaborHub.
+ * Mantém o contrato da API Dart anterior (/auth/...), agora sobre o MySQL.
+ */
+final class Auth
+{
+    // Hash sem senha conhecida: iguala o tempo de resposta para emails inexistentes.
+    private const HASH_FALSO = '$2y$10$2uhynh1phTdNxOwRD0xX2uxIzN7NuypRl.p6DMPbCpg4O3Q0nNCa2';
+    private const ATIVO = 'usuarios_ativo = 1 AND usuarios_deletado_em IS NULL';
+    private const DIAS_SESSAO = 30;
+
+    /** @param Closure(string, string): void $enviarCodigo */
+    public function __construct(
+        private PDO $db,
+        private string $segredo,
+        private Closure $enviarCodigo,
+    ) {
+        if (strlen($segredo) < 32) {
+            throw new InvalidArgumentException('APP_SECRET: mínimo 32 caracteres');
+        }
+    }
+
+    /** @return array{0: int, 1: array, 2?: ?callable} */
+    public function processar(string $rota, array $dados, string $ip, ?string $token = null): array
+    {
+        // Rotas de sessão: identificadas pelo token (Authorization: Bearer), sem email no corpo.
+        if ($rota === 'auth/session') {
+            return $this->renovarSessao($token);
+        }
+        if ($rota === 'auth/logout') {
+            return $this->encerrarSessao($token);
+        }
+
+        $email = $this->email($dados);
+        return match ($rota) {
+            'auth/register' => $this->cadastrar($dados, $email, $ip),
+            'auth/login' => $this->entrar($dados, $email),
+            'auth/password/request' => $this->solicitarCodigo($email, $ip),
+            'auth/password/verify' => $this->validarCodigo($dados, $email),
+            'auth/password/reset' => $this->redefinirSenha($dados, $email),
+            default => throw new ApiError(404, 'Rota não encontrada.'),
+        };
+    }
+
+    /** Limite persistente de tentativas por chave (IP ou email). */
+    public function limitar(string $chave, int $maximo, int $segundos): void
+    {
+        $agora = time();
+        $chave = $this->hmac("limite:$chave");
+        $this->db->prepare('DELETE FROM limites WHERE limites_inicio < ?')->execute([$agora - 3600]);
+        $this->db->prepare(
+            'INSERT INTO limites (limites_chave, limites_inicio, limites_total) VALUES (?, ?, 1)
+             ON DUPLICATE KEY UPDATE
+               limites_total = IF(limites_inicio <= ?, 1, limites_total + 1),
+               limites_inicio = IF(limites_inicio <= ?, ?, limites_inicio)'
+        )->execute([$chave, $agora, $agora - $segundos, $agora - $segundos, $agora]);
+
+        $consulta = $this->db->prepare('SELECT limites_total FROM limites WHERE limites_chave = ?');
+        $consulta->execute([$chave]);
+        if ((int) $consulta->fetchColumn() > $maximo) {
+            throw new ApiError(429, 'Muitas tentativas. Aguarde e tente novamente.');
+        }
+    }
+
+    private function cadastrar(array $dados, string $email, string $ip): array
+    {
+        $this->limitar("cadastro:$ip", 10, 3600);
+        $senha = $this->texto($dados, 'password', 128);
+        $this->validarSenha($senha);
+        $usuario = $this->objeto($dados, 'usuario');
+        $endereco = $this->objeto($dados, 'endereco');
+        $pessoaFisica = isset($dados['pessoaFisica']);
+        if ($pessoaFisica === isset($dados['pessoaJuridica'])) {
+            throw new ApiError(400, 'Informe pessoa física ou pessoa jurídica, apenas uma.');
+        }
+
+        // Repetição após resposta perdida: aceita somente com a mesma senha.
+        $existente = $this->buscarUsuario($email);
+        if ($existente !== null) {
+            if (password_verify($senha, (string) $existente['usuarios_senha_hash'])) {
+                return [200, ['usuarios_id' => (int) $existente['usuarios_id']]];
+            }
+            throw new ApiError(409, 'Não foi possível cadastrar este email.');
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $this->db->prepare(
+                'INSERT INTO usuarios (usuarios_email, usuarios_imagem, usuarios_telefone, usuarios_senha_hash,
+                   usuarios_ativo, usuarios_is_admin, usuarios_criado_em)
+                 VALUES (?, ?, ?, ?, 1, 0, UTC_TIMESTAMP())'
+            )->execute([
+                $email,
+                $this->opcional($usuario, 'usuarios_imagem', 255),
+                $this->opcional($usuario, 'usuarios_telefone', 20),
+                password_hash($senha, PASSWORD_DEFAULT),
+            ]);
+            $id = (int) $this->db->lastInsertId();
+
+            if ($pessoaFisica) {
+                $pf = $this->objeto($dados, 'pessoaFisica');
+                $this->db->prepare(
+                    'INSERT INTO pessoaFisica (pf_nome, pf_sobrenome, pf_dataNascimento, pf_genero, pf_cpf, pf_tipo, pf_usuarios_id)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)'
+                )->execute([
+                    $this->texto($pf, 'pf_nome', 50),
+                    $this->texto($pf, 'pf_sobrenome', 150),
+                    $this->data($pf, 'pf_dataNascimento'),
+                    $this->opcional($pf, 'pf_genero', 100),
+                    $this->documento($pf, 'pf_cpf', 11),
+                    $this->tipo($pf, 'pf_tipo'),
+                    $id,
+                ]);
+            } else {
+                $pj = $this->objeto($dados, 'pessoaJuridica');
+                $this->db->prepare(
+                    'INSERT INTO pessoaJuridica (pj_razaoSocial, pj_nomeFantasia, pj_dataFundacao, pj_cnpj, pj_tipo, pj_usuarios_id)
+                     VALUES (?, ?, ?, ?, ?, ?)'
+                )->execute([
+                    $this->texto($pj, 'pj_razaoSocial', 200),
+                    $this->texto($pj, 'pj_nomeFantasia', 200),
+                    $this->data($pj, 'pj_dataFundacao'),
+                    $this->documento($pj, 'pj_cnpj', 14),
+                    $this->tipo($pj, 'pj_tipo'),
+                    $id,
+                ]);
+            }
+
+            $this->db->prepare(
+                'INSERT INTO endereco (endereco_nome, endereco_rua, endereco_bairro, endereco_cep, endereco_complemento,
+                   endereco_numero, endereco_descricao, endereco_cidade, endereco_uf, endereco_usuarios_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            )->execute([
+                $this->opcional($endereco, 'endereco_nome', 30) ?? 'Principal',
+                $this->texto($endereco, 'endereco_rua', 100),
+                $this->opcional($endereco, 'endereco_bairro', 100),
+                $this->texto($endereco, 'endereco_cep', 20),
+                $this->opcional($endereco, 'endereco_complemento', 150),
+                $this->texto($endereco, 'endereco_numero', 20),
+                $this->opcional($endereco, 'endereco_descricao', 1000),
+                $this->texto($endereco, 'endereco_cidade', 100),
+                strtoupper($this->texto($endereco, 'endereco_uf', 2)),
+                $id,
+            ]);
+            $this->db->commit();
+        } catch (Throwable $erro) {
+            $this->db->rollBack();
+            if ($erro instanceof PDOException && $erro->getCode() === '23000') {
+                throw new ApiError(409, 'Email, CPF ou CNPJ já cadastrado.');
+            }
+            throw $erro;
+        }
+
+        return [201, ['usuarios_id' => $id]];
+    }
+
+    private function entrar(array $dados, string $email): array
+    {
+        $this->limitar("login:$email", 10, 900);
+        $senha = $this->texto($dados, 'password', 128);
+        $usuario = $this->buscarUsuario($email);
+        $hash = (string) ($usuario['usuarios_senha_hash'] ?? self::HASH_FALSO);
+        if (!password_verify($senha, $hash) || $usuario === null) {
+            throw new ApiError(401, 'Email ou senha inválidos.');
+        }
+        $id = (int) $usuario['usuarios_id'];
+        if (password_needs_rehash($hash, PASSWORD_DEFAULT)) {
+            $this->db->prepare('UPDATE usuarios SET usuarios_senha_hash = ? WHERE usuarios_id = ?')
+                ->execute([password_hash($senha, PASSWORD_DEFAULT), $id]);
+        }
+
+        return [200, $this->perfil($usuario) + $this->criarSessao($id)];
+    }
+
+    /**
+     * Usuário dono do token. Use em rotas que exigem login:
+     * $usuario = $auth->usuarioDaSessao($token);
+     */
+    public function usuarioDaSessao(?string $token): array
+    {
+        if ($token === null || !preg_match('/^[A-Za-z0-9_-]{43}$/', $token)) {
+            $this->sessaoInvalida();
+        }
+        $consulta = $this->db->prepare(
+            'SELECT usuarios.*, sessoes.sessoes_id FROM sessoes
+             JOIN usuarios ON usuarios.usuarios_id = sessoes.sessoes_usuarios_id
+             WHERE sessoes.sessoes_token_hash = ? AND sessoes.sessoes_expira_em > UTC_TIMESTAMP() AND ' . self::ATIVO
+        );
+        $consulta->execute([$this->hmac("sessao:$token")]);
+        return $consulta->fetch() ?: $this->sessaoInvalida();
+    }
+
+    private function criarSessao(int $id): array
+    {
+        $this->db->exec('DELETE FROM sessoes WHERE sessoes_expira_em <= UTC_TIMESTAMP()');
+        $token = $this->tokenAleatorio();
+        $expira = time() + self::DIAS_SESSAO * 86400;
+        $this->db->prepare(
+            'INSERT INTO sessoes (sessoes_token_hash, sessoes_usuarios_id, sessoes_criada_em, sessoes_expira_em)
+             VALUES (?, ?, UTC_TIMESTAMP(), ?)'
+        )->execute([$this->hmac("sessao:$token"), $id, gmdate('Y-m-d H:i:s', $expira)]);
+        return ['token' => $token, 'sessao_expira_em' => gmdate('Y-m-d\TH:i:s\Z', $expira)];
+    }
+
+    /** Valida o token, estende a validade (30 dias a partir do uso) e devolve o perfil atualizado. */
+    private function renovarSessao(?string $token): array
+    {
+        $usuario = $this->usuarioDaSessao($token);
+        $expira = time() + self::DIAS_SESSAO * 86400;
+        $this->db->prepare('UPDATE sessoes SET sessoes_expira_em = ? WHERE sessoes_id = ?')
+            ->execute([gmdate('Y-m-d H:i:s', $expira), $usuario['sessoes_id']]);
+        return [200, $this->perfil($usuario) + ['sessao_expira_em' => gmdate('Y-m-d\TH:i:s\Z', $expira)]];
+    }
+
+    private function encerrarSessao(?string $token): array
+    {
+        if ($token !== null) {
+            $this->db->prepare('DELETE FROM sessoes WHERE sessoes_token_hash = ?')
+                ->execute([$this->hmac("sessao:$token")]);
+        }
+        return [200, ['message' => 'Sessão encerrada.']];
+    }
+
+    /** Usuário (formato de Usuarios.fromMap), tipo e dados do perfil, para o app guardar offline. */
+    private function perfil(array $usuario): array
+    {
+        $id = (int) $usuario['usuarios_id'];
+        $buscar = function (string $sql) use ($id): array {
+            $consulta = $this->db->prepare($sql);
+            $consulta->execute([$id]);
+            return $consulta->fetchAll();
+        };
+        $pf = $buscar('SELECT * FROM pessoaFisica WHERE pf_usuarios_id = ? LIMIT 1')[0] ?? null;
+        $pj = $buscar('SELECT * FROM pessoaJuridica WHERE pj_usuarios_id = ? LIMIT 1')[0] ?? null;
+        $criado = $usuario['usuarios_criado_em'] ?? gmdate('Y-m-d H:i:s');
+
+        return [
+            'usuarios_id' => $id,
+            'usuarios_email' => $usuario['usuarios_email'],
+            'usuarios_imagem' => $usuario['usuarios_imagem'] ?? '',
+            'usuarios_telefone' => $usuario['usuarios_telefone'],
+            'usuarios_senha_hash' => '',
+            'usuarios_ativo' => 1,
+            'usuarios_is_admin' => (int) $usuario['usuarios_is_admin'],
+            'usuarios_criado_em' => str_replace(' ', 'T', (string) $criado) . 'Z',
+            'tipo' => $pf['pf_tipo'] ?? $pj['pj_tipo'] ?? null,
+            'pessoaFisica' => $pf,
+            'pessoaJuridica' => $pj,
+            'enderecos' => $buscar('SELECT * FROM endereco WHERE endereco_usuarios_id = ? ORDER BY endereco_id'),
+        ];
+    }
+
+    private function solicitarCodigo(string $email, string $ip): array
+    {
+        // Mesmos limites e mesma resposta para emails cadastrados ou não.
+        $this->limitar("envio-ip:$ip", 10, 3600);
+        $this->limitar("envio-hora:$email", 5, 3600);
+        $this->limitar("envio-minuto:$email", 1, 60);
+
+        $resposta = ['message' => 'Se o email estiver cadastrado, você receberá um código.'];
+        $usuario = $this->buscarUsuario($email);
+        if ($usuario === null) {
+            return [202, $resposta];
+        }
+
+        $id = (int) $usuario['usuarios_id'];
+        $codigo = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $hash = $this->hmac("$email:codigo:$codigo");
+        // O novo código substitui qualquer código ou autorização anterior.
+        $this->db->prepare(
+            'UPDATE usuarios SET usuarios_reset_hash = ?, usuarios_expira_em = UTC_TIMESTAMP() + INTERVAL 10 MINUTE
+             WHERE usuarios_id = ?'
+        )->execute([$hash, $id]);
+        $this->db->prepare('DELETE FROM limites WHERE limites_chave = ?')
+            ->execute([$this->hmac("limite:verificar:$email")]);
+
+        // O email é enviado depois da resposta: a latência do SMTP não revela se a conta existe.
+        $enviar = function () use ($email, $codigo, $hash, $id): void {
+            try {
+                ($this->enviarCodigo)($email, $codigo);
+            } catch (Throwable) {
+                $this->db->prepare(
+                    'UPDATE usuarios SET usuarios_reset_hash = NULL, usuarios_expira_em = NULL
+                     WHERE usuarios_id = ? AND usuarios_reset_hash = ?'
+                )->execute([$id, $hash]);
+                // Sem email, código ou detalhes do SMTP no log.
+                error_log('Falha na entrega de email de recuperação. Verifique o SMTP.');
+            }
+        };
+        return [202, $resposta, $enviar];
+    }
+
+    private function validarCodigo(array $dados, string $email): array
+    {
+        $codigo = $this->texto($dados, 'code', 6);
+        if (!preg_match('/^\d{6}$/', $codigo)) {
+            throw new ApiError(400, 'Informe os seis dígitos.');
+        }
+        try {
+            $this->limitar("verificar:$email", 5, 600);
+        } catch (ApiError) {
+            // Cinco tentativas: o código é descartado.
+            $this->db->prepare(
+                'UPDATE usuarios SET usuarios_reset_hash = NULL, usuarios_expira_em = NULL WHERE usuarios_email = ?'
+            )->execute([$email]);
+            $this->codigoInvalido();
+        }
+
+        $consulta = $this->db->prepare(
+            'SELECT usuarios_id, usuarios_reset_hash FROM usuarios
+             WHERE usuarios_email = ? AND ' . self::ATIVO . ' AND usuarios_expira_em > UTC_TIMESTAMP()'
+        );
+        $consulta->execute([$email]);
+        $usuario = $consulta->fetch();
+        $esperado = $this->hmac("$email:codigo:$codigo");
+        if ($usuario === false || !hash_equals((string) $usuario['usuarios_reset_hash'], $esperado)) {
+            $this->codigoInvalido();
+        }
+
+        // Troca o código por uma autorização de uso único, válida por 5 minutos.
+        $token = $this->tokenAleatorio();
+        $atualizar = $this->db->prepare(
+            'UPDATE usuarios SET usuarios_reset_hash = ?, usuarios_expira_em = UTC_TIMESTAMP() + INTERVAL 5 MINUTE
+             WHERE usuarios_id = ? AND usuarios_reset_hash = ?'
+        );
+        $atualizar->execute([$this->hmac("$email:autorizacao:$token"), $usuario['usuarios_id'], $esperado]);
+        if ($atualizar->rowCount() !== 1) {
+            $this->codigoInvalido();
+        }
+        return [200, ['resetToken' => $token]];
+    }
+
+    private function redefinirSenha(array $dados, string $email): array
+    {
+        $token = $this->texto($dados, 'resetToken', 100);
+        $senha = $this->texto($dados, 'password', 128);
+        if ($senha !== $this->texto($dados, 'confirmation', 128)) {
+            throw new ApiError(400, 'As senhas não conferem.');
+        }
+        $this->validarSenha($senha);
+
+        // Troca e consumo da autorização no mesmo UPDATE: uso único mesmo com requisições simultâneas.
+        $atualizar = $this->db->prepare(
+            'UPDATE usuarios SET usuarios_senha_hash = ?, usuarios_reset_hash = NULL, usuarios_expira_em = NULL,
+               usuarios_atualizado_em = UTC_TIMESTAMP()
+             WHERE usuarios_email = ? AND usuarios_reset_hash = ? AND usuarios_expira_em > UTC_TIMESTAMP()
+               AND ' . self::ATIVO
+        );
+        $atualizar->execute([password_hash($senha, PASSWORD_DEFAULT), $email, $this->hmac("$email:autorizacao:$token")]);
+        if ($atualizar->rowCount() !== 1) {
+            $this->codigoInvalido();
+        }
+        // Senha nova encerra as sessões abertas em todos os aparelhos.
+        $this->db->prepare(
+            'DELETE sessoes FROM sessoes JOIN usuarios ON usuarios.usuarios_id = sessoes.sessoes_usuarios_id
+             WHERE usuarios.usuarios_email = ?'
+        )->execute([$email]);
+        return [200, ['message' => 'Senha redefinida com sucesso.']];
+    }
+
+    private function buscarUsuario(string $email): ?array
+    {
+        $consulta = $this->db->prepare('SELECT * FROM usuarios WHERE usuarios_email = ? AND ' . self::ATIVO);
+        $consulta->execute([$email]);
+        return $consulta->fetch() ?: null;
+    }
+
+    /** 256 bits aleatórios em base64url (43 caracteres). */
+    private function tokenAleatorio(): string
+    {
+        return rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+    }
+
+    private function hmac(string $valor): string
+    {
+        return hash_hmac('sha256', $valor, $this->segredo);
+    }
+
+    private function email(array $dados): string
+    {
+        $email = strtolower(trim($this->texto($dados, 'email', 255)));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new ApiError(400, 'Informe um email válido.');
+        }
+        return $email;
+    }
+
+    private function texto(array $dados, string $chave, int $maximo): string
+    {
+        $valor = $dados[$chave] ?? null;
+        if (!is_string($valor) || trim($valor) === '' || mb_strlen($valor) > $maximo) {
+            throw new ApiError(400, 'Dados inválidos.');
+        }
+        return $valor;
+    }
+
+    private function opcional(array $dados, string $chave, int $maximo): ?string
+    {
+        $valor = $dados[$chave] ?? null;
+        if ($valor === null || $valor === '') {
+            return null;
+        }
+        return trim($this->texto($dados, $chave, $maximo));
+    }
+
+    private function objeto(array $dados, string $chave): array
+    {
+        $valor = $dados[$chave] ?? null;
+        // {} chega como [] no PHP; listas não vazias são rejeitadas.
+        if (!is_array($valor) || ($valor !== [] && array_is_list($valor))) {
+            throw new ApiError(400, 'Dados inválidos.');
+        }
+        return $dados[$chave];
+    }
+
+    /** CPF (11) ou CNPJ (14) apenas com dígitos; opcional para manter compatibilidade. */
+    private function documento(array $dados, string $chave, int $digitos): ?string
+    {
+        $valor = $this->opcional($dados, $chave, 20);
+        if ($valor === null) {
+            return null;
+        }
+        $valor = preg_replace('/\D/', '', $valor);
+        if (strlen($valor) !== $digitos) {
+            throw new ApiError(400, 'Documento inválido.');
+        }
+        return $valor;
+    }
+
+    private function tipo(array $dados, string $chave): string
+    {
+        $tipo = $this->texto($dados, $chave, 15);
+        if (!in_array($tipo, ['Cliente', 'Profissional'], true)) {
+            throw new ApiError(400, 'Tipo de perfil inválido.');
+        }
+        return $tipo;
+    }
+
+    /** Aceita dd/mm/aaaa (formulário) ou aaaa-mm-dd / ISO 8601 (DateTime.toIso8601String). */
+    private function data(array $dados, string $chave): ?string
+    {
+        $valor = $this->opcional($dados, $chave, 40);
+        if ($valor === null) {
+            return null;
+        }
+        $valor = substr($valor, 0, 10);
+        foreach (['d/m/Y', 'Y-m-d'] as $formato) {
+            $data = DateTimeImmutable::createFromFormat("!$formato", $valor);
+            if ($data !== false && $data->format($formato) === $valor) {
+                return $data->format('Y-m-d');
+            }
+        }
+        throw new ApiError(400, 'Data inválida.');
+    }
+
+    private function validarSenha(string $senha): void
+    {
+        $tamanho = mb_strlen($senha);
+        if (trim($senha) === '' || $tamanho < 7 || $tamanho > 128) {
+            throw new ApiError(400, 'A senha deve ter de 7 a 128 caracteres.');
+        }
+    }
+
+    private function sessaoInvalida(): never
+    {
+        throw new ApiError(401, 'Sessão inválida ou expirada. Entre novamente.');
+    }
+
+    private function codigoInvalido(): never
+    {
+        throw new ApiError(400, 'Código ou autorização inválidos ou expirados. Solicite outro código.');
+    }
+}

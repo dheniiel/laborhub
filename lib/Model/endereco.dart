@@ -32,7 +32,7 @@ Map<String, Object?> toMap() {
     return {
         if(endereco_id != null) 'endereco_id' : endereco_id,
         'endereco_nome': endereco_nome,
-        'endereco_rua' : endereco_nome,
+        'endereco_rua' : endereco_rua,
         'endereco_bairro' : endereco_bairro,
         'endereco_cep' : endereco_cep,
         'endereco_complemento' : endereco_complemento,

@@ -6,10 +6,12 @@ import '../Formularios/forms.dart';
 import '../Model/profissional.dart';
 import '../Model/usuarios.dart';
 import '../Repository/profissional_repository.dart';
+import '../Repository/sessao_repository.dart';
+import 'login.dart';
 
 
 class HomeCliente extends StatefulWidget {
-  // Usuário local (SQLite), já confirmado como Cliente pelo Login.
+  // Usuário da sessão (API ou cópia offline no SQLite), já confirmado como Cliente pelo Login.
   final Usuarios usuario;
 
   const HomeCliente({super.key, required this.usuario});
@@ -21,6 +23,7 @@ class HomeCliente extends StatefulWidget {
 class _HomeClienteState extends State<HomeCliente> {
   final _pesquisaController = TextEditingController();
   final ProfissionalRepository _repository = ProfissionalRepository();
+  final SessaoRepository _sessao = SessaoRepository();
 
   List<Profissional> _profissionais = [];
   bool _carregando = true;
@@ -31,6 +34,39 @@ class _HomeClienteState extends State<HomeCliente> {
     // Refaz o filtro a cada letra digitada.
     _pesquisaController.addListener(() => setState(() {}));
     _carregarProfissionais();
+    _validarSessao();
+  }
+
+  // Confere a sessão na API ao abrir. Sem conexão, continua com os dados do SQLite.
+  Future<void> _validarSessao() async {
+    try {
+      final sessao = await _sessao.restaurar();
+      final valida = sessao == null ? null : await _sessao.validar(sessao);
+      if (valida == null) _voltarAoLogin('Sua sessão expirou. Entre novamente.');
+    } catch (_) {
+      // Erro no banco local: mantém a tela; a próxima abertura tenta de novo.
+    }
+  }
+
+  Future<void> _sair() async {
+    try {
+      await _sessao.sair();
+    } catch (_) {
+      // Mesmo com erro local, volta ao login.
+    }
+    _voltarAoLogin(null);
+  }
+
+  void _voltarAoLogin(String? mensagem) {
+    if (!mounted) return;
+    final mensageiro = ScaffoldMessenger.of(context);
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const Login()),
+      (route) => false,
+    );
+    if (mensagem != null) {
+      mensageiro.showSnackBar(SnackBar(content: Text(mensagem)));
+    }
   }
 
   @override
@@ -104,6 +140,12 @@ class _HomeClienteState extends State<HomeCliente> {
                         onPressed: () {
                           // Navegação para tela de configurações
                         },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.logout, size: 30),
+                        color: Colors.black,
+                        tooltip: 'Sair',
+                        onPressed: _sair,
                       ),
                     ],
                   ),
