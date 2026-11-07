@@ -1,0 +1,4287 @@
+From f64d456624ecce06f19d067bffc873fc5ba61d25 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 7 Nov 2026 15:50:48 -0300
+Subject: [PATCH] =?UTF-8?q?API=20PHP=20+=20MySQL=20em=20Docker,=20SMTP=20p?=
+ =?UTF-8?q?r=C3=B3prio,=20sess=C3=A3o=20e=20SQLite=20offline?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- api/: API PHP 8.3 sem dependências (PDO + cliente SMTP próprio), contrato /auth/*
+- docker-compose: api, mysql 8.0, phpmyadmin e mailpit; configuração no .env
+- database/init: dump fornecido + tabelas auxiliares limites e sessoes
+- Sessão: login retorna token (HMAC no MySQL), /auth/session e /auth/logout;
+  troca de senha encerra sessões
+- App: cadastro/login pela API; SQLite v3 como cópia offline do usuário logado
+  e da sessão (inclui tabela servicos usada pelo ServicosDAO); botão Sair na home
+- Correções: endereco_rua recebia o nome do endereço; CPF passa a ser gravado
+- Remove o servidor Dart (server/)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01VvuytXSzjqu8AVrEZLmiJH
+---
+ .env.example                                  |  26 +
+ .github/workflows/auth.yml                    |  15 +-
+ .gitignore                                    |   3 +
+ README.md                                     |   2 +-
+ android/app/src/debug/AndroidManifest.xml     |   2 +
+ api/Dockerfile                                |  12 +
+ api/public/index.php                          |  32 ++
+ api/src/Auth.php                              | 477 +++++++++++++++++
+ api/src/Smtp.php                              | 117 +++++
+ api/src/bootstrap.php                         | 122 +++++
+ database/init/01-laborhub.sql                 | 273 ++++++++++
+ database/init/02-api.sql                      |  11 +
+ database/init/03-sessoes.sql                  |  14 +
+ docker-compose.yml                            |  72 +++
+ docs/ambiente.md                              | 182 +++++++
+ docs/recuperacao-senha.md                     |  90 ----
+ lib/Data/app_database.dart                    | 184 ++++---
+ lib/Data/endereco_dao.dart                    |  13 -
+ lib/Data/pessoaFisica_dao.dart                |  26 -
+ lib/Data/pessoaJuridica_dao.dart              |  26 -
+ lib/Data/sessao_dao.dart                      |  66 +++
+ lib/Data/usuarios_dao.dart                    |  26 -
+ lib/Model/endereco.dart                       |   2 +-
+ lib/Model/pessoaFisica.dart                   |   4 +
+ lib/Model/sessao.dart                         |  19 +
+ lib/Repository/auth_api.dart                  |  14 +-
+ lib/Repository/cadastro_repository.dart       |  57 +-
+ lib/Repository/endereco_repository.dart       |  17 -
+ lib/Repository/pessoaFisica_repository.dart   |  17 -
+ lib/Repository/pessoaJuridica_Repository.dart |  17 -
+ lib/Repository/sessao_repository.dart         |  52 ++
+ lib/Repository/usuarios_repository.dart       |  41 +-
+ lib/Telas/cliente.dart                        |   2 -
+ lib/Telas/enderecoProfissionalTela.dart       |   1 +
+ lib/Telas/enderecoTela.dart                   |   1 +
+ lib/Telas/homeCliente.dart                    |  44 +-
+ lib/Telas/login.dart                          |  62 ++-
+ lib/Telas/profissional.dart                   |   2 -
+ server/.env.example                           |  11 -
+ server/.gitignore                             |   5 -
+ server/analysis_options.yaml                  |  11 -
+ server/bin/import_legacy.dart                 |  53 --
+ server/bin/server.dart                        |  56 --
+ server/lib/auth.dart                          | 302 -----------
+ server/pubspec.lock                           | 485 ------------------
+ server/pubspec.yaml                           |  12 -
+ server/test/auth_test.dart                    | 304 -----------
+ test/cadastro_api_test.dart                   | 128 +++--
+ test/sessao_test.dart                         | 161 ++++++
+ 49 files changed, 1959 insertions(+), 1712 deletions(-)
+ create mode 100644 .env.example
+ create mode 100644 api/Dockerfile
+ create mode 100644 api/public/index.php
+ create mode 100644 api/src/Auth.php
+ create mode 100644 api/src/Smtp.php
+ create mode 100644 api/src/bootstrap.php
+ create mode 100644 database/init/01-laborhub.sql
+ create mode 100644 database/init/02-api.sql
+ create mode 100644 database/init/03-sessoes.sql
+ create mode 100644 docker-compose.yml
+ create mode 100644 docs/ambiente.md
+ delete mode 100644 docs/recuperacao-senha.md
+ delete mode 100644 lib/Data/endereco_dao.dart
+ delete mode 100644 lib/Data/pessoaFisica_dao.dart
+ delete mode 100644 lib/Data/pessoaJuridica_dao.dart
+ create mode 100644 lib/Data/sessao_dao.dart
+ delete mode 100644 lib/Data/usuarios_dao.dart
+ create mode 100644 lib/Model/sessao.dart
+ delete mode 100644 lib/Repository/endereco_repository.dart
+ delete mode 100644 lib/Repository/pessoaFisica_repository.dart
+ delete mode 100644 lib/Repository/pessoaJuridica_Repository.dart
+ create mode 100644 lib/Repository/sessao_repository.dart
+ delete mode 100644 server/.env.example
+ delete mode 100644 server/.gitignore
+ delete mode 100644 server/analysis_options.yaml
+ delete mode 100644 server/bin/import_legacy.dart
+ delete mode 100644 server/bin/server.dart
+ delete mode 100644 server/lib/auth.dart
+ delete mode 100644 server/pubspec.lock
+ delete mode 100644 server/pubspec.yaml
+ delete mode 100644 server/test/auth_test.dart
+ create mode 100644 test/sessao_test.dart
+
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..d817203
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,26 @@
++# Copie para .env (cp .env.example .env) e troque as senhas. O .env não vai para o Git.
++
++# Portas no computador. Use API_BIND=0.0.0.0 apenas para testar em um celular físico na mesma rede.
++API_BIND=127.0.0.1
++API_PORT=8080
++PHPMYADMIN_PORT=8081
++MAILPIT_PORT=8025
++MYSQL_PORT=3307
++
++# MySQL. O nome do banco é definido em database/init/01-laborhub.sql; não altere sem editar o dump.
++DB_NAME=FluuterLaborHub
++DB_USER=laborhub
++DB_PASSWORD=troque-esta-senha
++MYSQL_ROOT_PASSWORD=troque-esta-senha-root
++
++# Segredo HMAC dos códigos de recuperação, com 32+ caracteres. Gere com: openssl rand -hex 32
++APP_SECRET=
++
++# SMTP. Padrão: Mailpit local (emails visíveis em http://localhost:8025).
++# Servidor real: SMTP_SECURITY=starttls (porta 587) ou ssl (porta 465), com usuário e senha.
++SMTP_HOST=mailpit
++SMTP_PORT=1025
++SMTP_SECURITY=none
++SMTP_USER=
++SMTP_PASSWORD=
++SMTP_FROM=no-reply@laborhub.local
+diff --git a/.github/workflows/auth.yml b/.github/workflows/auth.yml
+index dc5ae47..5e4ec70 100644
+--- a/.github/workflows/auth.yml
++++ b/.github/workflows/auth.yml
+@@ -1,17 +1,14 @@
+-name: Password recovery
++name: API e app
+ on: [push, pull_request]
+ jobs:
+-  server:
++  api:
+     runs-on: ubuntu-latest
+-    defaults:
+-      run:
+-        working-directory: server
+     steps:
+       - uses: actions/checkout@v4
+-      - uses: dart-lang/setup-dart@v1
+-      - run: dart pub get
+-      - run: dart analyze --fatal-infos
+-      - run: dart test
++      - name: Sintaxe PHP
++        run: for f in api/src/*.php api/public/*.php; do php -l "$f"; done
++      - name: Docker Compose válido
++        run: cp .env.example .env && sed -i "s/^APP_SECRET=.*/APP_SECRET=$(openssl rand -hex 32)/" .env && docker compose config -q
+   flutter:
+     runs-on: ubuntu-latest
+     steps:
+diff --git a/.gitignore b/.gitignore
+index 79f7eca..1209292 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -46,3 +46,6 @@ app.*.map.json
+ 
+ # Widget Preview related
+ .widget_preview/
++
++# Configuração local do Docker (segredos)
++.env
+diff --git a/README.md b/README.md
+index f336fcf..ea3e23f 100644
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,6 @@
+ # laborhub
+ 
+-Configuração da API, SMTP, migração de contas e testes: [Recuperação de senha](docs/recuperacao-senha.md).
++Ambiente local (Docker com API PHP, MySQL, phpMyAdmin e SMTP), contrato da API e testes: [Ambiente e API](docs/ambiente.md).
+ 
+ A new Flutter project.
+ 
+diff --git a/android/app/src/debug/AndroidManifest.xml b/android/app/src/debug/AndroidManifest.xml
+index 399f698..0a1c8f8 100644
+--- a/android/app/src/debug/AndroidManifest.xml
++++ b/android/app/src/debug/AndroidManifest.xml
+@@ -4,4 +4,6 @@
+          to allow setting breakpoints, to provide hot reload, etc.
+     -->
+     <uses-permission android:name="android.permission.INTERNET"/>
++    <!-- HTTP liberado somente no build de debug, para a API local (http://10.0.2.2:8080). -->
++    <application android:usesCleartextTraffic="true"/>
+ </manifest>
+diff --git a/api/Dockerfile b/api/Dockerfile
+new file mode 100644
+index 0000000..595c34f
+--- /dev/null
++++ b/api/Dockerfile
+@@ -0,0 +1,12 @@
++FROM php:8.3-apache
++
++# Extensão do MySQL, php.ini de produção e roteamento de tudo para public/index.php.
++RUN docker-php-ext-install pdo_mysql \
++    && mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
++    && printf 'expose_php=Off\nlog_errors=On\nerror_log=/dev/stderr\n' > "$PHP_INI_DIR/conf.d/laborhub.ini" \
++    && sed -ri 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf \
++    && printf '<Directory /var/www/html/public>\n  AllowOverride None\n  FallbackResource /index.php\n  CGIPassAuth On\n</Directory>\nServerTokens Prod\nServerSignature Off\n' \
++       > /etc/apache2/conf-enabled/laborhub.conf
++
++COPY src/ /var/www/html/src/
++COPY public/ /var/www/html/public/
+diff --git a/api/public/index.php b/api/public/index.php
+new file mode 100644
+index 0000000..3ee1123
+--- /dev/null
++++ b/api/public/index.php
+@@ -0,0 +1,32 @@
++<?php
++
++declare(strict_types=1);
++
++require dirname(__DIR__) . '/src/bootstrap.php';
++
++try {
++    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
++        throw new ApiError(405, 'Método não permitido.');
++    }
++    $rota = trim((string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), '/');
++
++    $auth = new Auth(conectarBanco(), env('APP_SECRET'), function (string $email, string $codigo): void {
++        criarSmtp()->enviar(
++            $email,
++            'Código para redefinir sua senha',
++            "Seu código é $codigo. Ele expira em 10 minutos e permite até 5 tentativas.\n\n"
++            . 'Se você não solicitou a recuperação, ignore este email.',
++        );
++    });
++
++    // IP da conexão; nunca X-Forwarded-For enviado pelo cliente.
++    $auth->limitar('ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'desconhecido'), 60, 900);
++    $resultado = $auth->processar($rota, lerJson(), $_SERVER['REMOTE_ADDR'] ?? 'desconhecido', lerToken());
++    responder($resultado[0], $resultado[1], $resultado[2] ?? null);
++} catch (ApiError $erro) {
++    responder($erro->status, ['message' => $erro->getMessage()]);
++} catch (Throwable $erro) {
++    // Registra só o tipo e o local: mensagens podem conter dados pessoais ou credenciais.
++    error_log(sprintf('LaborHub API: %s (%s) em %s:%d', $erro::class, $erro->getCode(), $erro->getFile(), $erro->getLine()));
++    responder(500, ['message' => 'Não foi possível concluir. Tente novamente.']);
++}
+diff --git a/api/src/Auth.php b/api/src/Auth.php
+new file mode 100644
+index 0000000..a20ff0f
+--- /dev/null
++++ b/api/src/Auth.php
+@@ -0,0 +1,477 @@
++<?php
++
++declare(strict_types=1);
++
++/**
++ * Cadastro, login e recuperação de senha do LaborHub.
++ * Mantém o contrato da API Dart anterior (/auth/...), agora sobre o MySQL.
++ */
++final class Auth
++{
++    // Hash sem senha conhecida: iguala o tempo de resposta para emails inexistentes.
++    private const HASH_FALSO = '$2y$10$2uhynh1phTdNxOwRD0xX2uxIzN7NuypRl.p6DMPbCpg4O3Q0nNCa2';
++    private const ATIVO = 'usuarios_ativo = 1 AND usuarios_deletado_em IS NULL';
++    private const DIAS_SESSAO = 30;
++
++    /** @param Closure(string, string): void $enviarCodigo */
++    public function __construct(
++        private PDO $db,
++        private string $segredo,
++        private Closure $enviarCodigo,
++    ) {
++        if (strlen($segredo) < 32) {
++            throw new InvalidArgumentException('APP_SECRET: mínimo 32 caracteres');
++        }
++    }
++
++    /** @return array{0: int, 1: array, 2?: ?callable} */
++    public function processar(string $rota, array $dados, string $ip, ?string $token = null): array
++    {
++        // Rotas de sessão: identificadas pelo token (Authorization: Bearer), sem email no corpo.
++        if ($rota === 'auth/session') {
++            return $this->renovarSessao($token);
++        }
++        if ($rota === 'auth/logout') {
++            return $this->encerrarSessao($token);
++        }
++
++        $email = $this->email($dados);
++        return match ($rota) {
++            'auth/register' => $this->cadastrar($dados, $email, $ip),
++            'auth/login' => $this->entrar($dados, $email),
++            'auth/password/request' => $this->solicitarCodigo($email, $ip),
++            'auth/password/verify' => $this->validarCodigo($dados, $email),
++            'auth/password/reset' => $this->redefinirSenha($dados, $email),
++            default => throw new ApiError(404, 'Rota não encontrada.'),
++        };
++    }
++
++    /** Limite persistente de tentativas por chave (IP ou email). */
++    public function limitar(string $chave, int $maximo, int $segundos): void
++    {
++        $agora = time();
++        $chave = $this->hmac("limite:$chave");
++        $this->db->prepare('DELETE FROM limites WHERE limites_inicio < ?')->execute([$agora - 3600]);
++        $this->db->prepare(
++            'INSERT INTO limites (limites_chave, limites_inicio, limites_total) VALUES (?, ?, 1)
++             ON DUPLICATE KEY UPDATE
++               limites_total = IF(limites_inicio <= ?, 1, limites_total + 1),
++               limites_inicio = IF(limites_inicio <= ?, ?, limites_inicio)'
++        )->execute([$chave, $agora, $agora - $segundos, $agora - $segundos, $agora]);
++
++        $consulta = $this->db->prepare('SELECT limites_total FROM limites WHERE limites_chave = ?');
++        $consulta->execute([$chave]);
++        if ((int) $consulta->fetchColumn() > $maximo) {
++            throw new ApiError(429, 'Muitas tentativas. Aguarde e tente novamente.');
++        }
++    }
++
++    private function cadastrar(array $dados, string $email, string $ip): array
++    {
++        $this->limitar("cadastro:$ip", 10, 3600);
++        $senha = $this->texto($dados, 'password', 128);
++        $this->validarSenha($senha);
++        $usuario = $this->objeto($dados, 'usuario');
++        $endereco = $this->objeto($dados, 'endereco');
++        $pessoaFisica = isset($dados['pessoaFisica']);
++        if ($pessoaFisica === isset($dados['pessoaJuridica'])) {
++            throw new ApiError(400, 'Informe pessoa física ou pessoa jurídica, apenas uma.');
++        }
++
++        // Repetição após resposta perdida: aceita somente com a mesma senha.
++        $existente = $this->buscarUsuario($email);
++        if ($existente !== null) {
++            if (password_verify($senha, (string) $existente['usuarios_senha_hash'])) {
++                return [200, ['usuarios_id' => (int) $existente['usuarios_id']]];
++            }
++            throw new ApiError(409, 'Não foi possível cadastrar este email.');
++        }
++
++        $this->db->beginTransaction();
++        try {
++            $this->db->prepare(
++                'INSERT INTO usuarios (usuarios_email, usuarios_imagem, usuarios_telefone, usuarios_senha_hash,
++                   usuarios_ativo, usuarios_is_admin, usuarios_criado_em)
++                 VALUES (?, ?, ?, ?, 1, 0, UTC_TIMESTAMP())'
++            )->execute([
++                $email,
++                $this->opcional($usuario, 'usuarios_imagem', 255),
++                $this->opcional($usuario, 'usuarios_telefone', 20),
++                password_hash($senha, PASSWORD_DEFAULT),
++            ]);
++            $id = (int) $this->db->lastInsertId();
++
++            if ($pessoaFisica) {
++                $pf = $this->objeto($dados, 'pessoaFisica');
++                $this->db->prepare(
++                    'INSERT INTO pessoaFisica (pf_nome, pf_sobrenome, pf_dataNascimento, pf_genero, pf_cpf, pf_tipo, pf_usuarios_id)
++                     VALUES (?, ?, ?, ?, ?, ?, ?)'
++                )->execute([
++                    $this->texto($pf, 'pf_nome', 50),
++                    $this->texto($pf, 'pf_sobrenome', 150),
++                    $this->data($pf, 'pf_dataNascimento'),
++                    $this->opcional($pf, 'pf_genero', 100),
++                    $this->documento($pf, 'pf_cpf', 11),
++                    $this->tipo($pf, 'pf_tipo'),
++                    $id,
++                ]);
++            } else {
++                $pj = $this->objeto($dados, 'pessoaJuridica');
++                $this->db->prepare(
++                    'INSERT INTO pessoaJuridica (pj_razaoSocial, pj_nomeFantasia, pj_dataFundacao, pj_cnpj, pj_tipo, pj_usuarios_id)
++                     VALUES (?, ?, ?, ?, ?, ?)'
++                )->execute([
++                    $this->texto($pj, 'pj_razaoSocial', 200),
++                    $this->texto($pj, 'pj_nomeFantasia', 200),
++                    $this->data($pj, 'pj_dataFundacao'),
++                    $this->documento($pj, 'pj_cnpj', 14),
++                    $this->tipo($pj, 'pj_tipo'),
++                    $id,
++                ]);
++            }
++
++            $this->db->prepare(
++                'INSERT INTO endereco (endereco_nome, endereco_rua, endereco_bairro, endereco_cep, endereco_complemento,
++                   endereco_numero, endereco_descricao, endereco_cidade, endereco_uf, endereco_usuarios_id)
++                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
++            )->execute([
++                $this->opcional($endereco, 'endereco_nome', 30) ?? 'Principal',
++                $this->texto($endereco, 'endereco_rua', 100),
++                $this->opcional($endereco, 'endereco_bairro', 100),
++                $this->texto($endereco, 'endereco_cep', 20),
++                $this->opcional($endereco, 'endereco_complemento', 150),
++                $this->texto($endereco, 'endereco_numero', 20),
++                $this->opcional($endereco, 'endereco_descricao', 1000),
++                $this->texto($endereco, 'endereco_cidade', 100),
++                strtoupper($this->texto($endereco, 'endereco_uf', 2)),
++                $id,
++            ]);
++            $this->db->commit();
++        } catch (Throwable $erro) {
++            $this->db->rollBack();
++            if ($erro instanceof PDOException && $erro->getCode() === '23000') {
++                throw new ApiError(409, 'Email, CPF ou CNPJ já cadastrado.');
++            }
++            throw $erro;
++        }
++
++        return [201, ['usuarios_id' => $id]];
++    }
++
++    private function entrar(array $dados, string $email): array
++    {
++        $this->limitar("login:$email", 10, 900);
++        $senha = $this->texto($dados, 'password', 128);
++        $usuario = $this->buscarUsuario($email);
++        $hash = (string) ($usuario['usuarios_senha_hash'] ?? self::HASH_FALSO);
++        if (!password_verify($senha, $hash) || $usuario === null) {
++            throw new ApiError(401, 'Email ou senha inválidos.');
++        }
++        $id = (int) $usuario['usuarios_id'];
++        if (password_needs_rehash($hash, PASSWORD_DEFAULT)) {
++            $this->db->prepare('UPDATE usuarios SET usuarios_senha_hash = ? WHERE usuarios_id = ?')
++                ->execute([password_hash($senha, PASSWORD_DEFAULT), $id]);
++        }
++
++        return [200, $this->perfil($usuario) + $this->criarSessao($id)];
++    }
++
++    /**
++     * Usuário dono do token. Use em rotas que exigem login:
++     * $usuario = $auth->usuarioDaSessao($token);
++     */
++    public function usuarioDaSessao(?string $token): array
++    {
++        if ($token === null || !preg_match('/^[A-Za-z0-9_-]{43}$/', $token)) {
++            $this->sessaoInvalida();
++        }
++        $consulta = $this->db->prepare(
++            'SELECT usuarios.*, sessoes.sessoes_id FROM sessoes
++             JOIN usuarios ON usuarios.usuarios_id = sessoes.sessoes_usuarios_id
++             WHERE sessoes.sessoes_token_hash = ? AND sessoes.sessoes_expira_em > UTC_TIMESTAMP() AND ' . self::ATIVO
++        );
++        $consulta->execute([$this->hmac("sessao:$token")]);
++        return $consulta->fetch() ?: $this->sessaoInvalida();
++    }
++
++    private function criarSessao(int $id): array
++    {
++        $this->db->exec('DELETE FROM sessoes WHERE sessoes_expira_em <= UTC_TIMESTAMP()');
++        $token = $this->tokenAleatorio();
++        $expira = time() + self::DIAS_SESSAO * 86400;
++        $this->db->prepare(
++            'INSERT INTO sessoes (sessoes_token_hash, sessoes_usuarios_id, sessoes_criada_em, sessoes_expira_em)
++             VALUES (?, ?, UTC_TIMESTAMP(), ?)'
++        )->execute([$this->hmac("sessao:$token"), $id, gmdate('Y-m-d H:i:s', $expira)]);
++        return ['token' => $token, 'sessao_expira_em' => gmdate('Y-m-d\TH:i:s\Z', $expira)];
++    }
++
++    /** Valida o token, estende a validade (30 dias a partir do uso) e devolve o perfil atualizado. */
++    private function renovarSessao(?string $token): array
++    {
++        $usuario = $this->usuarioDaSessao($token);
++        $expira = time() + self::DIAS_SESSAO * 86400;
++        $this->db->prepare('UPDATE sessoes SET sessoes_expira_em = ? WHERE sessoes_id = ?')
++            ->execute([gmdate('Y-m-d H:i:s', $expira), $usuario['sessoes_id']]);
++        return [200, $this->perfil($usuario) + ['sessao_expira_em' => gmdate('Y-m-d\TH:i:s\Z', $expira)]];
++    }
++
++    private function encerrarSessao(?string $token): array
++    {
++        if ($token !== null) {
++            $this->db->prepare('DELETE FROM sessoes WHERE sessoes_token_hash = ?')
++                ->execute([$this->hmac("sessao:$token")]);
++        }
++        return [200, ['message' => 'Sessão encerrada.']];
++    }
++
++    /** Usuário (formato de Usuarios.fromMap), tipo e dados do perfil, para o app guardar offline. */
++    private function perfil(array $usuario): array
++    {
++        $id = (int) $usuario['usuarios_id'];
++        $buscar = function (string $sql) use ($id): array {
++            $consulta = $this->db->prepare($sql);
++            $consulta->execute([$id]);
++            return $consulta->fetchAll();
++        };
++        $pf = $buscar('SELECT * FROM pessoaFisica WHERE pf_usuarios_id = ? LIMIT 1')[0] ?? null;
++        $pj = $buscar('SELECT * FROM pessoaJuridica WHERE pj_usuarios_id = ? LIMIT 1')[0] ?? null;
++        $criado = $usuario['usuarios_criado_em'] ?? gmdate('Y-m-d H:i:s');
++
++        return [
++            'usuarios_id' => $id,
++            'usuarios_email' => $usuario['usuarios_email'],
++            'usuarios_imagem' => $usuario['usuarios_imagem'] ?? '',
++            'usuarios_telefone' => $usuario['usuarios_telefone'],
++            'usuarios_senha_hash' => '',
++            'usuarios_ativo' => 1,
++            'usuarios_is_admin' => (int) $usuario['usuarios_is_admin'],
++            'usuarios_criado_em' => str_replace(' ', 'T', (string) $criado) . 'Z',
++            'tipo' => $pf['pf_tipo'] ?? $pj['pj_tipo'] ?? null,
++            'pessoaFisica' => $pf,
++            'pessoaJuridica' => $pj,
++            'enderecos' => $buscar('SELECT * FROM endereco WHERE endereco_usuarios_id = ? ORDER BY endereco_id'),
++        ];
++    }
++
++    private function solicitarCodigo(string $email, string $ip): array
++    {
++        // Mesmos limites e mesma resposta para emails cadastrados ou não.
++        $this->limitar("envio-ip:$ip", 10, 3600);
++        $this->limitar("envio-hora:$email", 5, 3600);
++        $this->limitar("envio-minuto:$email", 1, 60);
++
++        $resposta = ['message' => 'Se o email estiver cadastrado, você receberá um código.'];
++        $usuario = $this->buscarUsuario($email);
++        if ($usuario === null) {
++            return [202, $resposta];
++        }
++
++        $id = (int) $usuario['usuarios_id'];
++        $codigo = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
++        $hash = $this->hmac("$email:codigo:$codigo");
++        // O novo código substitui qualquer código ou autorização anterior.
++        $this->db->prepare(
++            'UPDATE usuarios SET usuarios_reset_hash = ?, usuarios_expira_em = UTC_TIMESTAMP() + INTERVAL 10 MINUTE
++             WHERE usuarios_id = ?'
++        )->execute([$hash, $id]);
++        $this->db->prepare('DELETE FROM limites WHERE limites_chave = ?')
++            ->execute([$this->hmac("limite:verificar:$email")]);
++
++        // O email é enviado depois da resposta: a latência do SMTP não revela se a conta existe.
++        $enviar = function () use ($email, $codigo, $hash, $id): void {
++            try {
++                ($this->enviarCodigo)($email, $codigo);
++            } catch (Throwable) {
++                $this->db->prepare(
++                    'UPDATE usuarios SET usuarios_reset_hash = NULL, usuarios_expira_em = NULL
++                     WHERE usuarios_id = ? AND usuarios_reset_hash = ?'
++                )->execute([$id, $hash]);
++                // Sem email, código ou detalhes do SMTP no log.
++                error_log('Falha na entrega de email de recuperação. Verifique o SMTP.');
++            }
++        };
++        return [202, $resposta, $enviar];
++    }
++
++    private function validarCodigo(array $dados, string $email): array
++    {
++        $codigo = $this->texto($dados, 'code', 6);
++        if (!preg_match('/^\d{6}$/', $codigo)) {
++            throw new ApiError(400, 'Informe os seis dígitos.');
++        }
++        try {
++            $this->limitar("verificar:$email", 5, 600);
++        } catch (ApiError) {
++            // Cinco tentativas: o código é descartado.
++            $this->db->prepare(
++                'UPDATE usuarios SET usuarios_reset_hash = NULL, usuarios_expira_em = NULL WHERE usuarios_email = ?'
++            )->execute([$email]);
++            $this->codigoInvalido();
++        }
++
++        $consulta = $this->db->prepare(
++            'SELECT usuarios_id, usuarios_reset_hash FROM usuarios
++             WHERE usuarios_email = ? AND ' . self::ATIVO . ' AND usuarios_expira_em > UTC_TIMESTAMP()'
++        );
++        $consulta->execute([$email]);
++        $usuario = $consulta->fetch();
++        $esperado = $this->hmac("$email:codigo:$codigo");
++        if ($usuario === false || !hash_equals((string) $usuario['usuarios_reset_hash'], $esperado)) {
++            $this->codigoInvalido();
++        }
++
++        // Troca o código por uma autorização de uso único, válida por 5 minutos.
++        $token = $this->tokenAleatorio();
++        $atualizar = $this->db->prepare(
++            'UPDATE usuarios SET usuarios_reset_hash = ?, usuarios_expira_em = UTC_TIMESTAMP() + INTERVAL 5 MINUTE
++             WHERE usuarios_id = ? AND usuarios_reset_hash = ?'
++        );
++        $atualizar->execute([$this->hmac("$email:autorizacao:$token"), $usuario['usuarios_id'], $esperado]);
++        if ($atualizar->rowCount() !== 1) {
++            $this->codigoInvalido();
++        }
++        return [200, ['resetToken' => $token]];
++    }
++
++    private function redefinirSenha(array $dados, string $email): array
++    {
++        $token = $this->texto($dados, 'resetToken', 100);
++        $senha = $this->texto($dados, 'password', 128);
++        if ($senha !== $this->texto($dados, 'confirmation', 128)) {
++            throw new ApiError(400, 'As senhas não conferem.');
++        }
++        $this->validarSenha($senha);
++
++        // Troca e consumo da autorização no mesmo UPDATE: uso único mesmo com requisições simultâneas.
++        $atualizar = $this->db->prepare(
++            'UPDATE usuarios SET usuarios_senha_hash = ?, usuarios_reset_hash = NULL, usuarios_expira_em = NULL,
++               usuarios_atualizado_em = UTC_TIMESTAMP()
++             WHERE usuarios_email = ? AND usuarios_reset_hash = ? AND usuarios_expira_em > UTC_TIMESTAMP()
++               AND ' . self::ATIVO
++        );
++        $atualizar->execute([password_hash($senha, PASSWORD_DEFAULT), $email, $this->hmac("$email:autorizacao:$token")]);
++        if ($atualizar->rowCount() !== 1) {
++            $this->codigoInvalido();
++        }
++        // Senha nova encerra as sessões abertas em todos os aparelhos.
++        $this->db->prepare(
++            'DELETE sessoes FROM sessoes JOIN usuarios ON usuarios.usuarios_id = sessoes.sessoes_usuarios_id
++             WHERE usuarios.usuarios_email = ?'
++        )->execute([$email]);
++        return [200, ['message' => 'Senha redefinida com sucesso.']];
++    }
++
++    private function buscarUsuario(string $email): ?array
++    {
++        $consulta = $this->db->prepare('SELECT * FROM usuarios WHERE usuarios_email = ? AND ' . self::ATIVO);
++        $consulta->execute([$email]);
++        return $consulta->fetch() ?: null;
++    }
++
++    /** 256 bits aleatórios em base64url (43 caracteres). */
++    private function tokenAleatorio(): string
++    {
++        return rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
++    }
++
++    private function hmac(string $valor): string
++    {
++        return hash_hmac('sha256', $valor, $this->segredo);
++    }
++
++    private function email(array $dados): string
++    {
++        $email = strtolower(trim($this->texto($dados, 'email', 255)));
++        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
++            throw new ApiError(400, 'Informe um email válido.');
++        }
++        return $email;
++    }
++
++    private function texto(array $dados, string $chave, int $maximo): string
++    {
++        $valor = $dados[$chave] ?? null;
++        if (!is_string($valor) || trim($valor) === '' || mb_strlen($valor) > $maximo) {
++            throw new ApiError(400, 'Dados inválidos.');
++        }
++        return $valor;
++    }
++
++    private function opcional(array $dados, string $chave, int $maximo): ?string
++    {
++        $valor = $dados[$chave] ?? null;
++        if ($valor === null || $valor === '') {
++            return null;
++        }
++        return trim($this->texto($dados, $chave, $maximo));
++    }
++
++    private function objeto(array $dados, string $chave): array
++    {
++        $valor = $dados[$chave] ?? null;
++        // {} chega como [] no PHP; listas não vazias são rejeitadas.
++        if (!is_array($valor) || ($valor !== [] && array_is_list($valor))) {
++            throw new ApiError(400, 'Dados inválidos.');
++        }
++        return $dados[$chave];
++    }
++
++    /** CPF (11) ou CNPJ (14) apenas com dígitos; opcional para manter compatibilidade. */
++    private function documento(array $dados, string $chave, int $digitos): ?string
++    {
++        $valor = $this->opcional($dados, $chave, 20);
++        if ($valor === null) {
++            return null;
++        }
++        $valor = preg_replace('/\D/', '', $valor);
++        if (strlen($valor) !== $digitos) {
++            throw new ApiError(400, 'Documento inválido.');
++        }
++        return $valor;
++    }
++
++    private function tipo(array $dados, string $chave): string
++    {
++        $tipo = $this->texto($dados, $chave, 15);
++        if (!in_array($tipo, ['Cliente', 'Profissional'], true)) {
++            throw new ApiError(400, 'Tipo de perfil inválido.');
++        }
++        return $tipo;
++    }
++
++    /** Aceita dd/mm/aaaa (formulário) ou aaaa-mm-dd / ISO 8601 (DateTime.toIso8601String). */
++    private function data(array $dados, string $chave): ?string
++    {
++        $valor = $this->opcional($dados, $chave, 40);
++        if ($valor === null) {
++            return null;
++        }
++        $valor = substr($valor, 0, 10);
++        foreach (['d/m/Y', 'Y-m-d'] as $formato) {
++            $data = DateTimeImmutable::createFromFormat("!$formato", $valor);
++            if ($data !== false && $data->format($formato) === $valor) {
++                return $data->format('Y-m-d');
++            }
++        }
++        throw new ApiError(400, 'Data inválida.');
++    }
++
++    private function validarSenha(string $senha): void
++    {
++        $tamanho = mb_strlen($senha);
++        if (trim($senha) === '' || $tamanho < 7 || $tamanho > 128) {
++            throw new ApiError(400, 'A senha deve ter de 7 a 128 caracteres.');
++        }
++    }
++
++    private function sessaoInvalida(): never
++    {
++        throw new ApiError(401, 'Sessão inválida ou expirada. Entre novamente.');
++    }
++
++    private function codigoInvalido(): never
++    {
++        throw new ApiError(400, 'Código ou autorização inválidos ou expirados. Solicite outro código.');
++    }
++}
+diff --git a/api/src/Smtp.php b/api/src/Smtp.php
+new file mode 100644
+index 0000000..9e8fd0f
+--- /dev/null
++++ b/api/src/Smtp.php
+@@ -0,0 +1,117 @@
++<?php
++
++declare(strict_types=1);
++
++/**
++ * Cliente SMTP mínimo, sem dependências externas.
++ * Segurança: "starttls" (porta 587), "ssl" (porta 465) ou "none" (somente o Mailpit local).
++ * Autenticação nunca é enviada sem TLS.
++ */
++final class Smtp
++{
++    public function __construct(
++        private string $host,
++        private int $porta,
++        private string $seguranca,
++        private string $usuario,
++        private string $senha,
++        private string $remetente,
++        private string $nomeRemetente = 'LaborHub',
++    ) {
++        if (!in_array($seguranca, ['starttls', 'ssl', 'none'], true)) {
++            throw new InvalidArgumentException('SMTP_SECURITY deve ser starttls, ssl ou none');
++        }
++        if ($seguranca === 'none' && $usuario !== '') {
++            throw new InvalidArgumentException('Autenticação SMTP exige starttls ou ssl');
++        }
++    }
++
++    public function enviar(string $para, string $assunto, string $texto): void
++    {
++        if (!filter_var($para, FILTER_VALIDATE_EMAIL)) {
++            throw new InvalidArgumentException('Destinatário inválido');
++        }
++        $contexto = stream_context_create(['ssl' => [
++            'verify_peer' => true,
++            'verify_peer_name' => true,
++            'peer_name' => $this->host,
++        ]]);
++        $prefixo = $this->seguranca === 'ssl' ? 'ssl://' : 'tcp://';
++        $conexao = @stream_socket_client(
++            "$prefixo{$this->host}:{$this->porta}",
++            $codigoErro,
++            $mensagemErro,
++            15,
++            STREAM_CLIENT_CONNECT,
++            $contexto,
++        );
++        if ($conexao === false) {
++            throw new RuntimeException('Não foi possível conectar ao SMTP');
++        }
++        stream_set_timeout($conexao, 20);
++
++        try {
++            $this->esperar($conexao, [220]);
++            $this->comando($conexao, 'EHLO laborhub', [250]);
++            if ($this->seguranca === 'starttls') {
++                $this->comando($conexao, 'STARTTLS', [220]);
++                $metodo = STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT;
++                if (stream_socket_enable_crypto($conexao, true, $metodo) !== true) {
++                    throw new RuntimeException('Falha ao iniciar TLS');
++                }
++                $this->comando($conexao, 'EHLO laborhub', [250]);
++            }
++            if ($this->usuario !== '') {
++                $this->comando($conexao, 'AUTH LOGIN', [334]);
++                $this->comando($conexao, base64_encode($this->usuario), [334]);
++                $this->comando($conexao, base64_encode($this->senha), [235]);
++            }
++            $this->comando($conexao, "MAIL FROM:<{$this->remetente}>", [250]);
++            $this->comando($conexao, "RCPT TO:<$para>", [250, 251]);
++            $this->comando($conexao, 'DATA', [354]);
++
++            $cabecalhos = [
++                'Date: ' . date(DATE_RFC2822),
++                'Message-ID: <' . bin2hex(random_bytes(16)) . '@' . substr(strrchr($this->remetente, '@'), 1) . '>',
++                'From: =?UTF-8?B?' . base64_encode($this->nomeRemetente) . "?= <{$this->remetente}>",
++                "To: <$para>",
++                'Subject: =?UTF-8?B?' . base64_encode($assunto) . '?=',
++                'MIME-Version: 1.0',
++                'Content-Type: text/plain; charset=UTF-8',
++                'Content-Transfer-Encoding: base64',
++            ];
++            // Corpo em base64: nenhuma linha começa com ".", dispensando dot-stuffing.
++            $mensagem = implode("\r\n", $cabecalhos) . "\r\n\r\n"
++                . rtrim(chunk_split(base64_encode($texto), 76, "\r\n")) . "\r\n.";
++            $this->comando($conexao, $mensagem, [250]);
++            $this->comando($conexao, 'QUIT', [221]);
++        } finally {
++            fclose($conexao);
++        }
++    }
++
++    /** @param resource $conexao */
++    private function comando($conexao, string $linha, array $esperados): void
++    {
++        if (fwrite($conexao, $linha . "\r\n") === false) {
++            throw new RuntimeException('Falha ao escrever no SMTP');
++        }
++        $this->esperar($conexao, $esperados);
++    }
++
++    /** @param resource $conexao */
++    private function esperar($conexao, array $esperados): void
++    {
++        do {
++            $linha = fgets($conexao, 1024);
++            if ($linha === false) {
++                throw new RuntimeException('Conexão SMTP encerrada');
++            }
++        } while (isset($linha[3]) && $linha[3] === '-');
++
++        if (!in_array((int) substr($linha, 0, 3), $esperados, true)) {
++            // Não inclui a resposta: ela pode ecoar dados da autenticação.
++            throw new RuntimeException('SMTP recusou o comando (' . substr($linha, 0, 3) . ')');
++        }
++    }
++}
+diff --git a/api/src/bootstrap.php b/api/src/bootstrap.php
+new file mode 100644
+index 0000000..1942009
+--- /dev/null
++++ b/api/src/bootstrap.php
+@@ -0,0 +1,122 @@
++<?php
++
++declare(strict_types=1);
++
++require __DIR__ . '/Smtp.php';
++require __DIR__ . '/Auth.php';
++
++final class ApiError extends Exception
++{
++    public function __construct(public readonly int $status, string $mensagem)
++    {
++        parent::__construct($mensagem);
++    }
++}
++
++/** Lê uma variável de ambiente obrigatória (definida no .env e repassada pelo Docker). */
++function env(string $nome, ?string $padrao = null): string
++{
++    $valor = getenv($nome);
++    if ($valor === false || $valor === '') {
++        if ($padrao !== null) {
++            return $padrao;
++        }
++        throw new RuntimeException("Configure $nome");
++    }
++    return $valor;
++}
++
++function conectarBanco(): PDO
++{
++    $dsn = sprintf(
++        'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
++        env('DB_HOST', 'mysql'),
++        env('DB_PORT', '3306'),
++        env('DB_NAME'),
++    );
++    $pdo = new PDO($dsn, env('DB_USER'), env('DB_PASSWORD'), [
++        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
++        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
++        PDO::ATTR_EMULATE_PREPARES => false,
++        PDO::ATTR_STRINGIFY_FETCHES => false,
++    ]);
++    // Datas sempre em UTC, como no dump (TIME_ZONE='+00:00').
++    $pdo->exec("SET time_zone = '+00:00'");
++    return $pdo;
++}
++
++function criarSmtp(): Smtp
++{
++    return new Smtp(
++        env('SMTP_HOST'),
++        (int) env('SMTP_PORT', '587'),
++        env('SMTP_SECURITY', 'starttls'),
++        getenv('SMTP_USER') ?: '',
++        getenv('SMTP_PASSWORD') ?: '',
++        env('SMTP_FROM'),
++    );
++}
++
++/**
++ * Envia a resposta JSON. Se $depois for informado, a conexão é encerrada
++ * antes de executá-lo (usado para enviar o email sem atrasar a resposta).
++ */
++function responder(int $status, array $corpo, ?callable $depois = null): void
++{
++    $json = json_encode($corpo ?: new stdClass(), JSON_UNESCAPED_UNICODE);
++    http_response_code($status);
++    header('Content-Type: application/json; charset=utf-8');
++    header('Cache-Control: no-store');
++    header('X-Content-Type-Options: nosniff');
++
++    if ($depois === null) {
++        echo $json;
++        return;
++    }
++
++    ignore_user_abort(true);
++    set_time_limit(60);
++    if (function_exists('apache_setenv')) {
++        apache_setenv('no-gzip', '1');
++    }
++    header('Content-Length: ' . strlen($json));
++    header('Connection: close');
++    echo $json;
++    if (function_exists('fastcgi_finish_request')) {
++        fastcgi_finish_request();
++    } else {
++        while (ob_get_level() > 0) {
++            ob_end_flush();
++        }
++        flush();
++    }
++    $depois();
++}
++
++/** Lê o corpo JSON da requisição (máximo 16 KiB). */
++function lerJson(): array
++{
++    $corpo = file_get_contents('php://input', false, null, 0, 16385);
++    if ($corpo === false || strlen($corpo) > 16384) {
++        throw new ApiError(413, 'Dados muito grandes.');
++    }
++    if (trim($corpo) === '') {
++        return [];
++    }
++    $dados = json_decode($corpo, true);
++    // {} chega como [] no PHP; listas não vazias são rejeitadas.
++    if (!is_array($dados) || ($dados !== [] && array_is_list($dados))) {
++        throw new ApiError(400, 'Dados inválidos.');
++    }
++    return $dados;
++}
++
++/** Token do cabeçalho "Authorization: Bearer <token>", ou null. */
++function lerToken(): ?string
++{
++    $cabecalho = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
++    if ($cabecalho === '' && function_exists('getallheaders')) {
++        $cabecalho = array_change_key_case(getallheaders())['authorization'] ?? '';
++    }
++    return preg_match('/^Bearer\s+(\S+)$/i', trim($cabecalho), $partes) ? $partes[1] : null;
++}
+diff --git a/database/init/01-laborhub.sql b/database/init/01-laborhub.sql
+new file mode 100644
+index 0000000..5e867b6
+--- /dev/null
++++ b/database/init/01-laborhub.sql
+@@ -0,0 +1,273 @@
++CREATE DATABASE  IF NOT EXISTS `FluuterLaborHub` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
++USE `FluuterLaborHub`;
++-- MySQL dump 10.13  Distrib 8.0.46, for Linux (x86_64)
++--
++-- Host: localhost    Database: FluuterLaborHub
++-- ------------------------------------------------------
++-- Server version	8.0.46-0ubuntu0.24.04.4
++
++/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
++/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
++/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
++/*!50503 SET NAMES utf8 */;
++/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
++/*!40103 SET TIME_ZONE='+00:00' */;
++/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
++/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
++/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
++/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
++
++--
++-- Table structure for table `avaliacao`
++--
++
++DROP TABLE IF EXISTS `avaliacao`;
++/*!40101 SET @saved_cs_client     = @@character_set_client */;
++/*!50503 SET character_set_client = utf8mb4 */;
++CREATE TABLE `avaliacao` (
++  `avaliacao_id` int NOT NULL AUTO_INCREMENT,
++  `avaliacao_assunto` varchar(120) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `avaliacao_descricao` text COLLATE utf8mb4_general_ci,
++  `avaliacao_resposta` text COLLATE utf8mb4_general_ci,
++  `avaliacao_notas` int DEFAULT NULL,
++  `avaliacao_data` date DEFAULT NULL,
++  `avaliador_usuarios_id` int DEFAULT NULL,
++  `avaliado_usuarios_id` int DEFAULT NULL,
++  `avaliacao_solicitacao_id` int DEFAULT NULL,
++  PRIMARY KEY (`avaliacao_id`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
++/*!40101 SET character_set_client = @saved_cs_client */;
++
++--
++-- Dumping data for table `avaliacao`
++--
++
++LOCK TABLES `avaliacao` WRITE;
++/*!40000 ALTER TABLE `avaliacao` DISABLE KEYS */;
++/*!40000 ALTER TABLE `avaliacao` ENABLE KEYS */;
++UNLOCK TABLES;
++
++--
++-- Table structure for table `endereco`
++--
++
++DROP TABLE IF EXISTS `endereco`;
++/*!40101 SET @saved_cs_client     = @@character_set_client */;
++/*!50503 SET character_set_client = utf8mb4 */;
++CREATE TABLE `endereco` (
++  `endereco_id` int NOT NULL AUTO_INCREMENT,
++  `endereco_nome` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `endereco_rua` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `endereco_bairro` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `endereco_cep` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `endereco_complemento` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `endereco_numero` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `endereco_descricao` text COLLATE utf8mb4_general_ci,
++  `endereco_cidade` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `endereco_uf` varchar(2) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `endereco_usuarios_id` int DEFAULT NULL,
++  PRIMARY KEY (`endereco_id`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
++/*!40101 SET character_set_client = @saved_cs_client */;
++
++--
++-- Dumping data for table `endereco`
++--
++
++LOCK TABLES `endereco` WRITE;
++/*!40000 ALTER TABLE `endereco` DISABLE KEYS */;
++/*!40000 ALTER TABLE `endereco` ENABLE KEYS */;
++UNLOCK TABLES;
++
++--
++-- Table structure for table `pessoaFisica`
++--
++
++DROP TABLE IF EXISTS `pessoaFisica`;
++/*!40101 SET @saved_cs_client     = @@character_set_client */;
++/*!50503 SET character_set_client = utf8mb4 */;
++CREATE TABLE `pessoaFisica` (
++  `pf_id` int NOT NULL AUTO_INCREMENT,
++  `pf_nome` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `pf_sobrenome` varchar(150) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `pf_dataNascimento` date DEFAULT NULL,
++  `pf_genero` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `pf_cpf` varchar(15) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `pf_tipo` varchar(15) COLLATE utf8mb4_general_ci NOT NULL,
++  `pf_usuarios_id` int DEFAULT NULL,
++  PRIMARY KEY (`pf_id`),
++  UNIQUE KEY `pf_cpf` (`pf_cpf`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
++/*!40101 SET character_set_client = @saved_cs_client */;
++
++--
++-- Dumping data for table `pessoaFisica`
++--
++
++LOCK TABLES `pessoaFisica` WRITE;
++/*!40000 ALTER TABLE `pessoaFisica` DISABLE KEYS */;
++/*!40000 ALTER TABLE `pessoaFisica` ENABLE KEYS */;
++UNLOCK TABLES;
++
++--
++-- Table structure for table `pessoaJuridica`
++--
++
++DROP TABLE IF EXISTS `pessoaJuridica`;
++/*!40101 SET @saved_cs_client     = @@character_set_client */;
++/*!50503 SET character_set_client = utf8mb4 */;
++CREATE TABLE `pessoaJuridica` (
++  `pj_id` int NOT NULL AUTO_INCREMENT,
++  `pj_razaoSocial` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `pj_nomeFantasia` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `pj_dataFundacao` date DEFAULT NULL,
++  `pj_cnpj` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `pj_tipo` varchar(15) COLLATE utf8mb4_general_ci NOT NULL,
++  `pj_usuarios_id` int DEFAULT NULL,
++  PRIMARY KEY (`pj_id`),
++  UNIQUE KEY `pj_cnpj` (`pj_cnpj`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
++/*!40101 SET character_set_client = @saved_cs_client */;
++
++--
++-- Dumping data for table `pessoaJuridica`
++--
++
++LOCK TABLES `pessoaJuridica` WRITE;
++/*!40000 ALTER TABLE `pessoaJuridica` DISABLE KEYS */;
++/*!40000 ALTER TABLE `pessoaJuridica` ENABLE KEYS */;
++UNLOCK TABLES;
++
++--
++-- Table structure for table `servicos`
++--
++
++DROP TABLE IF EXISTS `servicos`;
++/*!40101 SET @saved_cs_client     = @@character_set_client */;
++/*!50503 SET character_set_client = utf8mb4 */;
++CREATE TABLE `servicos` (
++  `servicos_id` int NOT NULL AUTO_INCREMENT,
++  `servicos_nome` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `servicos_data` varchar(25) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `servicos_valor` decimal(9,2) DEFAULT NULL,
++  `servicos_tipo_cobranca` text COLLATE utf8mb4_general_ci,
++  `servicos_nivel_experiencia` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `servicos_descricao` text COLLATE utf8mb4_general_ci,
++  `servicos_usuarios_id` int DEFAULT NULL,
++  PRIMARY KEY (`servicos_id`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
++/*!40101 SET character_set_client = @saved_cs_client */;
++
++--
++-- Dumping data for table `servicos`
++--
++
++LOCK TABLES `servicos` WRITE;
++/*!40000 ALTER TABLE `servicos` DISABLE KEYS */;
++/*!40000 ALTER TABLE `servicos` ENABLE KEYS */;
++UNLOCK TABLES;
++
++--
++-- Table structure for table `solicitacao`
++--
++
++DROP TABLE IF EXISTS `solicitacao`;
++/*!40101 SET @saved_cs_client     = @@character_set_client */;
++/*!50503 SET character_set_client = utf8mb4 */;
++CREATE TABLE `solicitacao` (
++  `solicitacao_id` int NOT NULL AUTO_INCREMENT,
++  `solicitacao_data` date DEFAULT NULL,
++  `solicitacao_data_atual` date DEFAULT NULL,
++  `solicitacao_conclusao` date DEFAULT NULL,
++  `solicitacao_quantidade` int NOT NULL,
++  `solicitacao_observacao` text COLLATE utf8mb4_general_ci,
++  `solicitacao_criada_em` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
++  `solicitacao_atualizada_em` timestamp NULL DEFAULT NULL,
++  `solicitacao_deletada_em` timestamp NULL DEFAULT NULL,
++  `solicitacao_status` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `solicitacao_status_profissional` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `solicitacao_motivo` varchar(250) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `solicitacao_endereco_id` int DEFAULT NULL,
++  `solicitacao_usuarios_id` int DEFAULT NULL,
++  PRIMARY KEY (`solicitacao_id`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
++/*!40101 SET character_set_client = @saved_cs_client */;
++
++--
++-- Dumping data for table `solicitacao`
++--
++
++LOCK TABLES `solicitacao` WRITE;
++/*!40000 ALTER TABLE `solicitacao` DISABLE KEYS */;
++/*!40000 ALTER TABLE `solicitacao` ENABLE KEYS */;
++UNLOCK TABLES;
++
++--
++-- Table structure for table `solicitacaoServico`
++--
++
++DROP TABLE IF EXISTS `solicitacaoServico`;
++/*!40101 SET @saved_cs_client     = @@character_set_client */;
++/*!50503 SET character_set_client = utf8mb4 */;
++CREATE TABLE `solicitacaoServico` (
++  `solicitacaoServico_id` int NOT NULL AUTO_INCREMENT,
++  `solicitacaoServico_servicos_id` int DEFAULT NULL,
++  `solicitacaoServico_solicitacao_id` int DEFAULT NULL,
++  PRIMARY KEY (`solicitacaoServico_id`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
++/*!40101 SET character_set_client = @saved_cs_client */;
++
++--
++-- Dumping data for table `solicitacaoServico`
++--
++
++LOCK TABLES `solicitacaoServico` WRITE;
++/*!40000 ALTER TABLE `solicitacaoServico` DISABLE KEYS */;
++/*!40000 ALTER TABLE `solicitacaoServico` ENABLE KEYS */;
++UNLOCK TABLES;
++
++--
++-- Table structure for table `usuarios`
++--
++
++DROP TABLE IF EXISTS `usuarios`;
++/*!40101 SET @saved_cs_client     = @@character_set_client */;
++/*!50503 SET character_set_client = utf8mb4 */;
++CREATE TABLE `usuarios` (
++  `usuarios_id` int NOT NULL AUTO_INCREMENT,
++  `usuarios_email` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `usuarios_imagem` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `usuarios_telefone` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `usuarios_senha_hash` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `usuarios_ativo` tinyint(1) DEFAULT NULL,
++  `usuarios_is_admin` tinyint(1) DEFAULT NULL,
++  `usuarios_reset_hash` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
++  `usuarios_expira_em` timestamp NULL DEFAULT NULL,
++  `usuarios_ativacao_hash` timestamp NULL DEFAULT NULL,
++  `usuarios_criado_em` timestamp NULL DEFAULT NULL,
++  `usuarios_atualizado_em` timestamp NULL DEFAULT NULL,
++  `usuarios_deletado_em` timestamp NULL DEFAULT NULL,
++  PRIMARY KEY (`usuarios_id`),
++  UNIQUE KEY `usuarios_email` (`usuarios_email`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
++/*!40101 SET character_set_client = @saved_cs_client */;
++
++--
++-- Dumping data for table `usuarios`
++--
++
++LOCK TABLES `usuarios` WRITE;
++/*!40000 ALTER TABLE `usuarios` DISABLE KEYS */;
++/*!40000 ALTER TABLE `usuarios` ENABLE KEYS */;
++UNLOCK TABLES;
++/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
++
++/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
++/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
++/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
++/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
++/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
++/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
++/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
++
++-- Dump completed on 2026-11-07 14:37:14
+diff --git a/database/init/02-api.sql b/database/init/02-api.sql
+new file mode 100644
+index 0000000..67d3617
+--- /dev/null
++++ b/database/init/02-api.sql
+@@ -0,0 +1,11 @@
++-- Tabela auxiliar da API: limites de tentativas (login, cadastro e recuperação de senha).
++-- Não altera as tabelas de 01-laborhub.sql. A chave é um HMAC; não guarda emails nem IPs em texto.
++USE `FluuterLaborHub`;
++
++CREATE TABLE IF NOT EXISTS `limites` (
++  `limites_chave` char(64) NOT NULL,
++  `limites_inicio` int NOT NULL,
++  `limites_total` int NOT NULL,
++  PRIMARY KEY (`limites_chave`),
++  KEY `limites_inicio` (`limites_inicio`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+diff --git a/database/init/03-sessoes.sql b/database/init/03-sessoes.sql
+new file mode 100644
+index 0000000..7747034
+--- /dev/null
++++ b/database/init/03-sessoes.sql
+@@ -0,0 +1,14 @@
++-- Sessões de login da API. Guarda somente o HMAC do token; o token em si fica apenas no aparelho.
++USE `FluuterLaborHub`;
++
++CREATE TABLE IF NOT EXISTS `sessoes` (
++  `sessoes_id` int NOT NULL AUTO_INCREMENT,
++  `sessoes_token_hash` char(64) NOT NULL,
++  `sessoes_usuarios_id` int NOT NULL,
++  `sessoes_criada_em` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
++  `sessoes_expira_em` timestamp NOT NULL,
++  PRIMARY KEY (`sessoes_id`),
++  UNIQUE KEY `sessoes_token_hash` (`sessoes_token_hash`),
++  KEY `sessoes_usuarios_id` (`sessoes_usuarios_id`),
++  KEY `sessoes_expira_em` (`sessoes_expira_em`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+diff --git a/docker-compose.yml b/docker-compose.yml
+new file mode 100644
+index 0000000..b67997e
+--- /dev/null
++++ b/docker-compose.yml
+@@ -0,0 +1,72 @@
++name: laborhub
++
++services:
++  api:
++    build: ./api
++    restart: unless-stopped
++    depends_on:
++      mysql:
++        condition: service_healthy
++    environment:
++      DB_HOST: mysql
++      DB_PORT: 3306
++      DB_NAME: ${DB_NAME:?Configure DB_NAME no .env}
++      DB_USER: ${DB_USER:?Configure DB_USER no .env}
++      DB_PASSWORD: ${DB_PASSWORD:?Configure DB_PASSWORD no .env}
++      APP_SECRET: ${APP_SECRET:?Configure APP_SECRET no .env}
++      SMTP_HOST: ${SMTP_HOST:-mailpit}
++      SMTP_PORT: ${SMTP_PORT:-1025}
++      SMTP_SECURITY: ${SMTP_SECURITY:-none}
++      SMTP_USER: ${SMTP_USER:-}
++      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
++      SMTP_FROM: ${SMTP_FROM:?Configure SMTP_FROM no .env}
++    volumes:
++      # Código montado para desenvolvimento: alterações em api/ valem sem rebuild.
++      - ./api/src:/var/www/html/src:ro
++      - ./api/public:/var/www/html/public:ro
++    ports:
++      - "${API_BIND:-127.0.0.1}:${API_PORT:-8080}:80"
++
++  mysql:
++    image: mysql:8.0
++    restart: unless-stopped
++    environment:
++      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Configure MYSQL_ROOT_PASSWORD no .env}
++      MYSQL_DATABASE: ${DB_NAME}
++      MYSQL_USER: ${DB_USER}
++      MYSQL_PASSWORD: ${DB_PASSWORD}
++      TZ: UTC
++    volumes:
++      - mysql_data:/var/lib/mysql
++      # Executado apenas na primeira inicialização (volume vazio), em ordem alfabética.
++      - ./database/init:/docker-entrypoint-initdb.d:ro
++    ports:
++      - "127.0.0.1:${MYSQL_PORT:-3307}:3306"
++    healthcheck:
++      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
++      interval: 5s
++      timeout: 5s
++      retries: 30
++
++  phpmyadmin:
++    image: phpmyadmin:5.2
++    restart: unless-stopped
++    depends_on:
++      - mysql
++    environment:
++      PMA_HOST: mysql
++      UPLOAD_LIMIT: 64M
++    ports:
++      - "127.0.0.1:${PHPMYADMIN_PORT:-8081}:80"
++
++  # SMTP local: recebe os emails da API e exibe em http://localhost:8025 (nada sai para a internet).
++  mailpit:
++    image: axllent/mailpit:latest
++    restart: unless-stopped
++    environment:
++      MP_MAX_MESSAGES: 500
++    ports:
++      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
++
++volumes:
++  mysql_data:
+diff --git a/docs/ambiente.md b/docs/ambiente.md
+new file mode 100644
+index 0000000..0ceca08
+--- /dev/null
++++ b/docs/ambiente.md
+@@ -0,0 +1,182 @@
++# Ambiente local e API
++
++O MySQL é a fonte oficial dos dados. Cadastro, login, sessão e recuperação de senha passam pela API PHP (`api/`). O app guarda no SQLite do aparelho uma cópia do usuário logado (perfil, endereços e sessão) para abrir offline. O backend roda em Docker:
++
++| Serviço | Endereço no computador | Função |
++| --- | --- | --- |
++| `api` | http://127.0.0.1:8080 | API PHP 8.3 (Apache) usada pelo app |
++| `mysql` | 127.0.0.1:3307 | MySQL 8.0 com o esquema de `database/init/` |
++| `phpmyadmin` | http://127.0.0.1:8081 | Administração do banco |
++| `mailpit` | http://127.0.0.1:8025 | SMTP local: recebe e mostra os emails enviados pela API |
++
++As portas ficam presas a `127.0.0.1` e podem ser alteradas no `.env`.
++
++## Requisitos
++
++- Docker com o plugin Compose (`docker compose version`). No Windows/macOS, Docker Desktop.
++- Flutter (SDK do `pubspec.yaml`) para rodar o app.
++
++## Primeira configuração
++
++```sh
++cp .env.example .env
++```
++
++Edite o `.env`:
++
++1. Troque `DB_PASSWORD` e `MYSQL_ROOT_PASSWORD`.
++2. Preencha `APP_SECRET` com 32 bytes aleatórios:
++   - Linux/macOS/Git Bash: `openssl rand -hex 32`
++   - PowerShell 7: `[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))`
++
++   Mantenha o mesmo valor entre reinícios: trocar o segredo invalida códigos de recuperação e limites em andamento. Ele não é uma senha de banco nem de SMTP.
++3. Não altere `DB_NAME`: o nome `FluuterLaborHub` vem do dump `database/init/01-laborhub.sql`.
++
++O `.env` está no `.gitignore`. Nunca coloque senhas no Flutter, no Git ou em `--dart-define`.
++
++## Comandos do dia a dia
++
++```sh
++docker compose up -d --build     # cria/atualiza e inicia tudo
++docker compose ps                # estado dos serviços (mysql deve ficar "healthy")
++docker compose logs -f api       # logs da API (erros PHP e falhas de SMTP)
++docker compose stop              # para sem apagar nada
++docker compose down              # remove os containers; os dados do MySQL ficam no volume
++```
++
++O código de `api/src` e `api/public` é montado no container: alterações em PHP valem na próxima requisição. Rode `docker compose up -d --build api` somente se mudar o `api/Dockerfile`.
++
++### Teste rápido da API
++
++```sh
++curl -i -X POST http://127.0.0.1:8080/auth/password/request \
++  -H 'Content-Type: application/json' -d '{"email":"teste@example.com"}'
++```
++
++Resposta esperada: `202`. Para emails cadastrados, o código aparece no Mailpit (http://127.0.0.1:8025).
++
++## Banco de dados
++
++Na primeira inicialização (volume vazio), o MySQL executa em ordem:
++
++- `database/init/01-laborhub.sql`: esquema do projeto (dump original, sem alterações).
++- `database/init/02-api.sql`: tabela auxiliar `limites`, usada pela API para limitar tentativas.
++- `database/init/03-sessoes.sql`: tabela `sessoes` (login).
++
++Banco já criado antes da sessão existir? Aplique o arquivo uma vez:
++
++```sh
++docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < database/init/03-sessoes.sql
++```
++
++phpMyAdmin: http://127.0.0.1:8081, usuário `DB_USER`/`DB_PASSWORD` (ou `root`/`MYSQL_ROOT_PASSWORD`).
++
++```sh
++# Backup
++docker compose exec mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --databases FluuterLaborHub' > backup.sql
++
++# Restaurar
++docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < backup.sql
++
++# Recriar do zero (APAGA todos os dados e executa database/init de novo)
++docker compose down -v && docker compose up -d
++```
++
++Os scripts de `database/init` só rodam com o volume vazio. Para mudar o esquema, crie um novo arquivo numerado (`03-....sql`) para ambientes novos e aplique o mesmo SQL nos bancos existentes pelo phpMyAdmin ou com `docker compose exec -T mysql ... < 03-....sql`.
++
++## Email (SMTP)
++
++Por padrão a API envia para o Mailpit (`SMTP_HOST=mailpit`, porta `1025`, `SMTP_SECURITY=none`). Nenhum email sai para a internet; todos aparecem em http://127.0.0.1:8025.
++
++Para enviar de verdade, aponte o `.env` para o servidor SMTP da sua organização ou do seu domínio e rode `docker compose up -d api`:
++
++```ini
++SMTP_HOST=smtp.seudominio.com
++SMTP_PORT=587
++SMTP_SECURITY=starttls   # 587 = starttls, 465 = ssl
++SMTP_USER=usuario
++SMTP_PASSWORD=senha-de-aplicativo
++SMTP_FROM=no-reply@seudominio.com
++```
++
++- O cliente SMTP (`api/src/Smtp.php`) não tem dependências, valida o certificado do servidor e recusa autenticação sem TLS (`SMTP_SECURITY=none` só serve para o Mailpit).
++- Configure SPF/DKIM do domínio de `SMTP_FROM`, ou os emails tendem a cair no spam.
++- Falhas de entrega aparecem em `docker compose logs api` como `Falha na entrega de email de recuperação`, sem email, código ou senha, e invalidam o código enviado.
++
++## Rodar o app Flutter
++
++```sh
++flutter pub get
++```
++
++| Onde o app roda | Comando |
++| --- | --- |
++| Emulador Android | `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080 --dart-define=ALLOW_LOCAL_HTTP=true` |
++| Simulador iOS, Linux, Windows, macOS | `flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8080 --dart-define=ALLOW_LOCAL_HTTP=true` |
++| Celular físico na mesma rede | No `.env`, `API_BIND=0.0.0.0`; `docker compose up -d`; use `http://IP-DO-COMPUTADOR:8080` e libere a porta no firewall |
++
++`ALLOW_LOCAL_HTTP` e o HTTP no manifesto de debug do Android existem só para desenvolvimento. Em release, use `API_BASE_URL=https://...`.
++
++Flutter Web: a API não habilita CORS. Sirva o app e `/auth/` na mesma origem por um proxy, ou adicione uma lista explícita de origens.
++
++## Contrato da API
++
++Todas as rotas usam `POST`, recebem JSON (máximo 16 KiB; corpo vazio ou `{}` nas rotas de sessão) e retornam JSON com `Cache-Control: no-store`. Erros retornam `{"message": "..."}`.
++
++| Rota | Campos | Resultado |
++| --- | --- | --- |
++| `/auth/register` | `email`, `password`, `usuario`, `endereco` e `pessoaFisica` **ou** `pessoaJuridica` | 201 `{usuarios_id}`; 200 se repetido com a mesma senha; 409 se email/CPF/CNPJ já existe |
++| `/auth/login` | `email`, `password` | 200 com usuário, `tipo`, `pessoaFisica`, `pessoaJuridica`, `enderecos`, `token` e `sessao_expira_em`; 401 |
++| `/auth/session` | cabeçalho `Authorization: Bearer <token>` | 200 com os mesmos dados (sem novo token) e validade renovada; 401 se inválida |
++| `/auth/logout` | cabeçalho `Authorization: Bearer <token>` | 200; o token deixa de valer |
++| `/auth/password/request` | `email` | 202 genérico (mesma resposta para emails existentes ou não); 429 |
++| `/auth/password/verify` | `email`, `code` | 200 `{resetToken}`; 400 se inválido/expirado |
++| `/auth/password/reset` | `email`, `resetToken`, `password`, `confirmation` | 200 |
++
++Os objetos `usuario`, `endereco`, `pessoaFisica` e `pessoaJuridica` usam os nomes de coluna do banco (os mesmos de `toMap()` nos models). O servidor ignora ids, chaves estrangeiras e `usuarios_senha_hash` enviados pelo app, grava tudo em uma transação e cria o hash da senha.
++
++## Sessão e uso offline
++
++- O login cria uma sessão de 30 dias. A validade é renovada sempre que o app confere a sessão (`/auth/session`).
++- O MySQL guarda apenas o HMAC do token (`sessoes.sessoes_token_hash`); o token fica no SQLite do aparelho (tabela `sessao`), na área privada do app.
++- Ao abrir, a tela de login lê a sessão do SQLite e entra direto, sem rede. A home então consulta a API:
++  - sessão válida: atualiza a cópia local do perfil;
++  - 401 (expirada, encerrada em "Sair" ou senha redefinida): apaga os dados locais e volta ao login;
++  - sem conexão: continua com os dados locais até a data de expiração.
++- "Sair" (ícone na home) encerra a sessão na API e apaga os dados do aparelho; offline, apaga os dados locais e o token expira sozinho no servidor.
++- Redefinir a senha encerra todas as sessões do usuário em todos os aparelhos.
++- Cadastro e login exigem conexão: as contas só existem no MySQL.
++- Rotas futuras que exigirem login usam `$auth->usuarioDaSessao(lerToken())` na API e `token: sessao.token` no `AuthApi.post` do app.
++
++### Segurança
++
++- Senhas com `password_hash` (bcrypt). Código de 6 dígitos com `random_int`, válido por 10 minutos e 5 tentativas; depois de validado vira uma autorização de 256 bits, válida por 5 minutos e de uso único.
++- Código e autorização são guardados como HMAC-SHA256 (`APP_SECRET`) em `usuarios_reset_hash`, com validade em `usuarios_expira_em`.
++- Limites persistentes (tabela `limites`): 60 requisições/15 min por IP; cadastro 10/h por IP; login 10/15 min por email; envio de código 1/min e 5/h por email e 10/h por IP.
++- Consultas parametrizadas (PDO); erros não expõem SQL, credenciais, códigos ou a existência da conta.
++- O limite por IP usa o endereço da conexão, nunca `X-Forwarded-For`. Atrás de um proxy (ou com o Docker Desktop), todos os clientes podem aparecer com o mesmo IP; em produção, aplique o limite por IP no proxy.
++
++## Produção (resumo)
++
++- Publique a API somente por HTTPS (proxy reverso na frente da porta da API).
++- Não exponha phpMyAdmin, Mailpit nem a porta do MySQL; remova esses `ports` ou os serviços.
++- Use senhas fortes e um `APP_SECRET` próprio, e configure um SMTP real.
++
++## Verificação
++
++```sh
++flutter test
++for f in api/src/*.php api/public/*.php; do php -l "$f"; done   # ou: docker compose exec api php -l src/Auth.php
++docker compose config -q
++```
++
++## Problemas comuns
++
++| Sintoma | Causa provável |
++| --- | --- |
++| `required variable APP_SECRET is missing` | `.env` ausente ou `APP_SECRET` vazio |
++| `api` não inicia | A API espera o MySQL ficar `healthy`; veja `docker compose logs mysql` |
++| Tabelas não aparecem | O volume já existia antes do dump; use `docker compose down -v` (apaga os dados) |
++| Porta em uso | Altere `API_PORT`, `MYSQL_PORT`, `PHPMYADMIN_PORT` ou `MAILPIT_PORT` no `.env` |
++| App: "Configure o endereço seguro da API" | Faltou `--dart-define=API_BASE_URL=...` (e `ALLOW_LOCAL_HTTP=true` para `http`) |
++| Email não chega | Veja `docker compose logs api` e o Mailpit; no SMTP real, confira porta, `SMTP_SECURITY` e credenciais |
+diff --git a/docs/recuperacao-senha.md b/docs/recuperacao-senha.md
+deleted file mode 100644
+index b81f05e..0000000
+--- a/docs/recuperacao-senha.md
++++ /dev/null
+@@ -1,90 +0,0 @@
+-# Recuperação de senha
+-
+-O aplicativo continua em Flutter, com repositórios e perfis no SQLite local. Como a versão anterior não tinha servidor e comparava senhas em texto no aparelho, `server/` introduz uma API Dart que passa a ser a autoridade de cadastro, login e recuperação. O código de email **não é validado pelo aparelho**. Alterar o SQLite local não altera a senha na API.
+-
+-## Configurar a API e o email
+-
+-1. Instale Dart 3.13 ou superior e execute `dart pub get` dentro de `server/`.
+-2. Defina as variáveis de `server/.env.example` no ambiente do processo. O arquivo `.env` não é carregado automaticamente. Nunca inclua credenciais SMTP no Flutter, no Git ou em `--dart-define`.
+-3. `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`: dados do provedor SMTP e remetente autorizado. Use uma senha de aplicativo quando exigida pelo provedor. Configure/verifique o domínio e SPF/DKIM conforme o provedor.
+-4. Porta 587 usa STARTTLS (`SMTP_SSL=false`); porta 465 usa TLS desde a conexão (`SMTP_SSL=true`). O cliente não permite transporte SMTP sem criptografia nem certificados inválidos.
+-5. Gere `RESET_SECRET` com pelo menos 32 bytes aleatórios (por exemplo, `openssl rand -hex 32`). Mantenha o mesmo segredo entre reinícios. Rotacioná-lo invalida códigos, autorizações e limites existentes. Ele não é a senha SMTP.
+-6. `DATABASE_PATH` deve apontar para um arquivo em volume persistente, gravável apenas pelo serviço. O esquema é criado automaticamente. Preserve também os arquivos WAL durante backups ativos ou use um backup consistente do SQLite.
+-7. Inicie com `dart run bin/server.dart`. A API escuta em `127.0.0.1:8080` por padrão. Exponha-a por HTTPS com um proxy reverso; use firewall para impedir acesso direto à porta interna. Configure limites de conexão, corpo e timeout também no proxy.
+-
+-Exemplo PowerShell (valores fictícios, execute em `server/`):
+-
+-```powershell
+-$env:RESET_SECRET = '<segredo-aleatorio>'
+-$env:SMTP_HOST = 'smtp.seudominio.com'
+-$env:SMTP_PORT = '587'
+-$env:SMTP_USER = 'usuario-do-provedor'
+-$env:SMTP_PASSWORD = '<senha-de-aplicativo>'
+-$env:SMTP_FROM = 'no-reply@seudominio.com'
+-dart run bin/server.dart
+-```
+-
+-O envio real depende de configurar essas credenciais e validar a entrega no provedor. Os testes usam um remetente substituto; não enviam mensagens reais. Falhas de entrega geram um aviso sem dados pessoais/segredos e invalidam o código correspondente. A resposta HTTP é a mesma para emails conhecidos e desconhecidos. O envio é assíncrono em memória: se o processo parar antes da entrega, será necessário reenviar após o intervalo; não há fila durável nesta versão.
+-
+-Os limites de IP usam o endereço da conexão, nunca um `X-Forwarded-For` fornecido pelo cliente. Atrás de um proxy, esse limite será compartilhado por todos os clientes do proxy; configure a limitação por IP real no próprio proxy. O limite por email permanece individual e persistente. Execute uma instância Dart por arquivo SQLite; para escalar horizontalmente, adapte o armazenamento/limites para um banco central.
+-
+-## Configurar o Flutter
+-
+-```sh
+-flutter pub get
+-flutter run --dart-define=API_BASE_URL=https://api.seudominio.com
+-```
+-
+-Sem `API_BASE_URL`, o app mostra uma mensagem de configuração ao tentar autenticar/recuperar. HTTP é recusado, salvo em desenvolvimento com `--dart-define=ALLOW_LOCAL_HTTP=true`. Em Android Emulator, o host costuma ser `http://10.0.2.2:8080`; o sistema também precisa permitir HTTP no manifesto de **debug**. Não habilite HTTP em release. Android já recebeu a permissão INTERNET e macOS, a permissão de cliente de rede.
+-
+-O alvo principal é mobile. A API não habilita CORS; para Flutter Web, sirva o app e `/auth/` na mesma origem pelo proxy, ou implemente uma lista explícita de origens permitidas. O cadastro/perfil local original usa sqflite e não foi portado para Web. O login mantém a resposta de usuário esperada pelo app; não introduz sessões ou endpoints de negócio autenticados, que ainda não existem no projeto.
+-
+-## Contas existentes: migrar ANTES de atualizar o aplicativo
+-
+-As contas antigas existem somente em cada aparelho, sem uma base central. A API não consegue encontrá-las automaticamente e não aceita upload público de bases locais como prova de identidade.
+-
+-1. Faça backups confiáveis dos arquivos `laborHUb.db` antigos **antes** da atualização. O banco local versão 2 remove as senhas em texto, os resets e suas datas, mantendo perfis e endereços.
+-2. Em ambiente administrativo confiável, configure `RESET_SECRET` e execute em `server/`:
+-
+-   ```sh
+-   dart run bin/import_legacy.dart /caminho/backup-legado.db /caminho/laborhub.sqlite
+-   ```
+-
+-3. O importador mantém status ativo e data de criação, normaliza email e transforma a senha antiga em PBKDF2. Não sobrescreve uma conta já existente; resolva colisões de email administrativamente. Não importe bancos fornecidos por pessoas sem validar sua origem, pois o formato legado não autentica a propriedade da conta.
+-4. Confirme login e recuperação no servidor antes de distribuir o app atualizado. Remova os backups em texto seguindo a política de retenção e proteja qualquer backup necessário. Se não houver contas reais a preservar, comece com uma base nova e faça o cadastro pelo app.
+-
+-Não existe fallback para autenticação local com senha antiga: uma senha redefinida deve passar a valer em todos os aparelhos. Os IDs de autenticação do servidor são independentes dos IDs dos perfis locais; não use um ID remoto como chave estrangeira no SQLite do aparelho.
+-
+-O cadastro salva o perfil em transação local e chama a API antes de concluir. Em caso de erro local/rede, a transação é desfeita. Para permitir repetir após uma resposta perdida ou falha de commit local, a API aceita cadastrar novamente somente quando o email **e a senha existente** conferem. Senha diferente não sobrescreve contas.
+-
+-## Contrato e proteção
+-
+-Todas as rotas recebem JSON e retornam JSON com `Cache-Control: no-store`.
+-
+-| POST | Campos | Resultado |
+-| --- | --- | --- |
+-| `/auth/register` | `email`, `password` | 201; 200 para repetição com a mesma senha |
+-| `/auth/login` | `email`, `password` | usuário; 401 se credenciais inválidas/inativo |
+-| `/auth/password/request` | `email` | 202 genérico; 429 quando limitado |
+-| `/auth/password/verify` | `email`, `code` | `resetToken` opaco; 400 se inválido/expirado |
+-| `/auth/password/reset` | `email`, `resetToken`, `password`, `confirmation` | 200 e volta ao login |
+-
+-- Código de seis dígitos gerado por `Random.secure`, incluindo zeros iniciais, válido por 10 minutos e cinco tentativas. Ao validar, é substituído por uma autorização aleatória de 256 bits, válida por cinco minutos.
+-- Código e autorização são persistidos como HMAC-SHA256 com segredo do servidor. Senhas usam PBKDF2-HMAC-SHA256, 600.000 iterações e salt aleatório individual. [Cryptography](https://pub.dev/packages/cryptography) fornece a derivação; [Mailer](https://pub.dev/documentation/mailer/latest/) fornece o transporte SMTP.
+-- A nova senha deve ter entre 7 e 128 caracteres, compatível com a regra mínima existente do cadastro. Senha e confirmação precisam coincidir; espaços da senha são preservados.
+-- Reenvio invalida o desafio/autorização anterior: um envio por minuto, cinco por hora por email e dez por hora por IP. Cadastro: cinco por hora por IP. Login: dez por 15 minutos por email. Limite geral: 60 chamadas por 15 minutos por IP. Limites ficam no banco e sobrevivem a reinícios.
+-- A troca e o consumo da autorização ocorrem na mesma transação; duas requisições simultâneas não podem trocar a senha duas vezes. O login revalida a senha armazenada após a derivação para não aceitar credenciais substituídas durante a operação.
+-- Corpo máximo de 4 KiB; queries parametrizadas; erros não expõem SQL, credenciais, códigos ou existência da conta na solicitação. Não registre corpos dessas rotas no proxy.
+-
+-## Verificação
+-
+-```sh
+-# Na raiz
+-flutter test --no-pub
+-flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+-# Em server/
+-dart analyze --fatal-infos
+-dart test
+-```
+-
+-Os testes cobrem as etapas da interface, validação, colagem dos seis dígitos, confirmação, retorno ao login, erros da API, alteração efetiva do login, código inválido, bloqueio por tentativas, expiração, reenvio, conta inexistente/inativa, autorização vinculada ao email, consumo concorrente, persistência de limites e falha do remetente. O repositório mantém avisos de estilo/validação anteriores, mas os erros de compilação do cadastro foram corrigidos. A rotina GitHub Actions executa os testes Flutter e a análise/testes Dart.
+diff --git a/lib/Data/app_database.dart b/lib/Data/app_database.dart
+index ff44a44..30ca983 100644
+--- a/lib/Data/app_database.dart
++++ b/lib/Data/app_database.dart
+@@ -13,93 +13,127 @@ class AppDatabase {
+     return _db!;
+   }
+ 
++  // Fecha a conexão (usado nos testes).
++  Future<void> fechar() async {
++    await _db?.close();
++    _db = null;
++  }
++
+   Future<Database> _abrir() async {
+     final dir = await getDatabasesPath();
+     final caminho = p.join(dir, 'laborHUb.db');
+ 
+     return openDatabase(
+       caminho,
+-      version: 2,
+-
+-      onUpgrade: (db, oldVersion, newVersion) async {
+-        if (oldVersion < 2) {
+-          // Import legacy accounts on the trusted server BEFORE distributing this update.
+-          await db.execute(
+-            "UPDATE usuarios SET usuarios_senha_hash = 'remote-managed', usuarios_reset_hash = NULL, usuarios_expira_em = NULL",
+-          );
+-        }
+-      },
++      version: 3,
+ 
+       onConfigure: (db) async {
+         await db.execute('PRAGMA foreign_keys = ON');
+       },
+ 
+-      onCreate: (db, version) async {
+-        await db.execute('''
+-          CREATE TABLE usuarios (
+-            usuarios_id INTEGER PRIMARY KEY AUTOINCREMENT,
+-            usuarios_email TEXT NOT NULL,
+-            usuarios_imagem TEXT,
+-            usuarios_telefone TEXT,
+-            usuarios_senha_hash TEXT NOT NULL,
+-            usuarios_ativo INTEGER,
+-            usuarios_is_admin INTEGER,
+-            usuarios_reset_hash TEXT,
+-            usuarios_expira_em TEXT,
+-            usuarios_ativacao_hash TEXT,
+-            usuarios_criado_em TEXT,
+-            usuarios_atualizado_em TEXT,
+-            usuarios_deletado_em TEXT
+-          )
+-        ''');
+-
+-        await db.execute('''
+-          CREATE TABLE pessoaFisica (
+-            pf_id INTEGER PRIMARY KEY AUTOINCREMENT,
+-            pf_nome TEXT NOT NULL,
+-            pf_sobrenome TEXT NOT NULL,
+-            pf_dataNascimento TEXT,
+-            pf_genero TEXT,
+-            pf_cpf TEXT,
+-            pf_tipo TEXT,
+-            pf_usuarios_id INTEGER,
+-            FOREIGN KEY (pf_usuarios_id) REFERENCES usuarios(usuarios_id)
+-            
+-            
+-          )
+-        ''');
+-
+-        await db.execute('''
+-          CREATE TABLE pessoaJuridica (
+-            pj_id INTEGER PRIMARY KEY AUTOINCREMENT,
+-            pj_razaoSocial TEXT NOT NULL,
+-            pj_nomeFantasia TEXT NOT NULL,
+-            pj_dataFundacao TEXT,
+-            pj_cnpj TEXT NOT NULL,
+-            pj_tipo TEXT NOT NULL,
+-            pj_usuarios_id INTEGER,
+-            FOREIGN KEY (pj_usuarios_id) REFERENCES usuarios(usuarios_id)
+-            
+-          )
+-        ''');
+-
+-        await db.execute('''
+-          CREATE TABLE endereco (
+-            endereco_id INTEGER PRIMARY KEY AUTOINCREMENT,
+-            endereco_nome TEXT NOT NULL,
+-            endereco_rua TEXT NOT NULL,
+-            endereco_bairro TEXT,
+-            endereco_cep TEXT NOT NULL,
+-            endereco_complemento TEXT,
+-            endereco_numero TEXT NOT NULL,
+-            endereco_descricao TEXT,
+-            endereco_cidade TEXT NOT NULL,
+-            endereco_uf TEXT NOT NULL,
+-            endereco_usuarios_id INTEGER,
+-            FOREIGN KEY (endereco_usuarios_id) REFERENCES usuarios(usuarios_id)
+-          )
+-        ''');
++      onCreate: (db, version) => _criarTabelas(db),
++
++      onUpgrade: (db, oldVersion, newVersion) async {
++        if (oldVersion < 3) {
++          // As versões 1 e 2 guardavam perfis criados só no aparelho, sem vínculo com o MySQL.
++          // A partir da versão 3 o SQLite é a cópia offline dos dados da API: recria as tabelas.
++          for (final tabela in ['endereco', 'pessoaFisica', 'pessoaJuridica', 'usuarios']) {
++            await db.execute('DROP TABLE IF EXISTS $tabela');
++          }
++          await _criarTabelas(db);
++        }
+       },
+     );
+   }
++
++  // Mesmas colunas do MySQL (database/init/01-laborhub.sql). Os ids são os do servidor.
++  Future<void> _criarTabelas(Database db) async {
++    await db.execute('''
++      CREATE TABLE usuarios (
++        usuarios_id INTEGER PRIMARY KEY,
++        usuarios_email TEXT NOT NULL,
++        usuarios_imagem TEXT,
++        usuarios_telefone TEXT,
++        usuarios_senha_hash TEXT,
++        usuarios_ativo INTEGER,
++        usuarios_is_admin INTEGER,
++        usuarios_reset_hash TEXT,
++        usuarios_expira_em TEXT,
++        usuarios_ativacao_hash TEXT,
++        usuarios_criado_em TEXT,
++        usuarios_atualizado_em TEXT,
++        usuarios_deletado_em TEXT
++      )
++    ''');
++
++    await db.execute('''
++      CREATE TABLE pessoaFisica (
++        pf_id INTEGER PRIMARY KEY,
++        pf_nome TEXT,
++        pf_sobrenome TEXT,
++        pf_dataNascimento TEXT,
++        pf_genero TEXT,
++        pf_cpf TEXT,
++        pf_tipo TEXT,
++        pf_usuarios_id INTEGER,
++        FOREIGN KEY (pf_usuarios_id) REFERENCES usuarios(usuarios_id)
++      )
++    ''');
++
++    await db.execute('''
++      CREATE TABLE pessoaJuridica (
++        pj_id INTEGER PRIMARY KEY,
++        pj_razaoSocial TEXT,
++        pj_nomeFantasia TEXT,
++        pj_dataFundacao TEXT,
++        pj_cnpj TEXT,
++        pj_tipo TEXT,
++        pj_usuarios_id INTEGER,
++        FOREIGN KEY (pj_usuarios_id) REFERENCES usuarios(usuarios_id)
++      )
++    ''');
++
++    await db.execute('''
++      CREATE TABLE endereco (
++        endereco_id INTEGER PRIMARY KEY,
++        endereco_nome TEXT,
++        endereco_rua TEXT,
++        endereco_bairro TEXT,
++        endereco_cep TEXT,
++        endereco_complemento TEXT,
++        endereco_numero TEXT,
++        endereco_descricao TEXT,
++        endereco_cidade TEXT,
++        endereco_uf TEXT,
++        endereco_usuarios_id INTEGER,
++        FOREIGN KEY (endereco_usuarios_id) REFERENCES usuarios(usuarios_id)
++      )
++    ''');
++
++    // Usada pelo ServicosDAO. Sem vínculo com a sessão: não é apagada no logout.
++    await db.execute('''
++      CREATE TABLE IF NOT EXISTS servicos (
++        servicos_id INTEGER PRIMARY KEY AUTOINCREMENT,
++        servicos_nome TEXT,
++        servicos_data TEXT,
++        servicos_valor REAL,
++        servicos_tipo_cobranca TEXT,
++        servicos_nivel_experiencia TEXT,
++        servicos_descricao TEXT,
++        servicos_usuarios_id INTEGER
++      )
++    ''');
++
++    // Uma única sessão por aparelho (sessao_id sempre 1).
++    await db.execute('''
++      CREATE TABLE IF NOT EXISTS sessao (
++        sessao_id INTEGER PRIMARY KEY CHECK (sessao_id = 1),
++        sessao_token TEXT NOT NULL,
++        sessao_tipo TEXT,
++        sessao_expira_em TEXT NOT NULL,
++        sessao_usuarios_id INTEGER NOT NULL,
++        FOREIGN KEY (sessao_usuarios_id) REFERENCES usuarios(usuarios_id)
++      )
++    ''');
++  }
+ }
+diff --git a/lib/Data/endereco_dao.dart b/lib/Data/endereco_dao.dart
+deleted file mode 100644
+index e59fcdb..0000000
+--- a/lib/Data/endereco_dao.dart
++++ /dev/null
+@@ -1,13 +0,0 @@
+-import 'package:sqflite/sqflite.dart';
+-import '../Model/endereco.dart';
+-import 'app_database.dart';
+-
+-class EnderecoDao {
+-    Future<Database> get _db async =>
+-        await AppDatabase.instance.database;
+-
+-    Future<int> inserir(Endereco endereco) async {
+-        final db = await _db;
+-        return db.insert('endereco.dart', endereco.toMap());
+-    }
+-}
+\ No newline at end of file
+diff --git a/lib/Data/pessoaFisica_dao.dart b/lib/Data/pessoaFisica_dao.dart
+deleted file mode 100644
+index f033b61..0000000
+--- a/lib/Data/pessoaFisica_dao.dart
++++ /dev/null
+@@ -1,26 +0,0 @@
+-import 'package:sqflite/sqflite.dart';
+-import '../Model/pessoaFisica.dart';
+-import 'app_database.dart';
+-
+-class PessoaFisicaDao {
+-    Future<Database> get _db async =>
+-        await AppDatabase.instance.database;
+-
+-    Future<int> inserir(PessoaFisica pf) async {
+-        final db = await _db;
+-        return db.insert('pessoaFisica', pf.toMap());
+-    }
+-
+-    Future<PessoaFisica?> buscarPorUsuario(int usuarioId) async {
+-        final db = await _db;
+-        final resultado = await db.query(
+-            'pessoaFisica',
+-            where: 'pf_usuarios_id = ?',
+-            whereArgs: [usuarioId],
+-            limit: 1,
+-        );
+-
+-        if (resultado.isEmpty) return null;
+-        return PessoaFisica.fromMap(resultado.first);
+-    }
+-}
+\ No newline at end of file
+diff --git a/lib/Data/pessoaJuridica_dao.dart b/lib/Data/pessoaJuridica_dao.dart
+deleted file mode 100644
+index f0dfb79..0000000
+--- a/lib/Data/pessoaJuridica_dao.dart
++++ /dev/null
+@@ -1,26 +0,0 @@
+-import 'package:sqflite/sqflite.dart';
+-import '../Model/pessoJuridica.dart';
+-import 'app_database.dart';
+-
+-class PessoajuridicaDao {
+-    Future<Database> get _db async =>
+-        await AppDatabase.instance.database;
+-
+-    Future<int> inserir(PessoaJuridica pj) async {
+-        final db = await _db;
+-        return db.insert('pessoaJuridica', pj.toMap());
+-    }
+-
+-    Future<PessoaJuridica?> buscarPorUsuario(int usuarioId) async {
+-        final db = await _db;
+-        final resultado = await db.query(
+-            'pessoaJuridica',
+-            where: 'pj_usuarios_id = ?',
+-            whereArgs: [usuarioId],
+-            limit: 1,
+-        );
+-
+-        if (resultado.isEmpty) return null;
+-        return PessoaJuridica.fromMap(resultado.first);
+-    }
+-}
+\ No newline at end of file
+diff --git a/lib/Data/sessao_dao.dart b/lib/Data/sessao_dao.dart
+new file mode 100644
+index 0000000..92e467c
+--- /dev/null
++++ b/lib/Data/sessao_dao.dart
+@@ -0,0 +1,66 @@
++import 'package:sqflite/sqflite.dart';
++import '../Model/sessao.dart';
++import '../Model/usuarios.dart';
++import 'app_database.dart';
++
++class SessaoDao {
++    Future<Database> get _db async =>
++        await AppDatabase.instance.database;
++
++    // Substitui a cópia local pelos dados retornados pela API (login ou renovação da sessão).
++    Future<void> salvar(String token, Map<String, dynamic> dados) async {
++        final db = await _db;
++        final usuario = Usuarios.fromMap(dados);
++
++        await db.transaction((txn) async {
++            await _apagar(txn);
++            await txn.insert('usuarios', usuario.toMap());
++
++            final pf = dados['pessoaFisica'];
++            if (pf is Map) await txn.insert('pessoaFisica', Map<String, Object?>.from(pf));
++
++            final pj = dados['pessoaJuridica'];
++            if (pj is Map) await txn.insert('pessoaJuridica', Map<String, Object?>.from(pj));
++
++            for (final endereco in (dados['enderecos'] as List? ?? const [])) {
++                await txn.insert('endereco', Map<String, Object?>.from(endereco as Map));
++            }
++
++            await txn.insert('sessao', {
++                'sessao_id': 1,
++                'sessao_token': token,
++                'sessao_tipo': dados['tipo'] as String?,
++                'sessao_expira_em': dados['sessao_expira_em'] as String,
++                'sessao_usuarios_id': usuario.usuarios_id,
++            });
++        });
++    }
++
++    Future<Sessao?> buscar() async {
++        final db = await _db;
++        final resultado = await db.rawQuery(
++            'SELECT * FROM sessao JOIN usuarios ON usuarios_id = sessao_usuarios_id LIMIT 1',
++        );
++
++        if (resultado.isEmpty) return null;
++        final linha = resultado.first;
++        return Sessao(
++            token: linha['sessao_token'] as String,
++            tipo: linha['sessao_tipo'] as String?,
++            expiraEm: DateTime.parse(linha['sessao_expira_em'] as String),
++            usuario: Usuarios.fromMap(linha),
++        );
++    }
++
++    // Logout ou sessão inválida: remove a sessão e os dados do usuário do aparelho.
++    Future<void> limpar() async {
++        final db = await _db;
++        await db.transaction(_apagar);
++    }
++
++    Future<void> _apagar(Transaction txn) async {
++        for (final tabela in ['sessao', 'endereco', 'pessoaFisica', 'pessoaJuridica', 'usuarios']) {
++            await txn.delete(tabela);
++        }
++    }
++}
+diff --git a/lib/Data/usuarios_dao.dart b/lib/Data/usuarios_dao.dart
+deleted file mode 100644
+index 92eeac4..0000000
+--- a/lib/Data/usuarios_dao.dart
++++ /dev/null
+@@ -1,26 +0,0 @@
+-import 'package:sqflite/sqflite.dart';
+-import '../Model/usuarios.dart';
+-import 'app_database.dart';
+-
+-class UsuariosDao {
+-    Future<Database> get _db async =>
+-        await AppDatabase.instance.database;
+-
+-    Future<int> inserir(Usuarios usuarios) async {
+-        final db = await _db;
+-        return db.insert('usuarios', usuarios.toMap());
+-    }
+-    
+-    Future<Usuarios?> buscarPorEmail(String email) async {
+-        final db = await _db;
+-        final resultado = await db.query(
+-            'usuarios',
+-            where: 'LOWER(usuarios_email) = LOWER(?) AND usuarios_deletado_em IS NULL',
+-            whereArgs: [email],
+-            limit: 1,
+-        );
+-
+-        if (resultado.isEmpty) return null;
+-        return Usuarios.fromMap(resultado.first);
+-    }
+-}
+\ No newline at end of file
+diff --git a/lib/Model/endereco.dart b/lib/Model/endereco.dart
+index e4f405d..cf2ae89 100644
+--- a/lib/Model/endereco.dart
++++ b/lib/Model/endereco.dart
+@@ -32,7 +32,7 @@ Map<String, Object?> toMap() {
+     return {
+         if(endereco_id != null) 'endereco_id' : endereco_id,
+         'endereco_nome': endereco_nome,
+-        'endereco_rua' : endereco_nome,
++        'endereco_rua' : endereco_rua,
+         'endereco_bairro' : endereco_bairro,
+         'endereco_cep' : endereco_cep,
+         'endereco_complemento' : endereco_complemento,
+diff --git a/lib/Model/pessoaFisica.dart b/lib/Model/pessoaFisica.dart
+index 9702ec1..ec13b0d 100644
+--- a/lib/Model/pessoaFisica.dart
++++ b/lib/Model/pessoaFisica.dart
+@@ -5,6 +5,7 @@ final String pf_nome;
+ final String pf_sobrenome;
+ final DateTime pf_dataNascimento;
+ final String pf_genero;
++final String? pf_cpf;
+ final String pf_tipo;
+ final int pf_usuarios_id; // chave estrangeira de usuarios
+ 
+@@ -14,6 +15,7 @@ const PessoaFisica({
+     required this.pf_sobrenome,
+     required this.pf_dataNascimento,
+     required this.pf_genero,
++    this.pf_cpf,
+     required this.pf_tipo,
+     required this.pf_usuarios_id
+ 
+@@ -27,6 +29,7 @@ Map<String, Object?> toMap() {
+         'pf_sobrenome' : pf_sobrenome,
+         'pf_dataNascimento' : pf_dataNascimento.toIso8601String(),
+         'pf_genero' : pf_genero,
++        'pf_cpf' : pf_cpf,
+         'pf_tipo' : pf_tipo,
+         'pf_usuarios_id': pf_usuarios_id,
+     };
+@@ -40,6 +43,7 @@ factory PessoaFisica.fromMap(Map<String, Object?> map) {
+     pf_sobrenome : map['pf_sobrenome'] as String,
+     pf_dataNascimento : DateTime.parse(map['pf_dataNascimento'] as String),
+     pf_genero : map['pf_genero'] as String,
++    pf_cpf : map['pf_cpf'] as String?,
+     pf_tipo : map['pf_tipo'] as String,
+     pf_usuarios_id : map['pf_usuarios_id'] as int,
+ 
+diff --git a/lib/Model/sessao.dart b/lib/Model/sessao.dart
+new file mode 100644
+index 0000000..2627e9a
+--- /dev/null
++++ b/lib/Model/sessao.dart
+@@ -0,0 +1,19 @@
++import 'usuarios.dart';
++
++class Sessao {
++
++final String token;
++final String? tipo; // Cliente ou Profissional
++final DateTime expiraEm;
++final Usuarios usuario;
++
++const Sessao({
++    required this.token,
++    required this.tipo,
++    required this.expiraEm,
++    required this.usuario,
++});
++
++bool get expirada => !expiraEm.isAfter(DateTime.now());
++
++}
+diff --git a/lib/Repository/auth_api.dart b/lib/Repository/auth_api.dart
+index c7ccf9f..26efc4d 100644
+--- a/lib/Repository/auth_api.dart
++++ b/lib/Repository/auth_api.dart
+@@ -4,7 +4,8 @@ import 'package:http/http.dart' as http;
+ 
+ class AuthException implements Exception {
+   final String mensagem;
+-  const AuthException(this.mensagem);
++  final int? status; // código HTTP; null quando não houve resposta (sem conexão)
++  const AuthException(this.mensagem, [this.status]);
+   @override
+   String toString() => mensagem;
+ }
+@@ -18,8 +19,9 @@ class AuthApi {
+ 
+   Future<Map<String, dynamic>> post(
+     String path,
+-    Map<String, String> data,
+-  ) async {
++    Map<String, Object?> data, {
++    String? token,
++  }) async {
+     final uri = Uri.tryParse(baseUrl);
+     const local = bool.fromEnvironment('ALLOW_LOCAL_HTTP');
+     if (uri == null ||
+@@ -33,7 +35,10 @@ class AuthApi {
+       final response = await _client
+           .post(
+             Uri.parse('${baseUrl.replaceAll(RegExp(r'/+$'), '')}/$path'),
+-            headers: {'Content-Type': 'application/json'},
++            headers: {
++              'Content-Type': 'application/json',
++              if (token != null) 'Authorization': 'Bearer $token',
++            },
+             body: jsonEncode(data),
+           )
+           .timeout(const Duration(seconds: 30));
+@@ -42,6 +47,7 @@ class AuthApi {
+       if (response.statusCode >= 400) {
+         throw AuthException(
+           body['message'] as String? ?? 'Não foi possível concluir.',
++          response.statusCode,
+         );
+       }
+       return body;
+diff --git a/lib/Repository/cadastro_repository.dart b/lib/Repository/cadastro_repository.dart
+index f10adbe..575bda9 100644
+--- a/lib/Repository/cadastro_repository.dart
++++ b/lib/Repository/cadastro_repository.dart
+@@ -1,4 +1,3 @@
+-import '../Data/app_database.dart';
+ import 'auth_api.dart';
+ 
+ class CadastroRepository {
+@@ -19,45 +18,23 @@ class CadastroRepository {
+       );
+     }
+ 
+-    final db = await AppDatabase.instance.database;
+-
+-    return db.transaction((txn) async {
+-      final dadosUsuario = Map<String, Object?>.from(usuario)
+-        ..remove('usuarios_id')
+-        ..['usuarios_senha_hash'] = 'remote-managed';
+-
+-      final usuarioId = await txn.insert('usuarios', dadosUsuario);
+-
+-      if (pessoaFisica != null) {
+-        final dadosPF = Map<String, Object?>.from(pessoaFisica)
+-          ..remove('pf_id')
+-          ..['pf_usuarios_id'] = usuarioId;
+-
+-        await txn.insert('pessoaFisica', dadosPF);
+-      } else {
+-        final dadosPJ = Map<String, Object?>.from(pessoaJuridica!)
+-          ..remove('pj_id')
+-          ..['pj_usuarios_id'] = usuarioId;
+-
+-        await txn.insert('pessoaJuridica', dadosPJ);
+-      }
+-
+-      final dadosEndereco = Map<String, Object?>.from(endereco)
+-        ..remove('endereco_id')
+-        ..['endereco_usuarios_id'] = usuarioId;
+-
+-      await txn.insert('endereco', dadosEndereco);
+-
+-      // Validate local writes before creating remote credentials. The server accepts
+-      // retries only when the existing password matches, covering a lost response.
+-      // Send the entered password separately from any hash in the local model.
+-      // The server alone derives the credential used by login.
+-      await _api.post('auth/register', {
+-        'email': usuario['usuarios_email'] as String,
+-        'password': senha,
+-      });
+-
+-      return usuarioId;
++    // A API grava usuário, perfil e endereço no MySQL em uma única transação
++    // e preenche as chaves estrangeiras. Ids e hashes locais não são enviados:
++    // a senha digitada vai separada e somente o servidor gera o hash.
++    Map<String, Object?> semChaves(Map<String, Object?> dados, List<String> chaves) =>
++        Map<String, Object?>.from(dados)..removeWhere((chave, _) => chaves.contains(chave));
++
++    final body = await _api.post('auth/register', {
++      'email': usuario['usuarios_email'] as String,
++      'password': senha,
++      'usuario': semChaves(usuario, ['usuarios_id', 'usuarios_senha_hash']),
++      'endereco': semChaves(endereco, ['endereco_id', 'endereco_usuarios_id']),
++      if (pessoaFisica != null)
++        'pessoaFisica': semChaves(pessoaFisica, ['pf_id', 'pf_usuarios_id']),
++      if (pessoaJuridica != null)
++        'pessoaJuridica': semChaves(pessoaJuridica, ['pj_id', 'pj_usuarios_id']),
+     });
++
++    return body['usuarios_id'] as int;
+   }
+ }
+diff --git a/lib/Repository/endereco_repository.dart b/lib/Repository/endereco_repository.dart
+deleted file mode 100644
+index 5c4560b..0000000
+--- a/lib/Repository/endereco_repository.dart
++++ /dev/null
+@@ -1,17 +0,0 @@
+-import '../Data/endereco_dao.dart';
+-import '../Model/endereco.dart';
+-
+-
+-class EnderecoRepository {
+-
+-       final EnderecoDao _dao = EnderecoDao();
+-
+-       //Cadastro
+-       Future<void> Cadastrar(Endereco endereco) async {
+-         await _dao.inserir(endereco);
+-
+-       }
+-
+-
+-
+-}
+\ No newline at end of file
+diff --git a/lib/Repository/pessoaFisica_repository.dart b/lib/Repository/pessoaFisica_repository.dart
+deleted file mode 100644
+index 665d881..0000000
+--- a/lib/Repository/pessoaFisica_repository.dart
++++ /dev/null
+@@ -1,17 +0,0 @@
+-import '../Data/pessoaFisica_dao.dart';
+-import '../Model/pessoaFisica.dart';
+-
+-
+-class PessoaFisicaRepository {
+-
+-       final PessoaFisicaDao _dao = PessoaFisicaDao();
+-
+-       //Cadastro
+-       Future<void> Cadastrar(PessoaFisica pf) async {
+-         await _dao.inserir(pf);
+-
+-       }
+-
+-
+-
+-}
+\ No newline at end of file
+diff --git a/lib/Repository/pessoaJuridica_Repository.dart b/lib/Repository/pessoaJuridica_Repository.dart
+deleted file mode 100644
+index 8fae47c..0000000
+--- a/lib/Repository/pessoaJuridica_Repository.dart
++++ /dev/null
+@@ -1,17 +0,0 @@
+-import '../Data/pessoaJuridica_dao.dart';
+-import '../Model/pessoJuridica.dart';
+-
+-
+-class UsuariosRepository {
+-
+-       final PessoajuridicaDao _dao = PessoajuridicaDao();
+-
+-       //Cadastro
+-       Future<void> Cadastrar(PessoaJuridica pj) async {
+-         await _dao.inserir(pj);
+-
+-       }
+-
+-
+-
+-}
+\ No newline at end of file
+diff --git a/lib/Repository/sessao_repository.dart b/lib/Repository/sessao_repository.dart
+new file mode 100644
+index 0000000..02f070e
+--- /dev/null
++++ b/lib/Repository/sessao_repository.dart
+@@ -0,0 +1,52 @@
++import 'auth_api.dart';
++import '../Data/sessao_dao.dart';
++import '../Model/sessao.dart';
++
++class SessaoRepository {
++  final AuthApi _api;
++  final SessaoDao _dao;
++  SessaoRepository({AuthApi? api, SessaoDao? dao})
++    : _api = api ?? AuthApi(),
++      _dao = dao ?? SessaoDao();
++
++  // Sessão guardada no SQLite, sem acessar a rede: permite abrir o app offline.
++  Future<Sessao?> restaurar() async {
++    final sessao = await _dao.buscar();
++    if (sessao == null) return null;
++    if (sessao.expirada) {
++      await _dao.limpar();
++      return null;
++    }
++    return sessao;
++  }
++
++  // Confere a sessão na API e atualiza a cópia local.
++  // Sem conexão, mantém a sessão local; com 401 (expirada, encerrada ou senha trocada), apaga.
++  Future<Sessao?> validar(Sessao sessao) async {
++    try {
++      final body = await _api.post('auth/session', {}, token: sessao.token);
++      await _dao.salvar(sessao.token, body);
++      return await _dao.buscar();
++    } on AuthException catch (erro) {
++      if (erro.status == 401) {
++        await _dao.limpar();
++        return null;
++      }
++      return sessao;
++    }
++  }
++
++  // Encerra a sessão na API (quando houver conexão) e apaga os dados do aparelho.
++  Future<void> sair() async {
++    final sessao = await _dao.buscar();
++    try {
++      if (sessao != null) {
++        await _api.post('auth/logout', {}, token: sessao.token);
++      }
++    } on AuthException {
++      // Offline: os dados locais são apagados mesmo assim; o token expira no servidor.
++    } finally {
++      await _dao.limpar();
++    }
++  }
++}
+diff --git a/lib/Repository/usuarios_repository.dart b/lib/Repository/usuarios_repository.dart
+index 703fff1..564f907 100644
+--- a/lib/Repository/usuarios_repository.dart
++++ b/lib/Repository/usuarios_repository.dart
+@@ -1,42 +1,21 @@
+ import 'auth_api.dart';
+-import '../Data/usuarios_dao.dart';
+-import '../Data/pessoaFisica_dao.dart';
+-import '../Data/pessoaJuridica_dao.dart';
++import '../Data/sessao_dao.dart';
+ import '../Model/usuarios.dart';
+ 
+ class UsuariosRepository {
+-  final AuthApi _api = AuthApi();
+-  final UsuariosDao _dao = UsuariosDao();
+-  final PessoaFisicaDao _pfDao = PessoaFisicaDao();
+-  final PessoajuridicaDao _pjDao = PessoajuridicaDao();
++  final AuthApi _api;
++  final SessaoDao _sessaoDao;
++  UsuariosRepository({AuthApi? api, SessaoDao? sessaoDao})
++    : _api = api ?? AuthApi(),
++      _sessaoDao = sessaoDao ?? SessaoDao();
+ 
+-  //Cadastro
+-  Future<void> Cadastrar(Usuarios usuarios) async {
+-    await _api.post('auth/register', {
+-      'email': usuarios.usuarios_email,
+-      'password': usuarios.usuarios_senha_hash,
+-    });
+-  }
+-
+-  //Login
+-  Future<Usuarios?> Autenticar(String email, String senha) async {
++  //Login: valida na API, abre a sessão e guarda usuário e perfil no SQLite para uso offline.
++  Future<(Usuarios, String?)> Autenticar(String email, String senha) async {
+     final body = await _api.post('auth/login', {
+       'email': email.trim(),
+       'password': senha,
+     });
+-    return Usuarios.fromMap(body);
+-  }
+-  
+-  Future<Usuarios?> BuscarLocal(String email) {
+-    return _dao.buscarPorEmail(email.trim());
++    await _sessaoDao.salvar(body['token'] as String, body);
++    return (Usuarios.fromMap(body), body['tipo'] as String?);
+   }
+-
+-  Future<String?> BuscarTipo(int usuarioId) async {
+-    final pf = await _pfDao.buscarPorUsuario(usuarioId);
+-    if (pf != null) return pf.pf_tipo;
+-
+-    final pj = await _pjDao.buscarPorUsuario(usuarioId);
+-    return pj?.pj_tipo;
+-  }
+-
+ }
+diff --git a/lib/Telas/cliente.dart b/lib/Telas/cliente.dart
+index e4cdee8..8364cd4 100644
+--- a/lib/Telas/cliente.dart
++++ b/lib/Telas/cliente.dart
+@@ -15,8 +15,6 @@ import 'enderecoTela.dart';
+ import '../Model/pessoaFisica.dart';
+ import '../Model/pessoJuridica.dart';
+ import '../Model/usuarios.dart';
+-import '../Repository/pessoaFisica_repository.dart';
+-import '../Repository/pessoaJuridica_Repository.dart';
+ import '../Repository/usuarios_repository.dart';
+ 
+ class Cliente extends StatefulWidget {
+diff --git a/lib/Telas/enderecoProfissionalTela.dart b/lib/Telas/enderecoProfissionalTela.dart
+index 7756500..c510a53 100644
+--- a/lib/Telas/enderecoProfissionalTela.dart
++++ b/lib/Telas/enderecoProfissionalTela.dart
+@@ -183,6 +183,7 @@ class _EnderecoProfissionalTelaState extends State<EnderecoProfissionalTela> {
+             obrigatorio(widget.dataNascimento, 'a data de nascimento'),
+           ),
+           pf_genero: obrigatorio(widget.genero, 'o gênero'),
++          pf_cpf: widget.cpf,
+           pf_tipo: 'Cliente',
+           pf_usuarios_id: 0,
+         );
+diff --git a/lib/Telas/enderecoTela.dart b/lib/Telas/enderecoTela.dart
+index 8a6c3c9..611cef1 100644
+--- a/lib/Telas/enderecoTela.dart
++++ b/lib/Telas/enderecoTela.dart
+@@ -183,6 +183,7 @@ class _EnderecoTelaState extends State<EnderecoTela> {
+             obrigatorio(widget.dataNascimento, 'a data de nascimento'),
+           ),
+           pf_genero: obrigatorio(widget.genero, 'o gênero'),
++          pf_cpf: widget.cpf,
+           pf_tipo: 'Cliente',
+           pf_usuarios_id: 0,
+         );
+diff --git a/lib/Telas/homeCliente.dart b/lib/Telas/homeCliente.dart
+index 11c1cb3..3fdee7c 100644
+--- a/lib/Telas/homeCliente.dart
++++ b/lib/Telas/homeCliente.dart
+@@ -6,10 +6,12 @@ import '../Formularios/forms.dart';
+ import '../Model/profissional.dart';
+ import '../Model/usuarios.dart';
+ import '../Repository/profissional_repository.dart';
++import '../Repository/sessao_repository.dart';
++import 'login.dart';
+ 
+ 
+ class HomeCliente extends StatefulWidget {
+-  // Usuário local (SQLite), já confirmado como Cliente pelo Login.
++  // Usuário da sessão (API ou cópia offline no SQLite), já confirmado como Cliente pelo Login.
+   final Usuarios usuario;
+ 
+   const HomeCliente({super.key, required this.usuario});
+@@ -21,6 +23,7 @@ class HomeCliente extends StatefulWidget {
+ class _HomeClienteState extends State<HomeCliente> {
+   final _pesquisaController = TextEditingController();
+   final ProfissionalRepository _repository = ProfissionalRepository();
++  final SessaoRepository _sessao = SessaoRepository();
+ 
+   List<Profissional> _profissionais = [];
+   bool _carregando = true;
+@@ -31,6 +34,39 @@ class _HomeClienteState extends State<HomeCliente> {
+     // Refaz o filtro a cada letra digitada.
+     _pesquisaController.addListener(() => setState(() {}));
+     _carregarProfissionais();
++    _validarSessao();
++  }
++
++  // Confere a sessão na API ao abrir. Sem conexão, continua com os dados do SQLite.
++  Future<void> _validarSessao() async {
++    try {
++      final sessao = await _sessao.restaurar();
++      final valida = sessao == null ? null : await _sessao.validar(sessao);
++      if (valida == null) _voltarAoLogin('Sua sessão expirou. Entre novamente.');
++    } catch (_) {
++      // Erro no banco local: mantém a tela; a próxima abertura tenta de novo.
++    }
++  }
++
++  Future<void> _sair() async {
++    try {
++      await _sessao.sair();
++    } catch (_) {
++      // Mesmo com erro local, volta ao login.
++    }
++    _voltarAoLogin(null);
++  }
++
++  void _voltarAoLogin(String? mensagem) {
++    if (!mounted) return;
++    final mensageiro = ScaffoldMessenger.of(context);
++    Navigator.of(context).pushAndRemoveUntil(
++      MaterialPageRoute(builder: (context) => const Login()),
++      (route) => false,
++    );
++    if (mensagem != null) {
++      mensageiro.showSnackBar(SnackBar(content: Text(mensagem)));
++    }
+   }
+ 
+   @override
+@@ -105,6 +141,12 @@ class _HomeClienteState extends State<HomeCliente> {
+                           // Navegação para tela de configurações
+                         },
+                       ),
++                      IconButton(
++                        icon: const Icon(Icons.logout, size: 30),
++                        color: Colors.black,
++                        tooltip: 'Sair',
++                        onPressed: _sair,
++                      ),
+                     ],
+                   ),
+                 ),
+diff --git a/lib/Telas/login.dart b/lib/Telas/login.dart
+index c11133c..79adb8c 100644
+--- a/lib/Telas/login.dart
++++ b/lib/Telas/login.dart
+@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
+ 
+ import '../Formularios/forms.dart';
+ import '../Repository/usuarios_repository.dart';
++import '../Repository/sessao_repository.dart';
++import '../Model/usuarios.dart';
+ import 'escolhaUsuario.dart';
+ import 'recuperarSenha.dart';
+ import '../Repository/auth_api.dart';
+@@ -19,9 +21,36 @@ class _LoginState extends State<Login> {
+   final _emailController = TextEditingController();
+   final _senhaController = TextEditingController();
+   final UsuariosRepository _repository = UsuariosRepository();
++  final SessaoRepository _sessao = SessaoRepository();
+ 
+   bool _carregando = false;
+ 
++  @override
++  void initState() {
++    super.initState();
++    _restaurarSessao();
++  }
++
++  // Sessão salva no SQLite: entra direto, mesmo sem internet.
++  Future<void> _restaurarSessao() async {
++    try {
++      final sessao = await _sessao.restaurar();
++      if (!mounted || sessao == null || sessao.tipo != 'Cliente') return;
++      _abrirHome(sessao.usuario);
++    } catch (_) {
++      // Banco local indisponível: segue no login normal.
++    }
++  }
++
++  void _abrirHome(Usuarios usuario) {
++    Navigator.of(context).pushAndRemoveUntil(
++      MaterialPageRoute(
++        builder: (context) => HomeCliente(usuario: usuario),
++      ),
++      (route) => false,
++    );
++  }
++
+   @override
+   void dispose() {
+     _emailController.dispose();
+@@ -54,41 +83,24 @@ class _LoginState extends State<Login> {
+     setState(() => _carregando = true);
+ 
+     try {
+-      final usuario = await _repository.Autenticar(
++      final (usuario, tipo) = await _repository.Autenticar(
+         _emailController.text,
+         _senhaController.text,
+       );
+ 
+       if (!mounted) return;
+ 
+-      if (usuario == null) {
+-        _mostrarMensagem('Email ou senha inválidos');
+-        return;
+-      }
+-
+-      final local = await _repository.BuscarLocal(usuario.usuarios_email);
+-      final tipo = local?.usuarios_id == null
+-          ? null
+-          : await _repository.BuscarTipo(local!.usuarios_id!);
+-
+-      if (!mounted) return;
+-
+-      if (local == null || tipo == null) {
+-        _mostrarMensagem('Perfil não encontrado neste aparelho.');
+-        return;
+-      }
+-
+       if (tipo != 'Cliente') {
+-        _mostrarMensagem('Esta área está disponível apenas para clientes.');
++        // Sem área para este perfil no app: não mantém a sessão aberta.
++        await _sessao.sair();
++        if (!mounted) return;
++        _mostrarMensagem(tipo == null
++            ? 'Perfil não encontrado.'
++            : 'Esta área está disponível apenas para clientes.');
+         return;
+       }
+ 
+-      Navigator.of(context).pushAndRemoveUntil(
+-        MaterialPageRoute(
+-          builder: (context) => HomeCliente(usuario: local),
+-        ),
+-        (route) => false,
+-      );
++      _abrirHome(usuario);
+     } on AuthException catch (error) {
+       if (mounted) _mostrarMensagem(error.mensagem);
+     } catch (_) {
+diff --git a/lib/Telas/profissional.dart b/lib/Telas/profissional.dart
+index e6dfd68..404e003 100644
+--- a/lib/Telas/profissional.dart
++++ b/lib/Telas/profissional.dart
+@@ -15,8 +15,6 @@ import 'package:laborhub/Telas/enderecoProfissionalTela.dart';
+ import '../Model/pessoaFisica.dart';
+ import '../Model/pessoJuridica.dart';
+ import '../Model/usuarios.dart';
+-import '../Repository/pessoaFisica_repository.dart';
+-import '../Repository/pessoaJuridica_Repository.dart';
+ import '../Repository/usuarios_repository.dart';
+ 
+ class Profissional extends StatefulWidget {
+diff --git a/server/.env.example b/server/.env.example
+deleted file mode 100644
+index ec49f23..0000000
+--- a/server/.env.example
++++ /dev/null
+@@ -1,11 +0,0 @@
+-# Carregue estas variáveis no ambiente do processo; o servidor não lê .env automaticamente.
+-RESET_SECRET=troque-por-um-segredo-aleatorio-com-pelo-menos-32-caracteres
+-SMTP_HOST=smtp.example.com
+-SMTP_PORT=587
+-SMTP_SSL=false
+-SMTP_USER=usuario-smtp
+-SMTP_PASSWORD=senha-de-aplicativo
+-SMTP_FROM=no-reply@example.com
+-DATABASE_PATH=laborhub.sqlite
+-HOST=127.0.0.1
+-PORT=8080
+diff --git a/server/.gitignore b/server/.gitignore
+deleted file mode 100644
+index a75d5cf..0000000
+--- a/server/.gitignore
++++ /dev/null
+@@ -1,5 +0,0 @@
+-.dart_tool/
+-*.sqlite
+-*.sqlite-*
+-.env
+-build/
+diff --git a/server/analysis_options.yaml b/server/analysis_options.yaml
+deleted file mode 100644
+index 4a7c3f9..0000000
+--- a/server/analysis_options.yaml
++++ /dev/null
+@@ -1,11 +0,0 @@
+-analyzer:
+-  errors:
+-    unused_import: error
+-  exclude:
+-    - build/**
+-    - android/**
+-    - ios/**
+-    - web/**
+-    - windows/**
+-    - macos/**
+-    - linux/**
+diff --git a/server/bin/import_legacy.dart b/server/bin/import_legacy.dart
+deleted file mode 100644
+index 149d882..0000000
+--- a/server/bin/import_legacy.dart
++++ /dev/null
+@@ -1,53 +0,0 @@
+-import 'dart:io';
+-
+-import 'package:laborhub_server/auth.dart';
+-import 'package:sqlite3/sqlite3.dart';
+-
+-/// Run ONLY on a trusted administrator's machine, before upgrading old clients.
+-Future<void> main(List<String> args) async {
+-  if (args.length != 2) {
+-    stderr.writeln(
+-      'Uso: dart run bin/import_legacy.dart backup-legado.db laborhub.sqlite',
+-    );
+-    exitCode = 64;
+-    return;
+-  }
+-  final source = sqlite3.open(args[0], mode: OpenMode.readOnly);
+-  final target = sqlite3.open(args[1]);
+-  try {
+-    final api = AuthApi(
+-      target,
+-      Platform.environment['RESET_SECRET'] ?? '',
+-      (_, _) async {},
+-    );
+-    final users = source.select(
+-      'SELECT * FROM usuarios WHERE usuarios_deletado_em IS NULL',
+-    );
+-    var imported = 0;
+-    for (final user in users) {
+-      final email = (user['usuarios_email'] as String).trim().toLowerCase();
+-      final password = user['usuarios_senha_hash'] as String;
+-      if (password == 'remote-managed') {
+-        throw StateError('Use um backup ANTERIOR à atualização para v2.');
+-      }
+-      final hash = await api.hashPassword(password);
+-      target.execute(
+-        'INSERT OR IGNORE INTO users(email,password,created,active) VALUES(?,?,?,?)',
+-        [
+-          email,
+-          hash,
+-          user['usuarios_criado_em'] ??
+-              DateTime.now().toUtc().toIso8601String(),
+-          user['usuarios_ativo'] == 1 ? 1 : 0,
+-        ],
+-      );
+-      imported += target.updatedRows;
+-    }
+-    stdout.writeln(
+-      '$imported contas importadas; contas existentes não foram sobrescritas.',
+-    );
+-  } finally {
+-    source.close();
+-    target.close();
+-  }
+-}
+diff --git a/server/bin/server.dart b/server/bin/server.dart
+deleted file mode 100644
+index 15f89f3..0000000
+--- a/server/bin/server.dart
++++ /dev/null
+@@ -1,56 +0,0 @@
+-import 'dart:io';
+-
+-import 'package:laborhub_server/auth.dart';
+-import 'package:mailer/mailer.dart';
+-import 'package:mailer/smtp_server.dart';
+-import 'package:shelf/shelf.dart';
+-import 'package:shelf/shelf_io.dart' as io;
+-import 'package:sqlite3/sqlite3.dart';
+-
+-Future<void> main() async {
+-  final env = Platform.environment;
+-  String required(String name) {
+-    final value = env[name];
+-    if (value == null || value.isEmpty) throw StateError('Configure $name');
+-    return value;
+-  }
+-
+-  final secret = required('RESET_SECRET');
+-  final from = required('SMTP_FROM');
+-  final smtp = SmtpServer(
+-    required('SMTP_HOST'),
+-    port: int.parse(env['SMTP_PORT'] ?? '587'),
+-    username: required('SMTP_USER'),
+-    password: required('SMTP_PASSWORD'),
+-    ssl: env['SMTP_SSL'] == 'true',
+-    allowInsecure: false,
+-  );
+-  final database = sqlite3.open(env['DATABASE_PATH'] ?? 'laborhub.sqlite');
+-  final api = AuthApi(database, secret, (email, code) async {
+-    await send(
+-      Message()
+-        ..from = Address(from, 'LaborHub')
+-        ..recipients.add(email)
+-        ..subject = 'Código para redefinir sua senha'
+-        ..text =
+-            'Seu código é $code. Ele expira em 10 minutos e permite até 5 tentativas. '
+-            'Se você não solicitou a recuperação, ignore este email.',
+-      smtp,
+-    ).timeout(const Duration(seconds: 20));
+-  });
+-  final server = await io.serve(
+-    (Request request) {
+-      final connection =
+-          request.context['shelf.io.connection_info'] as HttpConnectionInfo?;
+-      return api.call(
+-        request.change(
+-          context: {'clientIp': connection?.remoteAddress.address ?? 'unknown'},
+-        ),
+-      );
+-    },
+-    env['HOST'] ?? '127.0.0.1',
+-    int.parse(env['PORT'] ?? '8080'),
+-  );
+-  server.idleTimeout = const Duration(seconds: 30);
+-  print('LaborHub API na porta ${server.port}');
+-}
+diff --git a/server/lib/auth.dart b/server/lib/auth.dart
+deleted file mode 100644
+index 77850f4..0000000
+--- a/server/lib/auth.dart
++++ /dev/null
+@@ -1,302 +0,0 @@
+-import 'dart:convert';
+-import 'dart:math';
+-
+-import 'package:crypto/crypto.dart' as crypto;
+-import 'package:cryptography/cryptography.dart';
+-import 'package:shelf/shelf.dart';
+-import 'package:sqlite3/sqlite3.dart';
+-
+-typedef SendCode = Future<void> Function(String email, String code);
+-
+-class ApiError implements Exception {
+-  final int status;
+-  final String message;
+-  ApiError(this.status, this.message);
+-}
+-
+-class AuthApi {
+-  final Database db;
+-  final String secret;
+-  final SendCode sendCode;
+-  final DateTime Function() clock;
+-  final int passwordIterations;
+-  final _random = Random.secure();
+-  AuthApi(
+-    this.db,
+-    this.secret,
+-    this.sendCode, {
+-    DateTime Function()? clock,
+-    this.passwordIterations = 600000,
+-  }) : clock = clock ?? DateTime.now {
+-    if (secret.length < 32)
+-      throw ArgumentError('RESET_SECRET: mínimo 32 caracteres');
+-    db.execute('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
+-    db.execute('''CREATE TABLE IF NOT EXISTS users (
+-      id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE,
+-      password TEXT NOT NULL, created TEXT NOT NULL,
+-      active INTEGER NOT NULL DEFAULT 1)''');
+-    db.execute('''CREATE TABLE IF NOT EXISTS resets (
+-      email TEXT PRIMARY KEY, code TEXT, grant_hash TEXT, expires INTEGER NOT NULL,
+-      attempts INTEGER NOT NULL DEFAULT 0)''');
+-    db.execute('''CREATE TABLE IF NOT EXISTS limits (
+-      key TEXT PRIMARY KEY, start INTEGER NOT NULL, count INTEGER NOT NULL)''');
+-  }
+-
+-  int get now => clock().millisecondsSinceEpoch ~/ 1000;
+-  String digest(String value) => crypto.Hmac(
+-    crypto.sha256,
+-    utf8.encode(secret),
+-  ).convert(utf8.encode(value)).toString();
+-  String token() =>
+-      base64Url.encode(List.generate(32, (_) => _random.nextInt(256)));
+-  bool equal(String a, String b) {
+-    var diff = a.length ^ b.length;
+-    for (var i = 0; i < a.length; i++) {
+-      diff |= a.codeUnitAt(i) ^ (i < b.length ? b.codeUnitAt(i) : 0);
+-    }
+-    return diff == 0;
+-  }
+-
+-  Future<String> hashPassword(String password, [String? salt]) async {
+-    salt ??= token();
+-    final key = await Pbkdf2(
+-      macAlgorithm: Hmac.sha256(),
+-      iterations: passwordIterations,
+-      bits: 256,
+-    ).deriveKeyFromPassword(password: password, nonce: utf8.encode(salt));
+-    return '$salt:${base64.encode(await key.extractBytes())}';
+-  }
+-
+-  void limit(String key, int max, int seconds) {
+-    final hashed = digest('limit:$key');
+-    db.execute('DELETE FROM limits WHERE start < ?', [now - 3600]);
+-    db.execute(
+-      '''INSERT INTO limits(key,start,count) VALUES(?,?,1)
+-      ON CONFLICT(key) DO UPDATE SET
+-      count=CASE WHEN start <= ? THEN 1 ELSE count+1 END,
+-      start=CASE WHEN start <= ? THEN excluded.start ELSE start END''',
+-      [hashed, now, now - seconds, now - seconds],
+-    );
+-    if ((db.select('SELECT count FROM limits WHERE key=?', [
+-              hashed,
+-            ]).single['count']
+-            as int) >
+-        max) {
+-      throw ApiError(429, 'Muitas tentativas. Aguarde e tente novamente.');
+-    }
+-  }
+-
+-  String field(Map<String, dynamic> body, String key, {int max = 254}) {
+-    final value = body[key];
+-    if (value is! String || value.isEmpty || value.length > max) {
+-      throw ApiError(400, 'Dados inválidos.');
+-    }
+-    return value;
+-  }
+-
+-  Response json(int status, Map<String, dynamic> body) => Response(
+-    status,
+-    body: jsonEncode(body),
+-    headers: {
+-      'content-type': 'application/json; charset=utf-8',
+-      'cache-control': 'no-store',
+-    },
+-  );
+-
+-  Future<Response> call(Request request) async {
+-    try {
+-      if (request.method != 'POST')
+-        return json(405, {'message': 'Método não permitido.'});
+-      final ip = request.context['clientIp'] as String? ?? 'unknown';
+-      limit('ip:$ip', 60, 900);
+-      final bytes = <int>[];
+-      await for (final chunk in request.read()) {
+-        bytes.addAll(chunk);
+-        if (bytes.length > 4096) throw ApiError(413, 'Dados muito grandes.');
+-      }
+-      final decoded = jsonDecode(utf8.decode(bytes));
+-      if (decoded is! Map<String, dynamic>)
+-        throw ApiError(400, 'Dados inválidos.');
+-      final email = field(decoded, 'email').trim().toLowerCase();
+-      if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+-        throw ApiError(400, 'Informe um email válido.');
+-      }
+-      final path = request.url.path;
+-      if (path == 'auth/register') {
+-        limit('register:$ip', 5, 3600);
+-        final password = field(decoded, 'password', max: 128);
+-        validatePassword(password);
+-        final hash = await hashPassword(password);
+-        db.execute(
+-          'INSERT OR IGNORE INTO users(email,password,created) VALUES(?,?,?)',
+-          [email, hash, clock().toUtc().toIso8601String()],
+-        );
+-        if (db.updatedRows == 0) {
+-          final existing = db.select(
+-            'SELECT password FROM users WHERE email=? AND active=1',
+-            [email],
+-          );
+-          if (existing.isEmpty)
+-            throw ApiError(409, 'Não foi possível cadastrar este email.');
+-          final stored = existing.single['password'] as String;
+-          if (!equal(
+-            await hashPassword(password, stored.split(':').first),
+-            stored,
+-          )) {
+-            throw ApiError(409, 'Não foi possível cadastrar este email.');
+-          }
+-          return json(200, {});
+-        }
+-        return json(201, {});
+-      }
+-      if (path == 'auth/login') {
+-        limit('login:$email', 10, 900);
+-        final password = field(decoded, 'password', max: 128);
+-        final rows = db.select(
+-          'SELECT * FROM users WHERE email=? AND active=1',
+-          [email],
+-        );
+-        final stored = rows.isEmpty
+-            ? '${digest("dummy")}:${digest("dummy-hash")}'
+-            : rows.single['password'] as String;
+-        final computed = await hashPassword(password, stored.split(':').first);
+-        if (rows.isEmpty || !equal(computed, stored))
+-          throw ApiError(401, 'Email ou senha inválidos.');
+-        // Recheck after the asynchronous KDF: a reset may have changed the password.
+-        final current = db.select(
+-          'SELECT * FROM users WHERE email=? AND password=? AND active=1',
+-          [email, stored],
+-        );
+-        if (current.isEmpty) throw ApiError(401, 'Email ou senha inválidos.');
+-        final user = current.single;
+-        return json(200, {
+-          'usuarios_id': user['id'],
+-          'usuarios_email': email,
+-          'usuarios_imagem': '',
+-          'usuarios_telefone': null,
+-          'usuarios_senha_hash': '',
+-          'usuarios_ativo': 1,
+-          'usuarios_is_admin': 0,
+-          'usuarios_criado_em': user['created'],
+-        });
+-      }
+-      if (path == 'auth/password/request') {
+-        limit('send-ip:$ip', 10, 3600);
+-        // Same response and limits for existing and unknown accounts.
+-        limit('send-hour:$email', 5, 3600);
+-        limit('send-minute:$email', 1, 60);
+-        db.execute('DELETE FROM resets WHERE expires <= ?', [now]);
+-        final code = _random.nextInt(1000000).toString().padLeft(6, '0');
+-        final hash = digest('$email:code:$code');
+-        db.execute(
+-          'INSERT OR REPLACE INTO resets(email,code,expires) VALUES(?,?,?)',
+-          [email, hash, now + 600],
+-        );
+-        final user = db.select(
+-          'SELECT id FROM users WHERE email=? AND active=1',
+-          [email],
+-        );
+-        if (user.isNotEmpty) {
+-          // Delivery runs separately so SMTP latency/failure cannot reveal account existence.
+-          Future<void>(() async {
+-            try {
+-              await sendCode(email, code);
+-            } catch (_) {
+-              db.execute('DELETE FROM resets WHERE email=? AND code=?', [
+-                email,
+-                hash,
+-              ]);
+-              // Never log the address, code or SMTP exception (may contain credentials).
+-              print(
+-                'Falha na entrega de email de recuperação. Verifique o SMTP.',
+-              );
+-            }
+-          });
+-        }
+-        return json(202, {
+-          'message': 'Se o email estiver cadastrado, você receberá um código.',
+-        });
+-      }
+-      if (path == 'auth/password/verify') {
+-        final code = field(decoded, 'code', max: 6);
+-        if (!RegExp(r'^\d{6}$').hasMatch(code))
+-          throw ApiError(400, 'Informe os seis dígitos.');
+-        final rows = db.select('SELECT * FROM resets WHERE email=?', [email]);
+-        if (rows.isEmpty) invalidCode();
+-        final reset = rows.single;
+-        if (reset['expires'] as int <= now ||
+-            reset['attempts'] as int >= 5 ||
+-            reset['code'] == null)
+-          invalidCode();
+-        db.execute('UPDATE resets SET attempts=attempts+1 WHERE email=?', [
+-          email,
+-        ]);
+-        if (!equal(digest('$email:code:$code'), reset['code'] as String) ||
+-            db.select('SELECT id FROM users WHERE email=? AND active=1', [
+-              email,
+-            ]).isEmpty)
+-          invalidCode();
+-        final grant = token();
+-        db.execute(
+-          'UPDATE resets SET code=NULL,grant_hash=?,expires=? WHERE email=?',
+-          [digest('$email:grant:$grant'), now + 300, email],
+-        );
+-        return json(200, {'resetToken': grant});
+-      }
+-      if (path == 'auth/password/reset') {
+-        final grant = field(decoded, 'resetToken', max: 100);
+-        final password = field(decoded, 'password', max: 128);
+-        if (password != field(decoded, 'confirmation', max: 128))
+-          throw ApiError(400, 'As senhas não conferem.');
+-        validatePassword(password);
+-        final grantHash = digest('$email:grant:$grant');
+-        if (db.select(
+-          'SELECT email FROM resets WHERE email=? AND grant_hash=? AND expires>?',
+-          [email, grantHash, now],
+-        ).isEmpty)
+-          invalidCode();
+-        final hash = await hashPassword(password);
+-        // Atomic single-use consumption, including requests racing during the KDF.
+-        db.execute('BEGIN IMMEDIATE');
+-        try {
+-          db.execute(
+-            'DELETE FROM resets WHERE email=? AND grant_hash=? AND expires>?',
+-            [email, grantHash, now],
+-          );
+-          if (db.updatedRows != 1) invalidCode();
+-          db.execute('UPDATE users SET password=? WHERE email=? AND active=1', [
+-            hash,
+-            email,
+-          ]);
+-          if (db.updatedRows != 1) invalidCode();
+-          db.execute('COMMIT');
+-        } catch (_) {
+-          db.execute('ROLLBACK');
+-          rethrow;
+-        }
+-        return json(200, {'message': 'Senha redefinida com sucesso.'});
+-      }
+-      return json(404, {'message': 'Rota não encontrada.'});
+-    } on ApiError catch (error) {
+-      return json(error.status, {'message': error.message});
+-    } on FormatException {
+-      return json(400, {'message': 'Dados inválidos.'});
+-    } catch (_) {
+-      return json(500, {
+-        'message': 'Não foi possível concluir. Tente novamente.',
+-      });
+-    }
+-  }
+-
+-  Never invalidCode() => throw ApiError(
+-    400,
+-    'Código ou autorização inválidos ou expirados. Solicite outro código.',
+-  );
+-  void validatePassword(String password) {
+-    if (password.trim().isEmpty ||
+-        password.length < 7 ||
+-        password.length > 128) {
+-      throw ApiError(400, 'A senha deve ter de 7 a 128 caracteres.');
+-    }
+-  }
+-}
+diff --git a/server/pubspec.lock b/server/pubspec.lock
+deleted file mode 100644
+index 2ff12c1..0000000
+--- a/server/pubspec.lock
++++ /dev/null
+@@ -1,485 +0,0 @@
+-# Generated by pub
+-# See https://dart.dev/tools/pub/glossary#lockfile
+-packages:
+-  _fe_analyzer_shared:
+-    dependency: transitive
+-    description:
+-      name: _fe_analyzer_shared
+-      sha256: "1c5591cc6f252d5f440d96ab87c03e43504be552a3fa49d7cb7563f04c51fb0a"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "111.0.0"
+-  analyzer:
+-    dependency: transitive
+-    description:
+-      name: analyzer
+-      sha256: "6c39bd5486a310e56217bed7cb1691377959f31be4227e41750107db7e6dd55c"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "14.7.0"
+-  args:
+-    dependency: transitive
+-    description:
+-      name: args
+-      sha256: d0481093c50b1da8910eb0bb301626d4d8eb7284aa739614d2b394ee09e3ea04
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.7.0"
+-  async:
+-    dependency: transitive
+-    description:
+-      name: async
+-      sha256: e2eb0491ba5ddb6177742d2da23904574082139b07c1e33b8503b9f46f3e1a37
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.13.1"
+-  boolean_selector:
+-    dependency: transitive
+-    description:
+-      name: boolean_selector
+-      sha256: "8aab1771e1243a5063b8b0ff68042d67334e3feab9e95b9490f9a6ebf73b42ea"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.1.2"
+-  cli_config:
+-    dependency: transitive
+-    description:
+-      name: cli_config
+-      sha256: ac20a183a07002b700f0c25e61b7ee46b23c309d76ab7b7640a028f18e4d99ec
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "0.2.0"
+-  cli_util:
+-    dependency: transitive
+-    description:
+-      name: cli_util
+-      sha256: "89b8801ba49f8b593fbf2d3e59efd0f566c46cd4ba6837ae2610c72b52a0f899"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "0.6.0"
+-  clock:
+-    dependency: transitive
+-    description:
+-      name: clock
+-      sha256: e51d50bca3217c9a9fa2b41a30e4a38971133f5f9ec7a3d57bae095007f1d28e
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.1.3"
+-  code_assets:
+-    dependency: transitive
+-    description:
+-      name: code_assets
+-      sha256: "828110d598123b5ea96c00c9f3c72105bf79f8ee36c20a39b26209ade421ec57"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.1.0"
+-  collection:
+-    dependency: transitive
+-    description:
+-      name: collection
+-      sha256: "2f5709ae4d3d59dd8f7cd309b4e023046b57d8a6c82130785d2b0e5868084e76"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.19.1"
+-  convert:
+-    dependency: transitive
+-    description:
+-      name: convert
+-      sha256: b30acd5944035672bc15c6b7a8b47d773e41e2f17de064350988c5d02adb1c68
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "3.1.2"
+-  coverage:
+-    dependency: transitive
+-    description:
+-      name: coverage
+-      sha256: ff89e37c19355194e279d26dafe8e4bece46c9ea63a30be4dc68214f5bc290d3
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.16.0"
+-  crypto:
+-    dependency: "direct main"
+-    description:
+-      name: crypto
+-      sha256: e3626ae6270383c9e3a549f34c9e4cd26c09ae6a9adaab2bf4737a00340efdc4
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "3.0.8"
+-  cryptography:
+-    dependency: "direct main"
+-    description:
+-      name: cryptography
+-      sha256: "3eda3029d34ec9095a27a198ac9785630fe525c0eb6a49f3d575272f8e792ef0"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.9.0"
+-  ffi:
+-    dependency: transitive
+-    description:
+-      name: ffi
+-      sha256: "6d7fd89431262d8f3125e81b50d3847a091d846eafcd4fdb88dd06f36d705a45"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.2.0"
+-  file:
+-    dependency: transitive
+-    description:
+-      name: file
+-      sha256: a3b4f84adafef897088c160faf7dfffb7696046cb13ae90b508c2cbc95d3b8d4
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "7.0.1"
+-  frontend_server_client:
+-    dependency: transitive
+-    description:
+-      name: frontend_server_client
+-      sha256: "2b56423afc7651a81da53ed3a4f9f51e92572293f54d0d54e19b759f13714849"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "4.2.0"
+-  glob:
+-    dependency: transitive
+-    description:
+-      name: glob
+-      sha256: "218aeb56050c714f62a3182775320dfa04602b55074873e24e31bbd39bda96fb"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.2.0"
+-  hooks:
+-    dependency: transitive
+-    description:
+-      name: hooks
+-      sha256: eaac480a35ec0814146c2c48d96aaa829e0e44a7662c88ae84c9edf4bc35651f
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.2.0"
+-  http_multi_server:
+-    dependency: transitive
+-    description:
+-      name: http_multi_server
+-      sha256: "361668bdd71f0ae2dc6d17b75a593520f3c414af6534f9eed1aa72049dd71d18"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "3.2.3"
+-  http_parser:
+-    dependency: transitive
+-    description:
+-      name: http_parser
+-      sha256: "178d74305e7866013777bab2c3d8726205dc5a4dd935297175b19a23a2e66571"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "4.1.2"
+-  intl:
+-    dependency: transitive
+-    description:
+-      name: intl
+-      sha256: "1ca20c894b1717686a2319b8548763d812bc0aabdac580420a44c5178c57a867"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "0.20.3"
+-  io:
+-    dependency: transitive
+-    description:
+-      name: io
+-      sha256: "2635216ca6a737e60de577ffa1a48a0bec76ca8a62917cfc1bb88c14c570646f"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.1.0"
+-  logging:
+-    dependency: transitive
+-    description:
+-      name: logging
+-      sha256: c8245ada5f1717ed44271ed1c26b8ce85ca3228fd2ffdb75468ab01979309d61
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.3.0"
+-  mailer:
+-    dependency: "direct main"
+-    description:
+-      name: mailer
+-      sha256: c3b934c0e800ddc946167c0123a900eba5acd009abb73648d0191a742542f2b4
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "6.6.0"
+-  matcher:
+-    dependency: transitive
+-    description:
+-      name: matcher
+-      sha256: "31bd099b47c10cd1aeb55146a2d46ce0277630ecef3f7dae54ad7873f36696cd"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "0.12.20"
+-  meta:
+-    dependency: transitive
+-    description:
+-      name: meta
+-      sha256: "307249ce4ff29d58a18e97f6345f539382eb9c9c29ecda628900f31de0443dd9"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.19.0"
+-  mime:
+-    dependency: transitive
+-    description:
+-      name: mime
+-      sha256: bd47de35f07e27267e69c8c8b22edf9473bfee170a60d60fcc93730c5144b7f6
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.1.0"
+-  native_toolchain_c:
+-    dependency: transitive
+-    description:
+-      name: native_toolchain_c
+-      sha256: "90eaad8059ebc2004a63810a4696ea9acdb02473e47ed3b6b3bafb100ac77e31"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "0.19.5"
+-  node_preamble:
+-    dependency: transitive
+-    description:
+-      name: node_preamble
+-      sha256: "6e7eac89047ab8a8d26cf16127b5ed26de65209847630400f9aefd7cd5c730db"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.0.2"
+-  package_config:
+-    dependency: transitive
+-    description:
+-      name: package_config
+-      sha256: ffcf4cf3d6c0b74ac43708d9f56625506e8a68aa935abe9d267a7330f320eb5d
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "3.0.0"
+-  path:
+-    dependency: transitive
+-    description:
+-      name: path
+-      sha256: "75cca69d1490965be98c73ceaea117e8a04dd21217b37b292c9ddbec0d955bc5"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.9.1"
+-  platform:
+-    dependency: transitive
+-    description:
+-      name: platform
+-      sha256: a36d119c13416516a7b5913fbe8af8531e11633d784c550b2125f76c758524ec
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "3.2.0"
+-  pool:
+-    dependency: transitive
+-    description:
+-      name: pool
+-      sha256: "4177f68c237ea2128d1bee66ac17b2ce05ba3dbaafcbdd54c5d40a39d0b6b11c"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.5.3"
+-  process:
+-    dependency: transitive
+-    description:
+-      name: process
+-      sha256: "4242ba3508d37e01808bdf71ad1d5bb93a8d671bf2e7450e6b1b353fb0808891"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "5.0.6"
+-  pub_semver:
+-    dependency: transitive
+-    description:
+-      name: pub_semver
+-      sha256: "261236774e8b1d69cfc6b9eabbc96c40f25e7a2d6b171f3385d4f65d5734fb24"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.2.1"
+-  record_use:
+-    dependency: transitive
+-    description:
+-      name: record_use
+-      sha256: "1cb8564af8d43b464294411db9217f5ec04891c6f22ee2c32d73ae05e88a6bd2"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.1.1"
+-  shelf:
+-    dependency: "direct main"
+-    description:
+-      name: shelf
+-      sha256: e75e9cf311d7fd712048038cc17c25199c38536c20330d53e7db058b543d5a48
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.4.3"
+-  shelf_packages_handler:
+-    dependency: transitive
+-    description:
+-      name: shelf_packages_handler
+-      sha256: "89f967eca29607c933ba9571d838be31d67f53f6e4ee15147d5dc2934fee1b1e"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "3.0.2"
+-  shelf_static:
+-    dependency: transitive
+-    description:
+-      name: shelf_static
+-      sha256: "480504af9e5323899c5be26a4f6c2fc4437d50954d39842f0290f4ae733d57b4"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.2.0"
+-  shelf_web_socket:
+-    dependency: transitive
+-    description:
+-      name: shelf_web_socket
+-      sha256: "3632775c8e90d6c9712f883e633716432a27758216dfb61bd86a8321c0580925"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "3.0.0"
+-  source_map_stack_trace:
+-    dependency: transitive
+-    description:
+-      name: source_map_stack_trace
+-      sha256: c0713a43e323c3302c2abe2a1cc89aa057a387101ebd280371d6a6c9fa68516b
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.1.2"
+-  source_maps:
+-    dependency: transitive
+-    description:
+-      name: source_maps
+-      sha256: "14c2945847669b44089bb1222f66873d7ff7103c58911917f2a63c5a62327898"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "0.10.14"
+-  source_span:
+-    dependency: transitive
+-    description:
+-      name: source_span
+-      sha256: "56a02f1f4cd1a2d96303c0144c93bd6d909eea6bee6bf5a0e0b685edbd4c47ab"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.10.2"
+-  sqlite3:
+-    dependency: "direct main"
+-    description:
+-      name: sqlite3
+-      sha256: "5340531ad17f386ae444873f643f281060b6238cc702edeee6b1e90bc4c6874e"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "3.8.0"
+-  stack_trace:
+-    dependency: transitive
+-    description:
+-      name: stack_trace
+-      sha256: "277654b3034d17ac6f9f1cb5595db011b1d5d41e8806866db28e0abaa101c490"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.12.2"
+-  stream_channel:
+-    dependency: transitive
+-    description:
+-      name: stream_channel
+-      sha256: "969e04c80b8bcdf826f8f16579c7b14d780458bd97f56d107d3950fdbeef059d"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "2.1.4"
+-  string_scanner:
+-    dependency: transitive
+-    description:
+-      name: string_scanner
+-      sha256: "921cd31725b72fe181906c6a94d987c78e3b98c2e205b397ea399d4054872b43"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.4.1"
+-  term_glyph:
+-    dependency: transitive
+-    description:
+-      name: term_glyph
+-      sha256: "7f554798625ea768a7518313e58f83891c7f5024f88e46e7182a4558850a4b8e"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.2.2"
+-  test:
+-    dependency: "direct dev"
+-    description:
+-      name: test
+-      sha256: "44b2fccf4407bcdb5e105c064c5d6b5e2a640c87761f8b03cdce8cf532d98cfa"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.33.0"
+-  test_api:
+-    dependency: transitive
+-    description:
+-      name: test_api
+-      sha256: "47481c58bb92d0b1d218f0510ff5647e768f8e1256d07077a151fb520923b51d"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "0.7.15"
+-  test_core:
+-    dependency: transitive
+-    description:
+-      name: test_core
+-      sha256: "9dec4c178bd61493e1cd2060ffe701fcb61c43da2493e99590fb1b0cc82eb4af"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "0.6.21"
+-  typed_data:
+-    dependency: transitive
+-    description:
+-      name: typed_data
+-      sha256: f9049c039ebfeb4cf7a7104a675823cd72dba8297f264b6637062516699fa006
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.4.0"
+-  vm_service:
+-    dependency: transitive
+-    description:
+-      name: vm_service
+-      sha256: "89b11d62e1040ee681af3b4f1c97a803ecbf010c6e8b9c5896ee5b08c3bf7b78"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "15.4.0"
+-  watcher:
+-    dependency: transitive
+-    description:
+-      name: watcher
+-      sha256: "1398c9f081a753f9226febe8900fce8f7d0a67163334e1c94a2438339d79d635"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.2.1"
+-  web:
+-    dependency: transitive
+-    description:
+-      name: web
+-      sha256: e119e82ac4795c7925103b7cf3768191f33941b99e7ccffbd6c645201d9f606b
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.1.2"
+-  web_socket:
+-    dependency: transitive
+-    description:
+-      name: web_socket
+-      sha256: "34d64019aa8e36bf9842ac014bb5d2f5586ca73df5e4d9bf5c936975cae6982c"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.0.1"
+-  web_socket_channel:
+-    dependency: transitive
+-    description:
+-      name: web_socket_channel
+-      sha256: d645757fb0f4773d602444000a8131ff5d48c9e47adfe9772652dd1a4f2d45c8
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "3.0.3"
+-  webkit_inspection_protocol:
+-    dependency: transitive
+-    description:
+-      name: webkit_inspection_protocol
+-      sha256: "87d3f2333bb240704cd3f1c6b5b7acd8a10e7f0bc28c28dcf14e782014f4a572"
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "1.2.1"
+-  yaml:
+-    dependency: transitive
+-    description:
+-      name: yaml
+-      sha256: f67cdd8e07d3c6329146aaef1ba043542b3134c12489f553ca9a7435d1068aea
+-      url: "https://pub.dev"
+-    source: hosted
+-    version: "3.1.4"
+-sdks:
+-  dart: ">=3.13.0 <4.0.0"
+diff --git a/server/pubspec.yaml b/server/pubspec.yaml
+deleted file mode 100644
+index dbf9bf8..0000000
+--- a/server/pubspec.yaml
++++ /dev/null
+@@ -1,12 +0,0 @@
+-name: laborhub_server
+-publish_to: none
+-environment:
+-  sdk: ^3.13.0
+-dependencies:
+-  shelf: ^1.4.2
+-  sqlite3: ^3.1.0
+-  crypto: ^3.0.6
+-  cryptography: ^2.7.0
+-  mailer: ^6.5.0
+-dev_dependencies:
+-  test: ^1.25.0
+diff --git a/server/test/auth_test.dart b/server/test/auth_test.dart
+deleted file mode 100644
+index a1bfd06..0000000
+--- a/server/test/auth_test.dart
++++ /dev/null
+@@ -1,304 +0,0 @@
+-import 'dart:convert';
+-import 'dart:io';
+-
+-import 'package:laborhub_server/auth.dart';
+-import 'package:shelf/shelf.dart';
+-import 'package:sqlite3/sqlite3.dart';
+-import 'package:test/test.dart';
+-
+-void main() {
+-  late Database db;
+-  late AuthApi api;
+-  late DateTime time;
+-  late List<String> sent;
+-  const email = 'cliente@example.com';
+-  Future<Response> post(
+-    String path, [
+-    Map<String, dynamic> fields = const {},
+-    String ip = 'test',
+-  ]) => api.call(
+-    Request(
+-      'POST',
+-      Uri.parse('https://api.example.com/auth/$path'),
+-      body: jsonEncode({'email': email, ...fields}),
+-      context: {'clientIp': ip},
+-    ),
+-  );
+-  Future<String> verify() async {
+-    final response = await post('password/verify', {'code': sent.last});
+-    expect(response.statusCode, 200);
+-    return (jsonDecode(await response.readAsString()) as Map)['resetToken']
+-        as String;
+-  }
+-
+-  Future<void> request() async {
+-    expect((await post('password/request')).statusCode, 202);
+-    await Future<void>.delayed(Duration.zero);
+-  }
+-
+-  Map<String, String> reset(String token) => {
+-    'resetToken': token,
+-    'password': 'nova senha segura',
+-    'confirmation': 'nova senha segura',
+-  };
+-
+-  setUp(() async {
+-    db = sqlite3.openInMemory();
+-    time = DateTime.utc(2026, 11, 3);
+-    sent = [];
+-    api = AuthApi(
+-      db,
+-      'a' * 32,
+-      (email, code) async {
+-        sent.add(code);
+-      },
+-      clock: () => time,
+-      passwordIterations: 10,
+-    );
+-    expect(
+-      (await post('register', {'password': 'senha antiga'})).statusCode,
+-      201,
+-    );
+-  });
+-  tearDown(() => db.close());
+-
+-  test('full flow changes login, hashes secrets and prevents reuse', () async {
+-    await request();
+-    expect(sent.single, matches(r'^\d{6}$'));
+-    final stored = db.select('SELECT * FROM resets').single;
+-    expect(stored['code'], isNot(sent.single));
+-    expect(
+-      db.select('SELECT password FROM users').single['password'],
+-      isNot('senha antiga'),
+-    );
+-    final token = await verify();
+-    expect(
+-      db.select('SELECT * FROM resets').single['grant_hash'],
+-      isNot(token),
+-    );
+-    expect(
+-      (await post('password/verify', {'code': sent.last})).statusCode,
+-      400,
+-    );
+-    expect((await post('password/reset', reset(token))).statusCode, 200);
+-    expect((await post('password/reset', reset(token))).statusCode, 400);
+-    expect((await post('login', {'password': 'senha antiga'})).statusCode, 401);
+-    expect(
+-      (await post('login', {'password': 'nova senha segura'})).statusCode,
+-      200,
+-    );
+-  });
+-  test('five wrong codes lock the challenge', () async {
+-    await request();
+-    final wrong = sent.last == '000000' ? '111111' : '000000';
+-    for (var i = 0; i < 5; i++) {
+-      expect((await post('password/verify', {'code': wrong})).statusCode, 400);
+-    }
+-    expect(
+-      (await post('password/verify', {'code': sent.last})).statusCode,
+-      400,
+-    );
+-  });
+-  test('code and grant expiry use exclusive deadline', () async {
+-    await request();
+-    time = time.add(const Duration(minutes: 10));
+-    expect(
+-      (await post('password/verify', {'code': sent.last})).statusCode,
+-      400,
+-    );
+-    await request();
+-    final token = await verify();
+-    time = time.add(const Duration(minutes: 5));
+-    expect((await post('password/reset', reset(token))).statusCode, 400);
+-  });
+-  test('resend throttles and invalidates previous authorization', () async {
+-    await request();
+-    final token = await verify();
+-    expect((await post('password/request')).statusCode, 429);
+-    time = time.add(const Duration(seconds: 60));
+-    await request();
+-    expect((await post('password/reset', reset(token))).statusCode, 400);
+-  });
+-  test(
+-    'unknown and inactive accounts receive same response without mail',
+-    () async {
+-      final missing = await post('password/request', {
+-        'email': 'missing@example.com',
+-      });
+-      final known = await post('password/request');
+-      expect(await missing.readAsString(), await known.readAsString());
+-      expect(missing.statusCode, known.statusCode);
+-      await Future<void>.delayed(Duration.zero);
+-      expect(sent.length, 1);
+-      db.execute('UPDATE users SET active=0');
+-      time = time.add(const Duration(seconds: 60));
+-      await request();
+-      expect(sent.length, 1);
+-    },
+-  );
+-  test('confirmation and password policy do not consume token', () async {
+-    await request();
+-    final token = await verify();
+-    expect(
+-      (await post('password/reset', {
+-        ...reset(token),
+-        'confirmation': 'other',
+-      })).statusCode,
+-      400,
+-    );
+-    expect(
+-      (await post('password/reset', {
+-        ...reset(token),
+-        'password': '123',
+-        'confirmation': '123',
+-      })).statusCode,
+-      400,
+-    );
+-    expect((await post('password/reset', reset(token))).statusCode, 200);
+-  });
+-  test('simultaneous resets can consume a grant only once', () async {
+-    await request();
+-    final token = await verify();
+-    final responses = await Future.wait([
+-      post('password/reset', reset(token)),
+-      post('password/reset', reset(token)),
+-    ]);
+-    expect(responses.map((r) => r.statusCode).toList()..sort(), [200, 400]);
+-  });
+-  test('authorization is bound to the email', () async {
+-    await request();
+-    final token = await verify();
+-    expect(
+-      (await post('password/reset', {
+-        ...reset(token),
+-        'email': 'other@example.com',
+-      })).statusCode,
+-      400,
+-    );
+-  });
+-  test('limits survive service reconstruction and other IPs', () async {
+-    await request();
+-    api = AuthApi(
+-      db,
+-      'a' * 32,
+-      (email, code) async {},
+-      clock: () => time,
+-      passwordIterations: 10,
+-    );
+-    expect((await post('password/request', {}, 'other-ip')).statusCode, 429);
+-  });
+-  test('invalid JSON and oversized requests are rejected', () async {
+-    expect(
+-      (await api.call(
+-        Request('POST', Uri.parse('https://api.test/auth/login'), body: '{'),
+-      )).statusCode,
+-      400,
+-    );
+-    expect((await post('login', {'password': 'a' * 5000})).statusCode, 413);
+-  });
+-  test('SMTP failure removes the challenge', () async {
+-    api = AuthApi(
+-      db,
+-      'a' * 32,
+-      (email, code) async {
+-        throw Exception('SMTP');
+-      },
+-      clock: () => time,
+-      passwordIterations: 10,
+-    );
+-    await request();
+-    expect(db.select('SELECT * FROM resets'), isEmpty);
+-  });
+-
+-  test('registration retries require the existing password', () async {
+-    expect(
+-      (await post('register', {'password': 'senha antiga'})).statusCode,
+-      200,
+-    );
+-    expect(
+-      (await post('register', {'password': 'outra senha'})).statusCode,
+-      409,
+-    );
+-    expect(db.select('SELECT * FROM users').length, 1);
+-  });
+-
+-  test(
+-    'accounts, challenges and limits survive closing the database',
+-    () async {
+-      final directory = Directory.systemTemp.createTempSync('laborhub-auth-');
+-      final path = '${directory.path}/auth.sqlite';
+-      var persistent = sqlite3.open(path);
+-      try {
+-        var service = AuthApi(
+-          persistent,
+-          'a' * 32,
+-          (_, _) async {},
+-          clock: () => time,
+-          passwordIterations: 10,
+-        );
+-        persistent.execute(
+-          'INSERT INTO users(email,password,created) VALUES(?,?,?)',
+-          [
+-            email,
+-            await service.hashPassword('senha antiga'),
+-            time.toIso8601String(),
+-          ],
+-        );
+-        persistent.execute(
+-          'INSERT INTO resets(email,code,expires) VALUES(?,?,?)',
+-          [email, service.digest('$email:code:123456'), service.now + 600],
+-        );
+-        service.limit('persisted', 1, 60);
+-        persistent.close();
+-        persistent = sqlite3.open(path);
+-        service = AuthApi(
+-          persistent,
+-          'a' * 32,
+-          (_, _) async {},
+-          clock: () => time,
+-          passwordIterations: 10,
+-        );
+-        expect(
+-          persistent.select('SELECT email FROM users').single['email'],
+-          email,
+-        );
+-        expect(
+-          () => service.limit('persisted', 1, 60),
+-          throwsA(isA<ApiError>()),
+-        );
+-        final response = await service.call(
+-          Request(
+-            'POST',
+-            Uri.parse('https://api.test/auth/password/verify'),
+-            body: jsonEncode({'email': email, 'code': '123456'}),
+-          ),
+-        );
+-        expect(response.statusCode, 200);
+-      } finally {
+-        persistent.close();
+-        directory.deleteSync(recursive: true);
+-      }
+-    },
+-  );
+-
+-  test('resend invalidates the old code', () async {
+-    await request();
+-    final previousHash = db.select('SELECT code FROM resets').single['code'];
+-    time = time.add(const Duration(seconds: 60));
+-    await request();
+-    // Extremely rare identical random codes are valid by design; the stored
+-    // challenge always corresponds solely to the last delivery.
+-    final current = db.select('SELECT code FROM resets').single['code'];
+-    expect(current, api.digest('$email:code:${sent.last}'));
+-    if (current != previousHash) {
+-      expect(
+-        (await post('password/verify', {'code': sent.first})).statusCode,
+-        400,
+-      );
+-    }
+-    expect(
+-      (await post('password/verify', {'code': sent.last})).statusCode,
+-      200,
+-    );
+-  });
+-}
+diff --git a/test/cadastro_api_test.dart b/test/cadastro_api_test.dart
+index f7b1e0f..e767eed 100644
+--- a/test/cadastro_api_test.dart
++++ b/test/cadastro_api_test.dart
+@@ -1,68 +1,96 @@
+ import 'dart:convert';
+-import 'dart:io';
+ 
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:http/http.dart' as http;
+ import 'package:http/testing.dart';
+-import 'package:laborhub/Data/app_database.dart';
+ import 'package:laborhub/Repository/auth_api.dart';
+ import 'package:laborhub/Repository/cadastro_repository.dart';
+-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+ 
+ void main() {
+-  test('registration sends entered password and keeps credentials out of local SQLite', () async {
+-    sqfliteFfiInit();
+-    databaseFactory = databaseFactoryFfi;
+-    final directory = await Directory.systemTemp.createTemp(
+-      'laborhub-cadastro-',
+-    );
+-    await databaseFactory.setDatabasesPath(directory.path);
++  test('registration sends profile to the API without local ids or hashes', () async {
+     final requests = <http.Request>[];
+     final client = MockClient((request) async {
+       requests.add(request);
+-      return http.Response('{}', 201);
++      return http.Response('{"usuarios_id": 7}', 201);
+     });
+     final repository = CadastroRepository(
+       api: AuthApi(baseUrl: 'https://api.example.com', client: client),
+     );
+-    final db = await AppDatabase.instance.database;
+-    try {
+-      final id = await repository.cadastrar(
+-        senha: 'senha digitada pelo usuario',
+-        usuario: {
+-          'usuarios_email': 'cliente@example.com',
+-          // The address screen may still build a local model with a BCrypt hash.
+-          'usuarios_senha_hash': 'hash-calculado-no-cliente',
+-          'usuarios_ativo': 1,
+-          'usuarios_criado_em': DateTime.now().toIso8601String(),
+-        },
+-        endereco: {
+-          'endereco_nome': 'Principal',
+-          'endereco_rua': 'Rua Teste',
+-          'endereco_cep': '74000000',
+-          'endereco_numero': '10',
+-          'endereco_cidade': 'Goiania',
+-          'endereco_uf': 'GO',
+-        },
+-        pessoaFisica: {'pf_nome': 'Cliente', 'pf_sobrenome': 'Teste'},
+-      );
+-      expect(requests, hasLength(1));
+-      expect(requests.single.url.path, '/auth/register');
+-      expect(jsonDecode(requests.single.body), {
+-        'email': 'cliente@example.com',
+-        'password': 'senha digitada pelo usuario',
+-      });
+-      final users = await db.query(
+-        'usuarios',
+-        where: 'usuarios_id = ?',
+-        whereArgs: [id],
+-      );
+-      expect(users.single['usuarios_senha_hash'], 'remote-managed');
+-      expect((await db.query('endereco')).single['endereco_usuarios_id'], id);
+-    } finally {
+-      client.close();
+-      await db.close();
+-      await directory.delete(recursive: true);
+-    }
++
++    final id = await repository.cadastrar(
++      senha: 'senha digitada pelo usuario',
++      usuario: {
++        'usuarios_email': 'cliente@example.com',
++        // The address screen may still build a local model with a BCrypt hash.
++        'usuarios_senha_hash': 'hash-calculado-no-cliente',
++        'usuarios_telefone': '62999998888',
++      },
++      endereco: {
++        'endereco_rua': 'Rua Teste',
++        'endereco_cep': '74000000',
++        'endereco_numero': '10',
++        'endereco_cidade': 'Goiania',
++        'endereco_uf': 'GO',
++        'endereco_usuarios_id': 0,
++      },
++      pessoaFisica: {
++        'pf_nome': 'Cliente',
++        'pf_sobrenome': 'Teste',
++        'pf_tipo': 'Cliente',
++        'pf_usuarios_id': 0,
++      },
++    );
++
++    expect(id, 7);
++    expect(requests, hasLength(1));
++    expect(requests.single.url.path, '/auth/register');
++    final body = jsonDecode(requests.single.body) as Map<String, dynamic>;
++    expect(body['email'], 'cliente@example.com');
++    expect(body['password'], 'senha digitada pelo usuario');
++    expect(body['usuario'], isNot(contains('usuarios_senha_hash')));
++    expect(body['endereco'], isNot(contains('endereco_usuarios_id')));
++    expect(body['pessoaFisica'], {
++      'pf_nome': 'Cliente',
++      'pf_sobrenome': 'Teste',
++      'pf_tipo': 'Cliente',
++    });
++    expect(body, isNot(contains('pessoaJuridica')));
++  });
++
++  test('registration requires exactly one person type', () {
++    final repository = CadastroRepository(
++      api: AuthApi(baseUrl: 'https://api.example.com'),
++    );
++    expect(
++      () => repository.cadastrar(senha: 'senha123', usuario: {}, endereco: {}),
++      throwsArgumentError,
++    );
++  });
++
++  test('API error message is shown to the user', () async {
++    final client = MockClient(
++      (_) async => http.Response(
++        jsonEncode({'message': 'Email, CPF ou CNPJ já cadastrado.'}),
++        409,
++      ),
++    );
++    final repository = CadastroRepository(
++      api: AuthApi(baseUrl: 'https://api.example.com', client: client),
++    );
++    expect(
++      () => repository.cadastrar(
++        senha: 'senha123',
++        usuario: {'usuarios_email': 'a@example.com'},
++        endereco: {},
++        pessoaJuridica: {'pj_tipo': 'Cliente'},
++      ),
++      throwsA(
++        isA<AuthException>().having(
++          (e) => e.mensagem,
++          'mensagem',
++          'Email, CPF ou CNPJ já cadastrado.',
++        ),
++      ),
++    );
+   });
+ }
+diff --git a/test/sessao_test.dart b/test/sessao_test.dart
+new file mode 100644
+index 0000000..9b2efcd
+--- /dev/null
++++ b/test/sessao_test.dart
+@@ -0,0 +1,161 @@
++import 'dart:convert';
++import 'dart:io';
++
++import 'package:flutter_test/flutter_test.dart';
++import 'package:http/http.dart' as http;
++import 'package:http/testing.dart';
++import 'package:laborhub/Data/app_database.dart';
++import 'package:laborhub/Repository/auth_api.dart';
++import 'package:laborhub/Repository/sessao_repository.dart';
++import 'package:laborhub/Repository/usuarios_repository.dart';
++import 'package:sqflite_common_ffi/sqflite_ffi.dart';
++
++// Resposta da API em /auth/login (com token) e /auth/session (sem token).
++Map<String, Object?> resposta({String? token, Duration validade = const Duration(days: 30)}) => {
++  'usuarios_id': 1,
++  'usuarios_email': 'cliente@example.com',
++  'usuarios_imagem': '',
++  'usuarios_telefone': '62999998888',
++  'usuarios_senha_hash': '',
++  'usuarios_ativo': 1,
++  'usuarios_is_admin': 0,
++  'usuarios_criado_em': '2026-11-07T18:00:00Z',
++  'tipo': 'Cliente',
++  'pessoaFisica': {
++    'pf_id': 1,
++    'pf_nome': 'Ana',
++    'pf_sobrenome': 'Silva',
++    'pf_dataNascimento': '2000-01-31',
++    'pf_genero': 'Feminino',
++    'pf_cpf': '52998224725',
++    'pf_tipo': 'Cliente',
++    'pf_usuarios_id': 1,
++  },
++  'pessoaJuridica': null,
++  'enderecos': [
++    {
++      'endereco_id': 1,
++      'endereco_nome': 'Principal',
++      'endereco_rua': 'Rua A',
++      'endereco_bairro': 'Centro',
++      'endereco_cep': '74000000',
++      'endereco_complemento': null,
++      'endereco_numero': '10',
++      'endereco_descricao': null,
++      'endereco_cidade': 'Goiânia',
++      'endereco_uf': 'GO',
++      'endereco_usuarios_id': 1,
++    },
++  ],
++  if (token != null) 'token': token,
++  'sessao_expira_em': DateTime.now().toUtc().add(validade).toIso8601String(),
++};
++
++AuthApi api(MockClientHandler handler) =>
++    AuthApi(baseUrl: 'https://api.example.com', client: MockClient(handler));
++
++// Simula falta de conexão.
++final offline = api((_) async => throw const SocketException('offline'));
++
++Future<void> entrar({Duration validade = const Duration(days: 30)}) =>
++    UsuariosRepository(
++      api: api((_) async => http.Response(
++        jsonEncode(resposta(token: 'token-1', validade: validade)),
++        200,
++      )),
++    ).Autenticar('cliente@example.com', 'senha123');
++
++void main() {
++  late Directory diretorio;
++
++  setUp(() async {
++    sqfliteFfiInit();
++    databaseFactory = databaseFactoryFfi;
++    diretorio = await Directory.systemTemp.createTemp('laborhub-sessao-');
++    await databaseFactory.setDatabasesPath(diretorio.path);
++  });
++
++  tearDown(() async {
++    await AppDatabase.instance.fechar();
++    await diretorio.delete(recursive: true);
++  });
++
++  test('login saves session and profile in SQLite for offline use', () async {
++    await entrar();
++
++    final sessao = await SessaoRepository(api: offline).restaurar();
++    expect(sessao!.token, 'token-1');
++    expect(sessao.tipo, 'Cliente');
++    expect(sessao.usuario.usuarios_email, 'cliente@example.com');
++
++    final db = await AppDatabase.instance.database;
++    expect((await db.query('pessoaFisica')).single['pf_cpf'], '52998224725');
++    expect((await db.query('endereco')).single['endereco_cidade'], 'Goiânia');
++  });
++
++  test('validation sends bearer token and refreshes local data', () async {
++    await entrar();
++    final requests = <http.Request>[];
++    final repository = SessaoRepository(
++      api: api((request) async {
++        requests.add(request);
++        final dados = resposta()..['usuarios_telefone'] = '62988887777';
++        return http.Response(jsonEncode(dados), 200);
++      }),
++    );
++
++    final sessao = await repository.validar((await repository.restaurar())!);
++
++    expect(requests.single.url.path, '/auth/session');
++    expect(requests.single.headers['Authorization'], 'Bearer token-1');
++    expect(sessao!.token, 'token-1');
++    expect(sessao.usuario.usuarios_telefone, '62988887777');
++  });
++
++  test('offline validation keeps the local session', () async {
++    await entrar();
++    final repository = SessaoRepository(api: offline);
++
++    final sessao = await repository.validar((await repository.restaurar())!);
++
++    expect(sessao, isNotNull);
++    expect(await repository.restaurar(), isNotNull);
++  });
++
++  test('401 from the API clears the local session and data', () async {
++    await entrar();
++    final repository = SessaoRepository(
++      api: api((_) async => http.Response(
++        '{"message":"Sessão inválida ou expirada. Entre novamente."}',
++        401,
++      )),
++    );
++
++    expect(await repository.validar((await repository.restaurar())!), isNull);
++    expect(await repository.restaurar(), isNull);
++    final db = await AppDatabase.instance.database;
++    expect(await db.query('usuarios'), isEmpty);
++  });
++
++  test('expired local session is discarded without network', () async {
++    await entrar(validade: const Duration(seconds: -1));
++    expect(await SessaoRepository(api: offline).restaurar(), isNull);
++  });
++
++  test('logout calls the API and clears local data, even offline', () async {
++    await entrar();
++    final requests = <http.Request>[];
++    await SessaoRepository(
++      api: api((request) async {
++        requests.add(request);
++        return http.Response('{"message":"Sessão encerrada."}', 200);
++      }),
++    ).sair();
++    expect(requests.single.url.path, '/auth/logout');
++    expect(await SessaoRepository(api: offline).restaurar(), isNull);
++
++    await entrar();
++    await SessaoRepository(api: offline).sair();
++    expect(await SessaoRepository(api: offline).restaurar(), isNull);
++  });
++}
+-- 
+2.43.0
+
