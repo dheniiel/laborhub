@@ -1,3 +1,5 @@
+import 'dart:async';
+
 class Profissional{
   final String profissional_nome;
   final String profissional_profissao;
@@ -10,6 +12,11 @@ class Profissional{
   final String profissional_imagem;
   final String profissional_telefone;
   final String profissional_email;
+  final String profissional_servicos_nome;
+  final String profissional_data;
+  final String profissional_tipo_cobranca;
+  final String profissional_experiencia;
+
 
   const Profissional({
     required this.profissional_nome,
@@ -23,6 +30,10 @@ class Profissional{
     required this.profissional_imagem,
     required this.profissional_telefone,
     required this.profissional_email,
+    required this.profissional_servicos_nome,
+    required this.profissional_data,
+    required this.profissional_tipo_cobranca,
+    required this.profissional_experiencia,
   });
 
   factory Profissional.fromMap(Map<String, Object?> map){
@@ -38,6 +49,11 @@ class Profissional{
       profissional_imagem: map['profissional_imagem'] as String? ?? '',
       profissional_telefone:  map['profissional_telefone'] as String? ?? '',
       profissional_email:  map['profissional_email'] as String? ?? '',
+      profissional_servicos_nome:  map['profissional_servicos_nome'] as String? ?? '',
+      profissional_data:  map['profissional_data'] as String? ?? '',
+      profissional_tipo_cobranca:  map['profissional_tipo_cobranca'] as String? ?? '',
+      profissional_experiencia:  map['profissional_experiencia'] as String? ?? '',
+
 
     );
   }

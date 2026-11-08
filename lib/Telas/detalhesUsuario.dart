@@ -78,7 +78,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                   borderRadius: BorderRadius.circular(16), // Arredonda os cantos.
                   child: Container(
                     width: 120,  // Define a largura.
-                    height: 120, // Define a altura.
+                    height: 140, // Define a altura.
                     color: Colors.white,
                     child: temFoto
                         ? Image.file(File(caminho), fit: BoxFit.cover)
@@ -105,6 +105,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
 
                       const SizedBox(height: 4),
 
+                      // Campo de localização
                       Row(
                         children: [
                           const Icon(
@@ -126,7 +127,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
 
                       const SizedBox(height: 4),
 
-
+                      // Campo de telefone
                       Row(
                         children: [
                           const Icon(
@@ -149,7 +150,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
 
                       const SizedBox(height: 4),
 
-
+                      // Campo de email
                       Row(
                         children: [
                           const Icon(

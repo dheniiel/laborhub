@@ -352,7 +352,9 @@ final class Auth
                COALESCE(u.usuarios_email, '') as profissional_email,
                COALESCE(se.servicos_data, '') AS profissional_dias,
                COALESCE(se.servicos_tipo_cobranca, '') AS profissional_tipo_cobranca,
-               COALESCE(se.servicos_nivel_experiencia, '') AS profissional_experiencia
+               COALESCE(se.servicos_nivel_experiencia, '') AS profissional_experiencia,
+               COALESCE(se.servicos_nome, '') AS profissional_servicos_nome
+
              FROM servicos se
              JOIN usuarios u ON u.usuarios_id = se.servicos_usuarios_id
              LEFT JOIN pessoaFisica pf ON pf.pf_usuarios_id = u.usuarios_id
