@@ -9,6 +9,7 @@ import '../Repository/profissional_repository.dart';
 import '../Repository/sessao_repository.dart';
 import 'login.dart';
 import 'perfilProfissional.dart';
+import 'editarPerfil.dart';
 
 
 class HomeCliente extends StatefulWidget {
@@ -28,6 +29,19 @@ class _HomeClienteState extends State<HomeCliente> {
 
   List<Profissional> _profissionais = [];
   bool _carregando = true;
+  
+    // Cópia do usuário que pode mudar após editar o perfil.
+  late Usuarios _usuario = widget.usuario;
+
+  // Abre a edição e, ao voltar com dados salvos, atualiza o cabeçalho.
+  Future<void> _abrirEdicaoPerfil() async {
+    final atualizado = await Navigator.of(context).push<Usuarios>(
+      MaterialPageRoute(builder: (context) => EditarPerfil(usuario: _usuario)),
+    );
+    if (atualizado != null && mounted) {
+      setState(() => _usuario = atualizado);
+    }
+  }
 
   @override
   void initState() {
@@ -121,9 +135,16 @@ class _HomeClienteState extends State<HomeCliente> {
                   padding: const EdgeInsets.fromLTRB(16, 10, 12, 0),
                   child: Row(
                     children: [
-                      _Avatar(
-                        caminho: widget.usuario.usuarios_imagem,
-                        raio: 23,
+                      Tooltip(
+                        message: 'Meu perfil',
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: _abrirEdicaoPerfil,
+                          child: _Avatar(
+                            caminho: _usuario.usuarios_imagem, // antes: widget.usuario.usuarios_imagem
+                            raio: 23,
+                          ),
+                        ),
                       ),
                       const Spacer(),
                       IconButton(
@@ -138,9 +159,7 @@ class _HomeClienteState extends State<HomeCliente> {
                         icon: const Icon(Icons.settings, size: 30),
                         color: Colors.black,
                         tooltip: 'Configurações',
-                        onPressed: () {
-                          // Navegação para tela de configurações
-                        },
+                        onPressed: _abrirEdicaoPerfil,
                       ),
                       IconButton(
                         icon: const Icon(Icons.logout, size: 30),
