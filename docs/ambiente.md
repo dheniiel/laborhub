@@ -133,6 +133,9 @@ Todas as rotas usam `POST`, recebem JSON (máximo 16 KiB; corpo vazio ou `{}` na
 | `/auth/password/verify` | `email`, `code` | 200 `{resetToken}`; 400 se inválido/expirado |
 | `/auth/password/reset` | `email`, `resetToken`, `password`, `confirmation` | 200 |
 | `/auth/profile` | cabeçalho `Authorization: Bearer <token>`; `usuario` (`usuarios_imagem`, `usuarios_telefone`), `endereco` (com `endereco_id`) e `pessoaFisica` **ou** `pessoaJuridica` | 200 com os mesmos dados de `/auth/session`; 400; 401 |
+| `/profissionais` | cabeçalho `Authorization: Bearer <token>` | 200 `{profissionais: [...]}` (um item por serviço, campos de `Profissional.fromMap`); 401 |
+| `/solicitacoes` | cabeçalho `Authorization: Bearer <token>` | 200 `{solicitacoes: [...]}` do cliente logado (Finalizado, Pendente, Recusado; campos de `Solicitacao.fromMap`); 401 |
+| `/solicitacoes/cancelar` | cabeçalho `Authorization: Bearer <token>`; `solicitacao_id` | 200; 409 se não for do usuário ou não estiver pendente; 401 |
 
 Os objetos `usuario`, `endereco`, `pessoaFisica` e `pessoaJuridica` usam os nomes de coluna do banco (os mesmos de `toMap()` nos models). O servidor ignora ids, chaves estrangeiras e `usuarios_senha_hash` enviados pelo app, grava tudo em uma transação e cria o hash da senha.
 
