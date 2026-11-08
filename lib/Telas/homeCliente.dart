@@ -12,6 +12,7 @@ import 'perfilProfissional.dart';
 import 'editarPerfil.dart';
 import 'historico.dart';
 import 'agendamentos.dart';
+import 'detalhesUsuario.dart';
 
 
 class HomeCliente extends StatefulWidget {
@@ -458,7 +459,7 @@ class _CardProfissional extends StatelessWidget {
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (context) => PerfilProfissional(profissional: profissional),
+                                builder: (context) => DetalhesUsuario(profissional: profissional),
                               ),
                             );
                           },
