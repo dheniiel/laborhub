@@ -240,6 +240,25 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
 
                       const SizedBox(height: 6),
 
+                      if(widget.profissional.profissional_tipo_cobranca == 'Negociar') ... [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                "Valor a negociar",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 20,
+                                  color: Color.fromARGB(1000, 34, 197, 94),
+                                ),
+
+                              ),
+                            )
+                          ],
+                        ),
+
+                      ] else ... [
+
                       Row(
                         children: [
                           Expanded(
@@ -255,6 +274,8 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                           )
                         ],
                       ),
+
+                      ],
 
                     ],
                   ),
@@ -358,11 +379,12 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                     Expanded(
                       child: Column(
                         children: [
-                          _barraAvaliacao(5, 150, 275),
-                          _barraAvaliacao(4, 85, 275),
-                          _barraAvaliacao(3, 25, 275),
-                          _barraAvaliacao(2, 10, 275),
-                          _barraAvaliacao(1, 5, 275),
+                          for (int estrela = 5; estrela >= 1; estrela--)
+                            _barraAvaliacao(
+                              estrela,
+                              widget.profissional.avaliacoesPorEstrela[estrela - 1],
+                              widget.profissional.profissional_total_avaliacoes,
+                            ),
                         ],
                       ),
                     ),

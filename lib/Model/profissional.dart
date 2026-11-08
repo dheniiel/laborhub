@@ -16,6 +16,7 @@ class Profissional{
   final String profissional_data;
   final String profissional_tipo_cobranca;
   final String profissional_experiencia;
+  final List<int> avaliacoesPorEstrela;
 
 
   const Profissional({
@@ -34,6 +35,7 @@ class Profissional{
     required this.profissional_data,
     required this.profissional_tipo_cobranca,
     required this.profissional_experiencia,
+    required this.avaliacoesPorEstrela
   });
 
   factory Profissional.fromMap(Map<String, Object?> map){
@@ -53,6 +55,12 @@ class Profissional{
       profissional_data:  map['profissional_data'] as String? ?? '',
       profissional_tipo_cobranca:  map['profissional_tipo_cobranca'] as String? ?? '',
       profissional_experiencia:  map['profissional_experiencia'] as String? ?? '',
+      avaliacoesPorEstrela: List.generate(
+        5,
+            (index) => int.parse(
+          '${map['estrelas_${index + 1}'] ?? 0}',
+        ),
+      ),
 
 
     );

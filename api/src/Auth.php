@@ -353,7 +353,12 @@ final class Auth
                COALESCE(se.servicos_data, '') AS profissional_data,
                COALESCE(se.servicos_tipo_cobranca, '') AS profissional_tipo_cobranca,
                COALESCE(se.servicos_nivel_experiencia, '') AS profissional_experiencia,
-               COALESCE(se.servicos_nome, '') AS profissional_servicos_nome
+               COALESCE(se.servicos_nome, '') AS profissional_servicos_nome,
+               COALESCE(av.estrelas_5, 0) AS estrelas_5,
+               COALESCE(av.estrelas_4, 0) AS estrelas_4,
+               COALESCE(av.estrelas_3, 0) AS estrelas_3,
+               COALESCE(av.estrelas_2, 0) AS estrelas_2,
+               COALESCE(av.estrelas_1, 0) AS estrelas_1
 
              FROM servicos se
              JOIN usuarios u ON u.usuarios_id = se.servicos_usuarios_id
@@ -362,8 +367,17 @@ final class Auth
              LEFT JOIN endereco e ON e.endereco_id =
                (SELECT MIN(endereco_id) FROM endereco WHERE endereco_usuarios_id = u.usuarios_id)
              LEFT JOIN (
-               SELECT avaliado_usuarios_id, ROUND(AVG(avaliacao_notas), 1) AS media, COUNT(*) AS total
-               FROM avaliacao GROUP BY avaliado_usuarios_id
+               SELECT
+                 avaliado_usuarios_id,
+                 ROUND(AVG(avaliacao_notas), 1) AS media,
+                 COUNT(*) AS total,
+                 SUM(avaliacao_notas = 5) AS estrelas_5,
+                 SUM(avaliacao_notas = 4) AS estrelas_4,
+                 SUM(avaliacao_notas = 3) AS estrelas_3,
+                 SUM(avaliacao_notas = 2) AS estrelas_2,
+                 SUM(avaliacao_notas = 1) AS estrelas_1
+               FROM avaliacao
+               GROUP BY avaliado_usuarios_id
              ) av ON av.avaliado_usuarios_id = u.usuarios_id
              WHERE u.usuarios_ativo = 1 AND u.usuarios_deletado_em IS NULL
                AND COALESCE(pf.pf_tipo, pj.pj_tipo) = 'Profissional'
