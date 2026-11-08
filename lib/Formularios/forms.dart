@@ -11,6 +11,7 @@ class Forms extends StatefulWidget {
   final String? Function(String?)? validador;
   final List<TextInputFormatter>? formatadores;
   final bool ocultarTexto;
+  final IconData? icone;
 
   final List<String>? opcao;
   final ValueChanged<String?>? onChanged;
@@ -25,6 +26,7 @@ class Forms extends StatefulWidget {
     this.validador,
     this.formatadores,
     this.ocultarTexto = false,
+    this.icone,
   }) : opcao = null, onChanged = null, valorInicial = null;
 
 
@@ -38,7 +40,8 @@ class Forms extends StatefulWidget {
   }) : controlador = null,
         tipagemValor = null,
         formatadores = null,
-        ocultarTexto = false;
+        ocultarTexto = false,
+        icone = null;
 
 
   @override
@@ -175,7 +178,12 @@ class _FormsState extends State<Forms> {
                   ),
                 ),
               )
-            : null,
+            : widget.icone != null
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Icon(widget.icone, size: 22, color: Colors.black),
+                  )
+                : null,
       ),
     );
 
