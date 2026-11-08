@@ -27,6 +27,49 @@ class  DetalhesUsuario extends StatefulWidget{
 
 class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
 
+  Widget _barraAvaliacao(
+      int estrelas,
+      int quantidade,
+      int total,
+      ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Text(
+            '$estrelas ${estrelas == 1 ? 'estrela' : 'estrelas'}',
+            style: const TextStyle(
+              fontSize: 9,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: total == 0 ? 0 : quantidade / total,
+                minHeight: 6,
+                backgroundColor: const Color(0xFFD9D9D9),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  Color(0xFF3B82F6),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$quantidade',
+            style: const TextStyle(
+              fontSize: 9,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
 
 
@@ -78,7 +121,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                   borderRadius: BorderRadius.circular(16), // Arredonda os cantos.
                   child: Container(
                     width: 120,  // Define a largura.
-                    height: 140, // Define a altura.
+                    height: 150, // Define a altura.
                     color: Colors.white,
                     child: temFoto
                         ? Image.file(File(caminho), fit: BoxFit.cover)
@@ -171,12 +214,162 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                       ),
 
 
+                      const SizedBox(height: 4),
+
+                      // Campo de email
+                      Row(
+                        children: [
+                         Expanded(
+                           child: Text.rich(
+                             TextSpan(
+                               children: [
+                                 TextSpan(
+                                   text: widget.profissional.profissional_servicos_nome,
+                                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+                                 ),
+
+                                 TextSpan(
+                                   text: " - ${widget.profissional.profissional_data}",
+                                 ),
+                               ]
+                             )
+                           ),
+                         )
+                        ],
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'R\$ ${profissional.profissional_preco.toStringAsFixed(2).replaceAll('.', ',')} - ${widget.profissional.profissional_tipo_cobranca}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 20,
+                                color: Color.fromARGB(1000, 34, 197, 94),
+                              ),
+
+                            ),
+                          )
+                        ],
+                      ),
+
                     ],
                   ),
                 )
               ],
 
-            )
+            ),
+
+            const SizedBox(height: 20),
+
+            // Row de descrição
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Descrição',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      Text(
+                          "Profissional: ${widget.profissional.profissional_experiencia} - ${widget.profissional.profissional_observacao}",
+                        textAlign: TextAlign.justify,
+                      ),
+                    ],
+                  ),
+                )
+              ],
+
+            ),
+
+            const SizedBox(height: 20),
+
+            Card(
+              color: Colors.white,
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: const BorderSide(color: Color(0xFFF0F0F0)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    // NOTA E ESTRELAS
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            widget.profissional.profissional_avaliacao
+                                .toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(5, (index) {
+                              final nota =
+                                  widget.profissional.profissional_avaliacao;
+
+                              return Icon(
+                                nota >= index + 1
+                                    ? Icons.star
+                                    : nota >= index + 0.5
+                                    ? Icons.star_half
+                                    : Icons.star_border,
+                                color: const Color(0xFFFFC107),
+                                size: 22,
+                              );
+                            }),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'de 5 estrelas',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    Container(
+                      width: 1,
+                      height: 80,
+                      margin: const EdgeInsets.symmetric(horizontal: 10),
+                      color: const Color(0xFFEEEEEE),
+                    ),
+
+                    // QUANTIDADE POR NOTA
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _barraAvaliacao(5, 150, 275),
+                          _barraAvaliacao(4, 85, 275),
+                          _barraAvaliacao(3, 25, 275),
+                          _barraAvaliacao(2, 10, 275),
+                          _barraAvaliacao(1, 5, 275),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

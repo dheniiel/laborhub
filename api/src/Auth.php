@@ -350,7 +350,7 @@ final class Auth
                COALESCE(u.usuarios_imagem, '') AS profissional_imagem,
                COALESCE(u.usuarios_telefone, '') AS profissional_telefone,
                COALESCE(u.usuarios_email, '') as profissional_email,
-               COALESCE(se.servicos_data, '') AS profissional_dias,
+               COALESCE(se.servicos_data, '') AS profissional_data,
                COALESCE(se.servicos_tipo_cobranca, '') AS profissional_tipo_cobranca,
                COALESCE(se.servicos_nivel_experiencia, '') AS profissional_experiencia,
                COALESCE(se.servicos_nome, '') AS profissional_servicos_nome
