@@ -134,12 +134,35 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                             size: 19,
                             color: Colors.black,
                           ),
-                          const SizedBox(width: 2),
+                          const SizedBox(width: 3),
                           Expanded(
                             child: Text(
-                              "${widget.profissional.profissi} - ${widget.profissional.profissional_uf}",
+                              "${widget.profissional.profissional_telefone}",
                               style: const TextStyle(
                                 fontSize: 14,
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+
+
+                      const SizedBox(height: 4),
+
+
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.mail,
+                            size: 19,
+                            color: Colors.black,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              "${widget.profissional.profissional_email}",
+                              style: const TextStyle(
+                                fontSize: 12,
                               ),
                             ),
                           )

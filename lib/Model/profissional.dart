@@ -8,6 +8,8 @@ class Profissional{
   final String profissional_observacao;
   final double profissional_preco;
   final String profissional_imagem;
+  final String profissional_telefone;
+  final String profissional_email;
 
   const Profissional({
     required this.profissional_nome,
@@ -19,6 +21,8 @@ class Profissional{
     required this.profissional_observacao,
     required this.profissional_preco,
     required this.profissional_imagem,
+    required this.profissional_telefone,
+    required this.profissional_email,
   });
 
   factory Profissional.fromMap(Map<String, Object?> map){
@@ -32,6 +36,9 @@ class Profissional{
       profissional_observacao: map['profissional_observacao'] as String,
       profissional_preco: (map['profissional_preco'] as num).toDouble(),
       profissional_imagem: map['profissional_imagem'] as String? ?? '',
+      profissional_telefone:  map['profissional_telefone'] as String? ?? '',
+      profissional_email:  map['profissional_email'] as String? ?? '',
+
     );
   }
 }
