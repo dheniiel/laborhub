@@ -28,6 +28,9 @@ final class Auth
     public function processar(string $rota, array $dados, string $ip, ?string $token = null): array
     {
         // Rotas de sessão: identificadas pelo token (Authorization: Bearer), sem email no corpo.
+        if ($rota === 'auth/profile') {
+            return $this->atualizarPerfil($token, $dados);
+        }
         if ($rota === 'auth/session') {
             return $this->renovarSessao($token);
         }
@@ -215,6 +218,86 @@ final class Auth
             ->execute([gmdate('Y-m-d H:i:s', $expira), $usuario['sessoes_id']]);
         return [200, $this->perfil($usuario) + ['sessao_expira_em' => gmdate('Y-m-d\TH:i:s\Z', $expira)]];
     }
+
+
+     /** Atualiza os dados do usuário logado. Email, CPF/CNPJ, tipo e senha não mudam por aqui. */
+    private function atualizarPerfil(?string $token, array $dados): array
+    {
+        $usuario = $this->usuarioDaSessao($token);
+        $id = (int) $usuario['usuarios_id'];
+        $dadosUsuario = $this->objeto($dados, 'usuario');
+        $endereco = $this->objeto($dados, 'endereco');
+        if (!is_int($endereco['endereco_id'] ?? null)) {
+            throw new ApiError(400, 'Dados inválidos.');
+        }
+        $pessoaFisica = isset($dados['pessoaFisica']);
+        if ($pessoaFisica === isset($dados['pessoaJuridica'])) {
+            throw new ApiError(400, 'Informe pessoa física ou pessoa jurídica, apenas uma.');
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $this->db->prepare(
+                'UPDATE usuarios SET usuarios_imagem = ?, usuarios_telefone = ?, usuarios_atualizado_em = UTC_TIMESTAMP()
+                 WHERE usuarios_id = ?'
+            )->execute([
+                $this->opcional($dadosUsuario, 'usuarios_imagem', 255),
+                $this->opcional($dadosUsuario, 'usuarios_telefone', 20),
+                $id,
+            ]);
+
+            if ($pessoaFisica) {
+                $pf = $this->objeto($dados, 'pessoaFisica');
+                $this->db->prepare(
+                    'UPDATE pessoaFisica SET pf_nome = ?, pf_sobrenome = ?, pf_dataNascimento = ?, pf_genero = ?
+                     WHERE pf_usuarios_id = ?'
+                )->execute([
+                    $this->texto($pf, 'pf_nome', 50),
+                    $this->texto($pf, 'pf_sobrenome', 150),
+                    $this->data($pf, 'pf_dataNascimento'),
+                    $this->opcional($pf, 'pf_genero', 100),
+                    $id,
+                ]);
+            } else {
+                $pj = $this->objeto($dados, 'pessoaJuridica');
+                $this->db->prepare(
+                    'UPDATE pessoaJuridica SET pj_razaoSocial = ?, pj_nomeFantasia = ?, pj_dataFundacao = ?
+                     WHERE pj_usuarios_id = ?'
+                )->execute([
+                    $this->texto($pj, 'pj_razaoSocial', 200),
+                    $this->texto($pj, 'pj_nomeFantasia', 200),
+                    $this->data($pj, 'pj_dataFundacao'),
+                    $id,
+                ]);
+            }
+
+            // Só altera endereço do próprio usuário.
+            $this->db->prepare(
+                'UPDATE endereco SET endereco_nome = ?, endereco_rua = ?, endereco_bairro = ?, endereco_cep = ?,
+                   endereco_complemento = ?, endereco_numero = ?, endereco_cidade = ?, endereco_uf = ?
+                 WHERE endereco_id = ? AND endereco_usuarios_id = ?'
+            )->execute([
+                $this->opcional($endereco, 'endereco_nome', 30) ?? 'Principal',
+                $this->texto($endereco, 'endereco_rua', 100),
+                $this->opcional($endereco, 'endereco_bairro', 100),
+                $this->texto($endereco, 'endereco_cep', 20),
+                $this->opcional($endereco, 'endereco_complemento', 150),
+                $this->texto($endereco, 'endereco_numero', 20),
+                $this->texto($endereco, 'endereco_cidade', 100),
+                strtoupper($this->texto($endereco, 'endereco_uf', 2)),
+                $endereco['endereco_id'],
+                $id,
+            ]);
+            $this->db->commit();
+        } catch (Throwable $erro) {
+            $this->db->rollBack();
+            throw $erro;
+        }
+
+        // Mesma resposta de auth/session: o app substitui a cópia local.
+        return $this->renovarSessao($token);
+    }
+
 
     private function encerrarSessao(?string $token): array
     {
