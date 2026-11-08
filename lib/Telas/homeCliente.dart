@@ -10,6 +10,7 @@ import '../Repository/sessao_repository.dart';
 import 'login.dart';
 import 'perfilProfissional.dart';
 import 'editarPerfil.dart';
+import 'historico.dart';
 
 
 class HomeCliente extends StatefulWidget {
@@ -37,6 +38,16 @@ class _HomeClienteState extends State<HomeCliente> {
   Future<void> _abrirEdicaoPerfil() async {
     final atualizado = await Navigator.of(context).push<Usuarios>(
       MaterialPageRoute(builder: (context) => EditarPerfil(usuario: _usuario)),
+    );
+    if (atualizado != null && mounted) {
+      setState(() => _usuario = atualizado);
+    }
+  }
+
+    // Abre o Histórico; ao voltar, atualiza o usuário caso o perfil tenha sido editado lá.
+  Future<void> _abrirHistorico() async {
+    final atualizado = await Navigator.of(context).push<Usuarios>(
+      MaterialPageRoute(builder: (context) => Historico(usuario: _usuario)),
     );
     if (atualizado != null && mounted) {
       setState(() => _usuario = atualizado);
@@ -256,9 +267,7 @@ class _HomeClienteState extends State<HomeCliente> {
                         icon: const Icon(Icons.history_toggle_off, size: 44),
                         color: const Color(0xFF424242),
                         tooltip: 'Histórico',
-                        onPressed: () {
-                          // Navegação para tela de histórico
-                        },
+                        onPressed: _abrirHistorico,
                       ),
 
                       IconButton(
