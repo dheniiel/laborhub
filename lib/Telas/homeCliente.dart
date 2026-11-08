@@ -11,6 +11,7 @@ import 'login.dart';
 import 'perfilProfissional.dart';
 import 'editarPerfil.dart';
 import 'historico.dart';
+import 'agendamentos.dart';
 
 
 class HomeCliente extends StatefulWidget {
@@ -48,6 +49,16 @@ class _HomeClienteState extends State<HomeCliente> {
   Future<void> _abrirHistorico() async {
     final atualizado = await Navigator.of(context).push<Usuarios>(
       MaterialPageRoute(builder: (context) => Historico(usuario: _usuario)),
+    );
+    if (atualizado != null && mounted) {
+      setState(() => _usuario = atualizado);
+    }
+  }
+
+   // Abre Agendamentos; ao voltar, atualiza o usuário caso o perfil tenha sido editado lá.
+  Future<void> _abrirAgendamentos() async {
+    final atualizado = await Navigator.of(context).push<Usuarios>(
+      MaterialPageRoute(builder: (context) => Agendamentos(usuario: _usuario)),
     );
     if (atualizado != null && mounted) {
       setState(() => _usuario = atualizado);
@@ -283,9 +294,7 @@ class _HomeClienteState extends State<HomeCliente> {
                         icon: const Icon(Icons.event_available, size: 44),
                         color: const Color(0xFF424242),
                         tooltip: 'Agendamentos',
-                        onPressed: () {
-                          // Navegação para tela de agendamentos
-                        },
+                        onPressed: _abrirAgendamentos,
                       ),
                     ],
                   ),

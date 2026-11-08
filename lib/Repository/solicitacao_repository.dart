@@ -1,45 +1,36 @@
+import 'auth_api.dart';
+import '../Data/sessao_dao.dart';
 import '../Model/solicitacao.dart';
 
 class SolicitacaoRepository {
-  // ainda não foi feita a API com o banco (tabela solicitacao)
+  final AuthApi _api;
+  final SessaoDao _dao;
+  SolicitacaoRepository({AuthApi? api, SessaoDao? dao})
+    : _api = api ?? AuthApi(),
+      _dao = dao ?? SessaoDao();
+
+  // Solicitações do cliente logado (MySQL, via API).
   Future<List<Solicitacao>> Listar() async {
-    return _dados.map(Solicitacao.fromMap).toList();
+    final body = await _api.post('solicitacoes', {}, token: await _token());
+    return (body['solicitacoes'] as List)
+        .map((item) => Solicitacao.fromMap(Map<String, Object?>.from(item as Map)))
+        .toList();
   }
 
-  // Sem API ainda: a tela só remove o item da lista.
-  Future<void> cancelar(int solicitacaoId) async {}
+  // Cancela no banco; a tela remove o item da lista após o sucesso.
+  Future<void> cancelar(int solicitacaoId) async {
+    await _api.post(
+      'solicitacoes/cancelar',
+      {'solicitacao_id': solicitacaoId},
+      token: await _token(),
+    );
+  }
 
-
-  //exemplo somente para teste, já que não possuimos dados cadastrados
-  static const List<Map<String, Object?>> _dados = [
-    {
-      'solicitacao_id': 1,
-      'solicitacao_data': '2026-05-15',
-      'solicitacao_conclusao': '2026-05-25',
-      'solicitacao_status': 'Finalizado',
-      'servicos_valor': 549.99,
-      'profissional_nome': 'Letícia Felix',
-      'profissional_profissao': 'Professora de linguagem',
-      'profissional_imagem': '',
-    },
-    {
-      'solicitacao_id': 2,
-      'solicitacao_data': '2026-07-01',
-      'solicitacao_status': 'Pendente',
-      'servicos_valor': 149.99,
-      'profissional_nome': 'Kamilla Marcela',
-      'profissional_profissao': 'Eletricista',
-      'profissional_imagem': '',
-    },
-    {
-      'solicitacao_id': 3,
-      'solicitacao_data': '2026-05-15',
-      'solicitacao_status': 'Recusado',
-      'solicitacao_motivo': 'Profissional sem disponibilidade na data solicitada.',
-      'servicos_valor': 199.99,
-      'profissional_nome': 'Matheus Kyan',
-      'profissional_profissao': 'Encanador',
-      'profissional_imagem': '',
-    },
-  ];
+  Future<String> _token() async {
+    final sessao = await _dao.buscar();
+    if (sessao == null) {
+      throw const AuthException('Sua sessão expirou. Entre novamente.', 401);
+    }
+    return sessao.token;
+  }
 }
