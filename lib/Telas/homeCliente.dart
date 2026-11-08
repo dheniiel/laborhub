@@ -8,6 +8,7 @@ import '../Model/usuarios.dart';
 import '../Repository/profissional_repository.dart';
 import '../Repository/sessao_repository.dart';
 import 'login.dart';
+import 'perfilProfissional.dart';
 
 
 class HomeCliente extends StatefulWidget {
@@ -403,14 +404,37 @@ class _CardProfissional extends StatelessWidget {
 
                     const SizedBox(height: 26),
 
-                    Text(
-                      'R\$ ${_moeda(profissional.profissional_preco)} - Total',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontFamily: 'Montserrat',
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF22C55E),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'R\$ ${_moeda(profissional.profissional_preco)} - Total',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF22C55E),
+                            ),
+                          ),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => PerfilProfissional(profissional: profissional),
+                              ),
+                            );
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF3B82F6),
+                            minimumSize: const Size(75, 30),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            textStyle: const TextStyle(fontSize: 14, fontFamily: 'Montserrat'),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                          ),
+                          child: const Text('Perfil'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
