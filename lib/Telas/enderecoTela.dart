@@ -491,7 +491,7 @@ class _EnderecoTelaState extends State<EnderecoTela> {
                      const SizedBox(height: 5),
 
                      Forms(
-                       controlador: _endereco_cidade,
+                       controlador: _endereco_nome,
                        tipagemValor: TextInputType.text,
                        rotulo: "Ex.: Minha casa",
 
@@ -522,8 +522,8 @@ class _EnderecoTelaState extends State<EnderecoTela> {
 
                        style: FilledButton.styleFrom(
                            backgroundColor: Color.fromARGB(1000, 59, 130, 246),
-                           minimumSize: const Size(500, 25),
-                           padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                           minimumSize: const Size(500, 35),
+                           padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
                            textStyle: TextStyle(
                              fontSize: 18,
                              fontWeight: FontWeight.w500,

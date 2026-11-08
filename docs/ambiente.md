@@ -132,6 +132,7 @@ Todas as rotas usam `POST`, recebem JSON (máximo 16 KiB; corpo vazio ou `{}` na
 | `/auth/password/request` | `email` | 202 genérico (mesma resposta para emails existentes ou não); 429 |
 | `/auth/password/verify` | `email`, `code` | 200 `{resetToken}`; 400 se inválido/expirado |
 | `/auth/password/reset` | `email`, `resetToken`, `password`, `confirmation` | 200 |
+| `/auth/profile` | cabeçalho `Authorization: Bearer <token>`; `usuario` (`usuarios_imagem`, `usuarios_telefone`), `endereco` (com `endereco_id`) e `pessoaFisica` **ou** `pessoaJuridica` | 200 com os mesmos dados de `/auth/session`; 400; 401 |
 
 Os objetos `usuario`, `endereco`, `pessoaFisica` e `pessoaJuridica` usam os nomes de coluna do banco (os mesmos de `toMap()` nos models). O servidor ignora ids, chaves estrangeiras e `usuarios_senha_hash` enviados pelo app, grava tudo em uma transação e cria o hash da senha.
 

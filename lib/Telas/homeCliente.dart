@@ -8,6 +8,8 @@ import '../Model/usuarios.dart';
 import '../Repository/profissional_repository.dart';
 import '../Repository/sessao_repository.dart';
 import 'login.dart';
+import 'perfilProfissional.dart';
+import 'editarPerfil.dart';
 
 
 class HomeCliente extends StatefulWidget {
@@ -27,6 +29,19 @@ class _HomeClienteState extends State<HomeCliente> {
 
   List<Profissional> _profissionais = [];
   bool _carregando = true;
+  
+    // Cópia do usuário que pode mudar após editar o perfil.
+  late Usuarios _usuario = widget.usuario;
+
+  // Abre a edição e, ao voltar com dados salvos, atualiza o cabeçalho.
+  Future<void> _abrirEdicaoPerfil() async {
+    final atualizado = await Navigator.of(context).push<Usuarios>(
+      MaterialPageRoute(builder: (context) => EditarPerfil(usuario: _usuario)),
+    );
+    if (atualizado != null && mounted) {
+      setState(() => _usuario = atualizado);
+    }
+  }
 
   @override
   void initState() {
@@ -120,9 +135,16 @@ class _HomeClienteState extends State<HomeCliente> {
                   padding: const EdgeInsets.fromLTRB(16, 10, 12, 0),
                   child: Row(
                     children: [
-                      _Avatar(
-                        caminho: widget.usuario.usuarios_imagem,
-                        raio: 23,
+                      Tooltip(
+                        message: 'Meu perfil',
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: _abrirEdicaoPerfil,
+                          child: _Avatar(
+                            caminho: _usuario.usuarios_imagem, // antes: widget.usuario.usuarios_imagem
+                            raio: 23,
+                          ),
+                        ),
                       ),
                       const Spacer(),
                       IconButton(
@@ -137,9 +159,7 @@ class _HomeClienteState extends State<HomeCliente> {
                         icon: const Icon(Icons.settings, size: 30),
                         color: Colors.black,
                         tooltip: 'Configurações',
-                        onPressed: () {
-                          // Navegação para tela de configurações
-                        },
+                        onPressed: _abrirEdicaoPerfil,
                       ),
                       IconButton(
                         icon: const Icon(Icons.logout, size: 30),
@@ -240,6 +260,16 @@ class _HomeClienteState extends State<HomeCliente> {
                           // Navegação para tela de histórico
                         },
                       ),
+
+                      IconButton(
+                        icon: const Icon(Icons.home, size: 44),
+                        color: const Color(0xFF3B82F6),
+                        tooltip: 'Início',
+                        onPressed: () {
+                        // Já está na Home
+                        },
+                      ),
+
                       IconButton(
                         icon: const Icon(Icons.event_available, size: 44),
                         color: const Color(0xFF424242),
@@ -393,14 +423,37 @@ class _CardProfissional extends StatelessWidget {
 
                     const SizedBox(height: 26),
 
-                    Text(
-                      'R\$ ${_moeda(profissional.profissional_preco)} - Total',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontFamily: 'Montserrat',
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF22C55E),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'R\$ ${_moeda(profissional.profissional_preco)} - Total',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF22C55E),
+                            ),
+                          ),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => PerfilProfissional(profissional: profissional),
+                              ),
+                            );
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF3B82F6),
+                            minimumSize: const Size(75, 30),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            textStyle: const TextStyle(fontSize: 14, fontFamily: 'Montserrat'),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                          ),
+                          child: const Text('Perfil'),
+                        ),
+                      ],
                     ),
                   ],
                 ),

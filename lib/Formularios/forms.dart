@@ -12,9 +12,11 @@ class Forms extends StatefulWidget {
   final List<TextInputFormatter>? formatadores;
   final bool ocultarTexto;
   final int maxLinha;
+  final IconData? icone;
 
   final List<String>? opcao;
   final ValueChanged<String?>? onChanged;
+  final String? valorInicial;
 
 
   const Forms({
@@ -26,7 +28,8 @@ class Forms extends StatefulWidget {
     this.formatadores,
     this.ocultarTexto = false,
     this.maxLinha = 1,
-  }) : opcao = null, onChanged = null;
+    this.icone,
+  }) : opcao = null, onChanged = null, valorInicial = null;
 
 
   const Forms.select({
@@ -35,11 +38,13 @@ class Forms extends StatefulWidget {
     required this.opcao,
     required this.onChanged,
     this.validador,
+    this.valorInicial,
   }) : controlador = null,
         tipagemValor = null,
         formatadores = null,
         ocultarTexto = false,
-        maxLinha = 1;
+        maxLinha = 1,
+        icone = null;
 
 
   @override
@@ -141,6 +146,7 @@ class _FormsState extends State<Forms> {
         onChanged: widget.onChanged,
         validator: widget.validador,
         autovalidateMode: AutovalidateMode.onUserInteraction,
+        initialValue: widget.valorInicial,
       );
     }
 
@@ -177,7 +183,12 @@ class _FormsState extends State<Forms> {
                   ),
                 ),
               )
-            : null,
+            : widget.icone != null
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Icon(widget.icone, size: 22, color: Colors.black),
+                  )
+                : null,
       ),
     );
 

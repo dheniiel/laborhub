@@ -52,6 +52,20 @@ class SessaoDao {
         );
     }
 
+        // Perfil (PF ou PJ) e endereço principal guardados no login. Usado na edição de perfil.
+    Future<Map<String, Object?>> buscarPerfil() async {
+        final db = await _db;
+        final pf = await db.query('pessoaFisica', limit: 1);
+        final pj = await db.query('pessoaJuridica', limit: 1);
+        final endereco = await db.query('endereco', orderBy: 'endereco_id', limit: 1);
+
+        return {
+            'pessoaFisica': pf.isEmpty ? null : pf.first,
+            'pessoaJuridica': pj.isEmpty ? null : pj.first,
+            'endereco': endereco.isEmpty ? null : endereco.first,
+        };
+    }
+
     // Logout ou sessão inválida: remove a sessão e os dados do usuário do aparelho.
     Future<void> limpar() async {
         final db = await _db;
