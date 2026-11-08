@@ -14,6 +14,7 @@ class Forms extends StatefulWidget {
 
   final List<String>? opcao;
   final ValueChanged<String?>? onChanged;
+  final String? valorInicial;
 
 
   const Forms({
@@ -24,7 +25,7 @@ class Forms extends StatefulWidget {
     this.validador,
     this.formatadores,
     this.ocultarTexto = false,
-  }) : opcao = null, onChanged = null;
+  }) : opcao = null, onChanged = null, valorInicial = null;
 
 
   const Forms.select({
@@ -33,6 +34,7 @@ class Forms extends StatefulWidget {
     required this.opcao,
     required this.onChanged,
     this.validador,
+    this.valorInicial,
   }) : controlador = null,
         tipagemValor = null,
         formatadores = null,
@@ -138,6 +140,7 @@ class _FormsState extends State<Forms> {
         onChanged: widget.onChanged,
         validator: widget.validador,
         autovalidateMode: AutovalidateMode.onUserInteraction,
+        initialValue: widget.valorInicial,
       );
     }
 
