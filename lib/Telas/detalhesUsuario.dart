@@ -127,6 +127,26 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                       const SizedBox(height: 4),
 
 
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.phone,
+                            size: 19,
+                            color: Colors.black,
+                          ),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Text(
+                              "${widget.profissional.profissi} - ${widget.profissional.profissional_uf}",
+                              style: const TextStyle(
+                                fontSize: 14,
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+
+
                     ],
                   ),
                 )

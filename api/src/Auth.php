@@ -347,7 +347,12 @@ final class Auth
                COALESCE(av.total, 0) AS profissional_total_avaliacoes,
                COALESCE(se.servicos_descricao, '') AS profissional_observacao,
                COALESCE(se.servicos_valor, 0) AS profissional_preco,
-               COALESCE(u.usuarios_imagem, '') AS profissional_imagem
+               COALESCE(u.usuarios_imagem, '') AS profissional_imagem,
+               COALESCE(u.usuarios_telefone, '') AS usuarios_telefone,
+               COALESCE(u.usuarios_email, '') as usuarios_email,
+               COALESCE(se.servicos_data, '') AS profissional_dias,
+               COALESCE(se.servicos_tipo_cobranca, '') AS profissional_tipo_cobranca,
+               COALESCE(se.servicos_nivel_experiencia, '') AS profissional_experiencia
              FROM servicos se
              JOIN usuarios u ON u.usuarios_id = se.servicos_usuarios_id
              LEFT JOIN pessoaFisica pf ON pf.pf_usuarios_id = u.usuarios_id
