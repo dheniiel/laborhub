@@ -37,6 +37,16 @@ final class Auth
         if ($rota === 'auth/logout') {
             return $this->encerrarSessao($token);
         }
+                // Consultas do app logado.
+        if ($rota === 'profissionais') {
+            return $this->listarProfissionais($token);
+        }
+        if ($rota === 'solicitacoes') {
+            return $this->listarSolicitacoes($token);
+        }
+        if ($rota === 'solicitacoes/cancelar') {
+            return $this->cancelarSolicitacao($token, $dados);
+        }
 
         $email = $this->email($dados);
         return match ($rota) {
@@ -149,7 +159,31 @@ final class Auth
                 strtoupper($this->texto($endereco, 'endereco_uf', 2)),
                 $id,
             ]);
+
+            // Serviço enviado pelo cadastro de profissional (CadastroProfissionalRepository).
+            if (isset($dados['servicos'])) {
+                $servico = $this->objeto($dados, 'servicos');
+                $valor = $servico['servicos_valor'] ?? null;
+                if ($valor !== null && (!(is_int($valor) || is_float($valor)) || $valor < 0 || $valor > 9999999.99)) {
+                    throw new ApiError(400, 'Dados inválidos.');
+                }
+                $this->db->prepare(
+                    'INSERT INTO servicos (servicos_nome, servicos_data, servicos_valor, servicos_tipo_cobranca,
+                       servicos_nivel_experiencia, servicos_descricao, servicos_usuarios_id)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)'
+                )->execute([
+                    $this->texto($servico, 'servicos_nome', 100),
+                    $this->opcional($servico, 'servicos_data', 25),
+                    $valor,
+                    $this->opcional($servico, 'servicos_tipo_cobranca', 1000),
+                    $this->opcional($servico, 'servicos_nivel_experiencia', 50),
+                    $this->opcional($servico, 'servicos_descricao', 1000),
+                    $id,
+                ]);
+            }
+
             $this->db->commit();
+
         } catch (Throwable $erro) {
             $this->db->rollBack();
             if ($erro instanceof PDOException && $erro->getCode() === '23000') {
@@ -298,6 +332,100 @@ final class Auth
         return $this->renovarSessao($token);
     }
 
+
+        /** Serviços de profissionais ativos, no formato de Profissional.fromMap. */
+    private function listarProfissionais(?string $token): array
+    {
+        $this->usuarioDaSessao($token);
+        $linhas = $this->db->query(
+            "SELECT
+               COALESCE(CONCAT(pf.pf_nome, ' ', pf.pf_sobrenome), pj.pj_nomeFantasia, '') AS profissional_nome,
+               COALESCE(se.servicos_nome, '') AS profissional_profissao,
+               COALESCE(e.endereco_cidade, '') AS profissional_cidade,
+               COALESCE(e.endereco_uf, '') AS profissional_uf,
+               COALESCE(av.media, 0) AS profissional_avaliacao,
+               COALESCE(av.total, 0) AS profissional_total_avaliacoes,
+               COALESCE(se.servicos_descricao, '') AS profissional_observacao,
+               COALESCE(se.servicos_valor, 0) AS profissional_preco,
+               COALESCE(u.usuarios_imagem, '') AS profissional_imagem
+             FROM servicos se
+             JOIN usuarios u ON u.usuarios_id = se.servicos_usuarios_id
+             LEFT JOIN pessoaFisica pf ON pf.pf_usuarios_id = u.usuarios_id
+             LEFT JOIN pessoaJuridica pj ON pj.pj_usuarios_id = u.usuarios_id
+             LEFT JOIN endereco e ON e.endereco_id =
+               (SELECT MIN(endereco_id) FROM endereco WHERE endereco_usuarios_id = u.usuarios_id)
+             LEFT JOIN (
+               SELECT avaliado_usuarios_id, ROUND(AVG(avaliacao_notas), 1) AS media, COUNT(*) AS total
+               FROM avaliacao GROUP BY avaliado_usuarios_id
+             ) av ON av.avaliado_usuarios_id = u.usuarios_id
+             WHERE u.usuarios_ativo = 1 AND u.usuarios_deletado_em IS NULL
+               AND COALESCE(pf.pf_tipo, pj.pj_tipo) = 'Profissional'
+             ORDER BY profissional_nome"
+        )->fetchAll();
+
+        // DECIMAL chega como texto no PDO: converte para número, como o app espera.
+        return [200, ['profissionais' => array_map(fn (array $linha): array => [
+            'profissional_avaliacao' => (float) $linha['profissional_avaliacao'],
+            'profissional_total_avaliacoes' => (int) $linha['profissional_total_avaliacoes'],
+            'profissional_preco' => (float) $linha['profissional_preco'],
+        ] + $linha, $linhas)]];
+    }
+
+    /** Solicitações do cliente logado, no formato de Solicitacao.fromMap. */
+    private function listarSolicitacoes(?string $token): array
+    {
+        $usuario = $this->usuarioDaSessao($token);
+        $consulta = $this->db->prepare(
+            "SELECT
+               so.solicitacao_id,
+               COALESCE(so.solicitacao_data, DATE(so.solicitacao_criada_em)) AS solicitacao_data,
+               so.solicitacao_conclusao,
+               so.solicitacao_status,
+               so.solicitacao_motivo,
+               so.solicitacao_observacao,
+               SUM(se.servicos_valor) * so.solicitacao_quantidade AS servicos_valor,
+               COALESCE(MIN(CONCAT(pf.pf_nome, ' ', pf.pf_sobrenome)), MIN(pj.pj_nomeFantasia), '') AS profissional_nome,
+               COALESCE(GROUP_CONCAT(DISTINCT se.servicos_nome SEPARATOR ', '), '') AS profissional_profissao,
+               COALESCE(MIN(u.usuarios_imagem), '') AS profissional_imagem
+             FROM solicitacao so
+             JOIN solicitacaoServico ss ON ss.solicitacaoServico_solicitacao_id = so.solicitacao_id
+             JOIN servicos se ON se.servicos_id = ss.solicitacaoServico_servicos_id
+             JOIN usuarios u ON u.usuarios_id = se.servicos_usuarios_id
+             LEFT JOIN pessoaFisica pf ON pf.pf_usuarios_id = u.usuarios_id
+             LEFT JOIN pessoaJuridica pj ON pj.pj_usuarios_id = u.usuarios_id
+             WHERE so.solicitacao_usuarios_id = ?
+               AND so.solicitacao_deletada_em IS NULL
+               AND so.solicitacao_status IN ('Finalizado', 'Pendente', 'Recusado')
+             GROUP BY so.solicitacao_id
+             ORDER BY solicitacao_data DESC"
+        );
+        $consulta->execute([$usuario['usuarios_id']]);
+
+        return [200, ['solicitacoes' => array_map(fn (array $linha): array => [
+            'servicos_valor' => (float) $linha['servicos_valor'],
+        ] + $linha, $consulta->fetchAll())]];
+    }
+
+    /** Cancela uma solicitação pendente do próprio cliente. */
+    private function cancelarSolicitacao(?string $token, array $dados): array
+    {
+        $usuario = $this->usuarioDaSessao($token);
+        $id = $dados['solicitacao_id'] ?? null;
+        if (!is_int($id)) {
+            throw new ApiError(400, 'Dados inválidos.');
+        }
+
+        $atualizar = $this->db->prepare(
+            "UPDATE solicitacao SET solicitacao_status = 'Cancelado', solicitacao_atualizada_em = UTC_TIMESTAMP()
+             WHERE solicitacao_id = ? AND solicitacao_usuarios_id = ?
+               AND solicitacao_status = 'Pendente' AND solicitacao_deletada_em IS NULL"
+        );
+        $atualizar->execute([$id, $usuario['usuarios_id']]);
+        if ($atualizar->rowCount() !== 1) {
+            throw new ApiError(409, 'Esta solicitação não pode mais ser cancelada.');
+        }
+        return [200, ['message' => 'Solicitação cancelada.']];
+    }
 
     private function encerrarSessao(?string $token): array
     {
