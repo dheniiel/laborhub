@@ -240,6 +240,16 @@ class _HomeClienteState extends State<HomeCliente> {
                           // Navegação para tela de histórico
                         },
                       ),
+
+                      IconButton(
+                        icon: const Icon(Icons.home, size: 44),
+                        color: const Color(0xFF3B82F6),
+                        tooltip: 'Início',
+                        onPressed: () {
+                        // Já está na Home
+                        },
+                      ),
+
                       IconButton(
                         icon: const Icon(Icons.event_available, size: 44),
                         color: const Color(0xFF424242),
