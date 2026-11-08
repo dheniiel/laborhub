@@ -103,6 +103,29 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                         ),
                       ),
 
+                      const SizedBox(height: 4),
+
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on_outlined,
+                            size: 19,
+                            color: Colors.black,
+                          ),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Text(
+                              "${widget.profissional.profissional_cidade} - ${widget.profissional.profissional_uf}",
+                              style: const TextStyle(
+                                fontSize: 14,
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+
+                      const SizedBox(height: 4),
+
 
                     ],
                   ),
