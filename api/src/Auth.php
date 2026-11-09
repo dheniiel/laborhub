@@ -340,13 +340,16 @@ final class Auth
         $linhas = $this->db->query(
             "SELECT
                COALESCE(CONCAT(pf.pf_nome, ' ', pf.pf_sobrenome), pj.pj_nomeFantasia, '') AS profissional_nome,
+               se.servicos_id as profissional_servicos_id,
                COALESCE(se.servicos_nome, '') AS profissional_profissao,
                COALESCE(e.endereco_cidade, '') AS profissional_cidade,
                COALESCE(e.endereco_uf, '') AS profissional_uf,
+               e.endereco_id AS profissional_endereco_id,
                COALESCE(av.media, 0) AS profissional_avaliacao,
                COALESCE(av.total, 0) AS profissional_total_avaliacoes,
                COALESCE(se.servicos_descricao, '') AS profissional_observacao,
                COALESCE(se.servicos_valor, 0) AS profissional_preco,
+               u.usuarios_id AS profissional_usuarios_id,
                COALESCE(u.usuarios_imagem, '') AS profissional_imagem,
                COALESCE(u.usuarios_telefone, '') AS profissional_telefone,
                COALESCE(u.usuarios_email, '') as profissional_email,
@@ -364,7 +367,7 @@ final class Auth
              JOIN usuarios u ON u.usuarios_id = se.servicos_usuarios_id
              LEFT JOIN pessoaFisica pf ON pf.pf_usuarios_id = u.usuarios_id
              LEFT JOIN pessoaJuridica pj ON pj.pj_usuarios_id = u.usuarios_id
-             LEFT JOIN endereco e ON e.endereco_id =
+             JOIN endereco e ON e.endereco_id =
                (SELECT MIN(endereco_id) FROM endereco WHERE endereco_usuarios_id = u.usuarios_id)
              LEFT JOIN (
                SELECT

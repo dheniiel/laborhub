@@ -10,6 +10,7 @@ import '../Model/pessoaFisica.dart';
 import '../Model/usuarios.dart';
 import '../Utils/validacao.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import '../Repository/solicitacao_repository.dart';
 
 
 
@@ -33,6 +34,8 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
   final _servicos_data = TextEditingController();
   final _servicos_quantidade = TextEditingController();
   final _solicitacao_observacao = TextEditingController();
+
+  final solicitacao = Solici ()
 
 
   final _mascaraData = MaskTextInputFormatter(
@@ -538,8 +541,27 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                           FilledButton(
                             child: const Text("Enviar"),
 
-                            onPressed: () {
-                            //   função para enviar solicitação
+                            onPressed: () async {
+                              // if (!(_formKey.currentState?.validate() ?? false)) return;
+                              //
+                              // // Converte dd/mm/aaaa para aaaa-mm-dd após a validação.
+                              // final partes = _servicos_data.text.trim().split('/');
+                              // final data = '${partes[2]}-${partes[1]}-${partes[0]}';
+                              //
+                              // try {
+                              //   await SolicitacaoRepository().enviarSolicitacao(
+                              //     servicoId: widget.profissional.servicos_id,
+                              //     data: data,
+                              //     quantidade: int.parse(_servicos_quantidade.text.trim()),
+                              //   );
+                              //
+                              //   if (context.mounted) Navigator.of(context).pop();
+                              // } catch (erro) {
+                              //   if (!context.mounted) return;
+                              //   ScaffoldMessenger.of(context).showSnackBar(
+                              //     SnackBar(content: Text('Não foi possível enviar: $erro')),
+                              //   );
+                              // }
                             },
 
                             style: FilledButton.styleFrom(
