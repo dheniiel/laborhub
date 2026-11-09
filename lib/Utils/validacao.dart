@@ -355,6 +355,69 @@ class Validacao {
 
   }
 
+  static String? quantidade(String? valor) {
+    final texto = valor?.trim() ?? '';
+
+    if (texto.isEmpty) {
+      return 'Informe a quantidade de dias.';
+    }
+
+    final dias = int.tryParse(texto);
+    if (dias == null) {
+      return 'Informe um número inteiro de dias.';
+    }
+
+    if (dias <= 0) {
+      return 'A quantidade deve ser de pelo menos 1 dia.';
+    }
+
+    if (dias > 100) {
+      return 'Não é possível contratar acima de 100 dias.';
+    }
+
+    return null;
+  }
+
+  static String? servicosData(String? valor) {
+    if (valor == null || valor.trim().isEmpty) {
+      return 'Informe a data para solicitação';
+    }
+
+    final texto = valor.trim();
+
+    if (!RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(texto)) {
+      return 'Use o formato dd/mm/aaaa.';
+    }
+
+    final partes = texto.split('/');
+    final dia = int.parse(partes[0]);
+    final mes = int.parse(partes[1]);
+    final ano = int.parse(partes[2]);
+
+    final nascimento = DateTime(ano, mes, dia);
+
+    // DateTime ajusta datas inválidas; por isso conferimos os valores.
+    if (nascimento.day != dia ||
+        nascimento.month != mes ||
+        nascimento.year != ano) {
+      return 'Data inválida!';
+    }
+
+    final agora = DateTime.now();
+    final hoje = DateTime(agora.year, agora.month, agora.day);
+    final limite = DateTime(hoje.year, hoje.month, hoje.day + 60);
+
+    if (nascimento.isBefore(hoje)) {
+      return 'A data para solicitação não pode ser anterior a hoje.';
+    }
+
+    if (nascimento.isAfter(limite)) {
+      return 'Escolha uma data até 60 dias a partir de hoje.';
+    }
+
+    return null;
+  }
+
 
 
 }

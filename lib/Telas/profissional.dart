@@ -436,7 +436,7 @@ class _ProfissionalTelas extends State<Profissional> {
 
                             Forms(
                               controlador: _usuarios_email,
-                              tipagemValor: TextInputType.text,
+                              tipagemValor: TextInputType.emailAddress,
                               rotulo: "email@gmail.com",
                               validador: Validacao.email,
 

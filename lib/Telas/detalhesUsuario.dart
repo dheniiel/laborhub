@@ -8,6 +8,8 @@ import '../Model/servico.dart';
 import '../Model/pessoJuridica.dart';
 import '../Model/pessoaFisica.dart';
 import '../Model/usuarios.dart';
+import '../Utils/validacao.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 
 
@@ -26,6 +28,17 @@ class  DetalhesUsuario extends StatefulWidget{
 
 
 class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
+
+  final _formKey = GlobalKey<FormState>();
+  final _servicos_data = TextEditingController();
+  final _servicos_quantidade = TextEditingController();
+  final _solicitacao_observacao = TextEditingController();
+
+
+  final _mascaraData = MaskTextInputFormatter(
+    mask: '##/##/####',
+    filter: {'#': RegExp(r'[0-9]')},
+  );
 
   Widget _barraAvaliacao(
       int estrelas,
@@ -316,6 +329,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
 
             const SizedBox(height: 20),
 
+            // card de avaliacao
             Card(
               color: Colors.white,
               elevation: 2,
@@ -391,6 +405,189 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                   ],
                 ),
               ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Ver Comentario
+            Align(
+              alignment: Alignment.centerRight,
+              child: InkWell(
+                onTap: () {
+                  // Botao para mandar pra uma proxima tela
+                  // Navigator.push(
+                  //   context,
+                  //   MaterialPageRoute(
+                  //     builder: (context) => (),
+                  //   ),
+                  // );
+                },
+                child: const Text(
+                  'Ver comentarios',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontFamily: 'Montserrat',
+                    color: Color(0xFF3B82F6),
+                    decoration: TextDecoration.underline,
+                    decorationColor: Color(0xFF3B82F6),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 130),
+
+            FilledButton(
+              child: const Text("Enviar solicitação"),
+
+
+              // Modal para enviar solicitação
+             onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => Dialog(
+                  // Distância entre o modal e as bordas da tela.
+                  backgroundColor: Colors.white,
+                  insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(
+                    width: 500,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Solicitação de Serviço",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+
+
+                            ),
+                          ),
+
+                          const SizedBox(height: 30),
+
+                          const Text(
+                            "Data para serviço",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+
+                          const SizedBox(height: 5),
+
+                          Forms(
+                            controlador: _servicos_data,
+                            tipagemValor: TextInputType.datetime,
+                            rotulo: "dd/mm/aaaa",
+                            formatadores: [_mascaraData],
+                            validador: Validacao.servicosData,
+                          ),
+
+                          const SizedBox(height: 24),
+
+
+                          // Quantidade de dias
+                          const Text(
+                            "Quantidade de dias",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+
+                          const SizedBox(height: 5),
+
+                          Forms(
+                            controlador: _servicos_quantidade,
+                            tipagemValor: TextInputType.number,
+                            rotulo: "Quantidade de dias",
+                            validador: Validacao.quantidade,
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          const Padding(
+                            padding: EdgeInsets.only(left: 12),
+                            child: Text(
+                              "Observação",
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+
+                          Forms(
+                            controlador: _solicitacao_observacao,
+                            tipagemValor: TextInputType.multiline,
+                            rotulo: "Descreva um pouco da solicitação...",
+                            maxLinha: 5 ,
+
+                          ),
+
+                          const SizedBox(height: 24),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          FilledButton(
+                            child: const Text("Enviar"),
+
+                            onPressed: () {
+                            //   função para enviar solicitação
+                            },
+
+                            style: FilledButton.styleFrom(
+
+                                backgroundColor: Color.fromARGB(1000, 59, 130, 246),
+                                minimumSize: const Size(100, 35),
+                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                textStyle: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w300,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadiusGeometry.circular(5),
+
+                                )
+                            ),
+
+                          ),
+
+                        ]
+                      )
+
+
+
+
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+
+
+              style: FilledButton.styleFrom(
+                  backgroundColor: Color.fromARGB(1000, 59, 130, 246),
+                  minimumSize: const Size(500, 35),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  textStyle: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadiusGeometry.circular(5),
+
+                  )
+              ),
+
             ),
           ],
         ),
