@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:laborhub/Formularios/forms.dart';
 import 'package:laborhub/Model/profissional.dart';
+import 'package:laborhub/Model/solicitacaoProfissional.dart';
 import '../Model/servico.dart';
 import '../Model/pessoJuridica.dart';
 import '../Model/pessoaFisica.dart';
@@ -35,7 +36,34 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
   final _servicos_quantidade = TextEditingController();
   final _solicitacao_observacao = TextEditingController();
 
-  final solicitacao = Solici ()
+  Future<void> _enviarSolicitacao(int clienteId) async {
+    if(!(_formKey.currentState?.validate() ?? false)) return;
+
+    final textoData = _servicos_data.text.trim(); //transofmrando dateTime para String
+
+    final partes = textoData.split('/');
+    final dataServico = DateTime(
+      int.parse(partes[2]),
+      int.parse(partes[1]),
+      int.parse(partes[0]),
+    );
+
+    final agora = DateTime.now();
+
+  await SolicitacaoRepository().enviarSolicitacao(
+      solicitacao_data: dataServico,
+      solicitacao_data_atual: agora,
+      solicitacao_quantidade: int.parse(_servicos_quantidade.text.trim()),
+      solicitacao_observacao: _solicitacao_observacao.text.trim(),
+      solicitacao_criada_em: agora,
+      solicitacao_endereco_id: widget.profissional.profissional_endereco_id,
+      solicitacao_usuarios_id: clienteId,
+      servicos_id: widget.profissional.profissional_servicos_id,
+  );
+
+
+  }
+
 
 
   final _mascaraData = MaskTextInputFormatter(
@@ -542,26 +570,28 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                             child: const Text("Enviar"),
 
                             onPressed: () async {
-                              // if (!(_formKey.currentState?.validate() ?? false)) return;
-                              //
-                              // // Converte dd/mm/aaaa para aaaa-mm-dd após a validação.
-                              // final partes = _servicos_data.text.trim().split('/');
-                              // final data = '${partes[2]}-${partes[1]}-${partes[0]}';
-                              //
-                              // try {
-                              //   await SolicitacaoRepository().enviarSolicitacao(
-                              //     servicoId: widget.profissional.servicos_id,
-                              //     data: data,
-                              //     quantidade: int.parse(_servicos_quantidade.text.trim()),
-                              //   );
-                              //
-                              //   if (context.mounted) Navigator.of(context).pop();
-                              // } catch (erro) {
-                              //   if (!context.mounted) return;
-                              //   ScaffoldMessenger.of(context).showSnackBar(
-                              //     SnackBar(content: Text('Não foi possível enviar: $erro')),
-                              //   );
-                              // }
+                              if (!(_formKey.currentState?.validate() ?? false)) return;
+
+                              final messenger = ScaffoldMessenger.of(context);
+
+                              try {
+                                await _enviarSolicitacao(widget.profissional.profissional_usuarios_id);
+
+                                if(!context.mounted) return;
+
+                                Navigator.of(context).pop();
+
+                                messenger.showSnackBar(
+                                  SnackBar(content: Text("Solicitação de serviço enviada!"), backgroundColor: Colors.green),
+                                );
+
+                              } catch (erro) {
+                                if(!context.mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Não foi possível enviar: $erro')),
+                                );
+                              }
                             },
 
                             style: FilledButton.styleFrom(

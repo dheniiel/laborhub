@@ -35,26 +35,28 @@ class SolicitacaoRepository {
   }
 
   Future<int> enviarSolicitacao({
-    required String solicitacao_data,
-    required String solicitacao_data_atual,
+    required DateTime solicitacao_data,
+    required DateTime solicitacao_data_atual,
     required int solicitacao_quantidade,
     required String solicitacao_observacao,
-    required String solicitacao_criada_em,
+    required DateTime solicitacao_criada_em,
     required int solicitacao_endereco_id,
     required int solicitacao_usuarios_id,
+    required int servicos_id,
 
   }) async {
 
     final body = await _api.post(
       'solicitacoes/criar', {
 
-        'solicitacao_data' : solicitacao_data,
-      'solicitacao_data_atual' : solicitacao_data_atual,
+        'solicitacao_data' : solicitacao_data.toIso8601String().split('T').first,
+      'solicitacao_data_atual' : solicitacao_data_atual.toIso8601String().split('T').first,
       'solicitacao_quantidade' : solicitacao_quantidade,
       'solicitacao_observacao' : solicitacao_observacao,
-      'solicitacao_criada_em' : solicitacao_criada_em,
+      'solicitacao_criada_em' : solicitacao_criada_em.toIso8601String().split('T').first,
       'solicitacao_endereco_id' : solicitacao_endereco_id,
       'solicitacao_usuarios_id' : solicitacao_usuarios_id,
+      'servicos_id' : servicos_id,
 
 
       },

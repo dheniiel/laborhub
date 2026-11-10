@@ -4,7 +4,7 @@ class CadastroRepository {
   final AuthApi _api;
   CadastroRepository({AuthApi? api}) : _api = api ?? AuthApi();
 
-  Future<int> cadastrar({
+  Future<int>  cadastrar({
     required String senha,
     required Map<String, Object?> usuario,
     required Map<String, Object?> endereco,

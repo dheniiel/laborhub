@@ -18,7 +18,7 @@ class Profissional{
   final String profissional_experiencia;
   final int profissional_servicos_id;
   final int profissional_endereco_id;
-  final int profissioal_usuarios_id;
+  final int profissional_usuarios_id;
 
 
   final List<int> avaliacoesPorEstrela;
@@ -42,7 +42,7 @@ class Profissional{
     required this.profissional_experiencia,
     required this.profissional_servicos_id,
     required this.profissional_endereco_id,
-    required this.profissioal_usuarios_id,
+    required this.profissional_usuarios_id,
     required this.avaliacoesPorEstrela
   });
 
@@ -65,7 +65,7 @@ class Profissional{
       profissional_experiencia:  map['profissional_experiencia'] as String? ?? '',
       profissional_endereco_id: map['profissional_endereco_id'] as int,
       profissional_servicos_id: map['profissional_servicos_id'] as int,
-      profissioal_usuarios_id: map['profissional_usuarios_id'] as int,
+      profissional_usuarios_id: map['profissional_usuarios_id'] as int,
 
       avaliacoesPorEstrela: List.generate(
         5,
