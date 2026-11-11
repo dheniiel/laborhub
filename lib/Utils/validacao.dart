@@ -130,6 +130,7 @@ class Validacao {
 
     return null;
   }
+
   //Validação usada em tela de cadastro
   static String? telefone(String? valor) {
     if (valor == null || valor.trim().isEmpty) {
@@ -148,6 +149,7 @@ class Validacao {
     return null;
   }
 
+  // VAlidação de email
   static String? email(String? valor) {
     if (valor == null || valor.trim().isEmpty) {
       return 'Informe o email';
@@ -163,7 +165,7 @@ class Validacao {
     return null;
   }
 
-
+  // Validação de senha
   static String? senha(String? valor) {
     if (valor == null || valor.trim().isEmpty) {
       return 'Informe uma senha';
@@ -177,6 +179,7 @@ class Validacao {
   }
 
 
+  // Validacação de razao Social
   static String? razaoSocial(String? valor){
     if(valor == null || valor.trim().isEmpty) {
       return "Informe a Razão Social!";
@@ -185,13 +188,14 @@ class Validacao {
 
     final contemNumero = RegExp(r'\d').hasMatch(valor);
 
-    if(valor.length < 3 || valor.length >= 20) {
+    if(valor.length < 3 || valor.length >= 50) {
       return "Sua Razão Social não possui caracter suficiente!";
     }
 
 
   }
 
+  // Validacação de nome fantasia
   static String? nomeFantasia(String? valor){
     if(valor == null || valor.trim().isEmpty) {
       return "Informe o nome fantasia!";
@@ -200,7 +204,7 @@ class Validacao {
 
     final contemNumero = RegExp(r'\d').hasMatch(valor);
 
-    if(valor.length < 3 || valor.length >= 15) {
+    if(valor.length < 3 || valor.length >= 50) {
       return "O nome fanstasia não possui caracter suficiente!";
     }
 
@@ -208,6 +212,50 @@ class Validacao {
 
 
   }
+
+  // Validação de fundação da empresa
+  static String? dataFundacao(String? valor) {
+    if (valor == null || valor.trim().isEmpty) {
+      return 'Informe a data de fundação!';
+    }
+
+    final texto = valor.trim();
+
+    if (!RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(texto)) {
+      return 'Use o formato dd/mm/aaaa.';
+    }
+
+    final partes = texto.split('/');
+    final dia = int.parse(partes[0]);
+    final mes = int.parse(partes[1]);
+    final ano = int.parse(partes[2]);
+
+    final nascimento = DateTime(ano, mes, dia);
+
+    // DateTime ajusta datas inválidas; por isso conferimos os valores.
+    if (nascimento.day != dia ||
+        nascimento.month != mes ||
+        nascimento.year != ano) {
+      return 'Data inválida!';
+    }
+
+    final hoje = DateTime.now();
+
+    if (nascimento.isAfter(hoje)) {
+      return 'A data de fundação não pode estar no futuro.';
+    }
+
+    var idade = hoje.year - nascimento.year;
+
+
+    if (idade >= 120) {
+      return 'Não é possível adicionar essa data!';
+    }
+
+    return null;
+  }
+
+
 
   static String? cnpj(String? valor) {
     if (valor == null || valor.trim().isEmpty) {
@@ -261,7 +309,6 @@ class Validacao {
 
     return null;
   }
-
 
   static String? rua(String? valor){
     if(valor == null || valor.trim().isEmpty) {

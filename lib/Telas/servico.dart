@@ -243,9 +243,22 @@ class _ServicoTelaState extends State<ServicoTela> {
         endereco_usuarios_id: 0,
       );
 
+      if ((_servicoDataSelecionado ?? '').trim().isEmpty ||
+          (_servicoValor ?? '').trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Selecione os dias de serviço e o tipo de cobrança.',
+            ),
+          ),
+        );
+        return;
+      }
+
+
 
       final servico = Servico(
-        servicos_nome: _servicos_nome.text.trim(),
+    servicos_nome: _servicos_nome.text.trim(),
         servicos_data: _servicoDataSelecionado ?? '',
         servicos_valor: _servicoValor == 'Negociar'
             ? 0.0

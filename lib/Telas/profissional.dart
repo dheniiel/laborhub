@@ -623,7 +623,7 @@ class _ProfissionalTelas extends State<Profissional> {
                               tipagemValor: TextInputType.datetime,
                               rotulo: "dd/mm/YYYY",
                               formatadores: [_mascaraData],
-                              validador: Validacao.data,
+                              validador: Validacao.dataFundacao,
 
                             ),
 
@@ -733,12 +733,6 @@ class _ProfissionalTelas extends State<Profissional> {
                                 if(!valido) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(content: Text("Erro ao preencher o formulario!")),
-                                  );
-                                }
-
-                                if(_generoSelecionado == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("Selecione seu gênero!")),
                                   );
                                 }
 

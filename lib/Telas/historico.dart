@@ -437,23 +437,25 @@ class _CardSolicitacao extends StatelessWidget {
               children: [
                 Text(
                   solicitacao.profissional_nome,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 16,
                     fontFamily: 'Montserrat',
                     color: Colors.black,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 5),
                 Text(
                   solicitacao.profissional_profissao,
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 13,
                     fontFamily: 'Montserrat',
                     color: Colors.black,
                   ),
                 ),
                 const SizedBox(height: 2),
-                _rotuloValor('Data solicitação:', _data(solicitacao.solicitacao_data), 10.5),
+                _rotuloValor('Data Solicitada:', _data(solicitacao.solicitacao_data), 10.5),
                 if (conclusao != null)
                   _rotuloValor('Data conclusão:', _data(conclusao), 10.5),
               ],
