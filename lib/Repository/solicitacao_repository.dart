@@ -46,8 +46,16 @@ class SolicitacaoRepository {
 
   }) async {
 
+    // print({
+    //   'solicitacao_data': solicitacao_data.toIso8601String().split('T').first,
+    //   'solicitacao_quantidade': solicitacao_quantidade,
+    //   'solicitacao_observacao': solicitacao_observacao,
+    //   'solicitacao_endereco_id': solicitacao_endereco_id,
+    //   'servicos_id': servicos_id,
+    // });
+
     final body = await _api.post(
-      'solicitacoes/criar', {
+      'solicitacoes/enviarSolicitacao', {
 
         'solicitacao_data' : solicitacao_data.toIso8601String().split('T').first,
       'solicitacao_data_atual' : solicitacao_data_atual.toIso8601String().split('T').first,

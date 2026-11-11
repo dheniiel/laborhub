@@ -48,7 +48,7 @@ final class Auth
             return $this->cancelarSolicitacao($token, $dados);
         }
 
-        if($rota === 'solicitacoes/criar') {
+        if($rota === 'solicitacoes/enviarSolicitacao') {
             return $this->enviarSolicitacao($token, $dados);
         }
 
@@ -336,7 +336,7 @@ final class Auth
         return $this->renovarSessao($token);
     }
 
-    private function criarSolicitacao(?string $token, array $dados): array
+    private function enviarSolicitacao(?string $token, array $dados): array
     {
         $usuario = $this->usuarioDaSessao($token);
 
@@ -366,8 +366,10 @@ final class Auth
             throw new ApiError(400, 'Informe a data do serviço.');
         }
 
-        $hoje = new DateTimeImmutable('today');
-        $dataServico = new DateTimeImmutable($data);
+       $fuso = new DateTimeZone('America/Sao_Paulo');
+
+       $hoje = new DateTimeImmutable('today', $fuso);
+       $dataServico = new DateTimeImmutable($data, $fuso);
 
         if ($dataServico < $hoje || $dataServico > $hoje->modify('+60 days')) {
             throw new ApiError(

@@ -246,13 +246,14 @@ class _ServicoTelaState extends State<ServicoTela> {
 
       final servico = Servico(
         servicos_nome: _servicos_nome.text.trim(),
-        servicos_data: _servicos_data.text.trim(),
-        servicos_valor:  _mascaraValor.getUnformattedValue().toDouble(),
-        servicos_tipo_cobranca: _servicos_tipo_cobranca.text.trim(),
-        servicos_nivel_experiencia: _servicos_nivel_experiencia.text.trim(),
+        servicos_data: _servicoDataSelecionado ?? '',
+        servicos_valor: _servicoValor == 'Negociar'
+            ? 0.0
+            : _mascaraValor.getUnformattedValue().toDouble(),
+        servicos_tipo_cobranca: _servicoValor ?? '',
+        servicos_nivel_experiencia: _nivelCobranca ?? '',
         servicos_descricao: _servicos_descricao.text.trim(),
         servicos_usuarios_id: 0,
-
       );
 
       final senhaHash = BCrypt.hashpw(
@@ -410,6 +411,7 @@ class _ServicoTelaState extends State<ServicoTela> {
                           setState(() {
                             _servicoDataSelecionado = valor;
                           });
+
                         },
                       ),
 

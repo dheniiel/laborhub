@@ -171,7 +171,7 @@ class _HomeClienteState extends State<HomeCliente> {
                       ),
                       const Spacer(),
                       IconButton(
-                        icon: const Icon(Icons.notifications, size: 30),
+                        icon: const Icon(Icons.notifications, size: 25),
                         color: Colors.black,
                         tooltip: 'Notificações',
                         onPressed: () {
@@ -179,13 +179,13 @@ class _HomeClienteState extends State<HomeCliente> {
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.settings, size: 30),
+                        icon: const Icon(Icons.settings, size: 25),
                         color: Colors.black,
                         tooltip: 'Configurações',
                         onPressed: _abrirEdicaoPerfil,
                       ),
                       IconButton(
-                        icon: const Icon(Icons.logout, size: 30),
+                        icon: const Icon(Icons.logout, size: 25),
                         color: Colors.black,
                         tooltip: 'Sair',
                         onPressed: _sair,
@@ -193,6 +193,8 @@ class _HomeClienteState extends State<HomeCliente> {
                     ],
                   ),
                 ),
+
+                const SizedBox(height: 15),
 
                 const Text(
                   'Busque profissionais\npróximo a você',
@@ -202,6 +204,7 @@ class _HomeClienteState extends State<HomeCliente> {
                     fontFamily: 'Montserrat',
                     fontWeight: FontWeight.w400,
                     color: Colors.black,
+
                   ),
                 ),
 
@@ -220,7 +223,7 @@ class _HomeClienteState extends State<HomeCliente> {
                         child: Text(
                           'Pesquise por um profissional',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontFamily: 'Montserrat',
                             color: Colors.white,
                           ),
@@ -276,14 +279,14 @@ class _HomeClienteState extends State<HomeCliente> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.history_toggle_off, size: 44),
+                        icon: const Icon(Icons.assignment_outlined, size: 38),
                         color: const Color(0xFF424242),
                         tooltip: 'Histórico',
                         onPressed: _abrirHistorico,
                       ),
 
                       IconButton(
-                        icon: const Icon(Icons.home, size: 44),
+                        icon: const Icon(Icons.home, size: 38),
                         color: const Color(0xFF3B82F6),
                         tooltip: 'Início',
                         onPressed: () {
@@ -292,7 +295,7 @@ class _HomeClienteState extends State<HomeCliente> {
                       ),
 
                       IconButton(
-                        icon: const Icon(Icons.event_available, size: 44),
+                        icon: const Icon(Icons.event_available, size: 38),
                         color: const Color(0xFF424242),
                         tooltip: 'Agendamentos',
                         onPressed: _abrirAgendamentos,
@@ -366,7 +369,7 @@ class _CardProfissional extends StatelessWidget {
                           ),
                         ),
 
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 10),
 
                         Text(
                           profissional.profissional_nome,
@@ -399,7 +402,7 @@ class _CardProfissional extends StatelessWidget {
 
                             Flexible(
                               child: Text(
-                                '${profissional.profissional_avaliacao.toStringAsFixed(1)} ( ${_milhar(profissional.profissional_total_avaliacoes)})',
+                                '${profissional.profissional_avaliacao.toStringAsFixed(1)} (${_milhar(profissional.profissional_total_avaliacoes)})',
                                 style: _estiloPequeno,
                               ),
                             ),
@@ -421,9 +424,9 @@ class _CardProfissional extends StatelessWidget {
                     const Text(
                       'Observação',
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: 13.5,
                         fontFamily: 'Montserrat',
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.bold,
                         color: Colors.black,
                       ),
                     ),
@@ -432,11 +435,15 @@ class _CardProfissional extends StatelessWidget {
 
                     Text(
                       profissional.profissional_observacao,
+                      textAlign: TextAlign.justify,
                       style: const TextStyle(
                         fontSize: 11.5,
                         fontFamily: 'Montserrat',
+
                         height: 1.4,
-                        color: Colors.black,
+                        // color: Colors.black,
+                        fontWeight: FontWeight.normal,
+
                       ),
                     ),
 
@@ -448,9 +455,9 @@ class _CardProfissional extends StatelessWidget {
                           child: Text(
                             'R\$ ${_moeda(profissional.profissional_preco)} - Total',
                             style: const TextStyle(
-                              fontSize: 15,
+                              fontSize: 19,
                               fontFamily: 'Montserrat',
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.bold,
                               color: Color(0xFF22C55E),
                             ),
                           ),
@@ -465,9 +472,9 @@ class _CardProfissional extends StatelessWidget {
                           },
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF3B82F6),
-                            minimumSize: const Size(75, 30),
+                            minimumSize: const Size(90, 40),
                             padding: const EdgeInsets.symmetric(horizontal: 20),
-                            textStyle: const TextStyle(fontSize: 14, fontFamily: 'Montserrat'),
+                            textStyle: const TextStyle(fontSize: 16, fontFamily: 'Montserrat'),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
                           ),
                           child: const Text('Perfil'),

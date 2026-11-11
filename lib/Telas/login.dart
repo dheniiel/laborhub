@@ -228,7 +228,7 @@ class _LoginState extends State<Login> {
                                   child: const Text(
                                     'Esqueci minha senha',
                                     style: TextStyle(
-                                      fontSize: 15,
+                                      fontSize: 13,
                                       fontFamily: 'Montserrat',
                                       color: Color(0xFF3B82F6),
                                       decoration: TextDecoration.underline,
