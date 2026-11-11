@@ -451,17 +451,36 @@ class _CardProfissional extends StatelessWidget {
 
                     Row(
                       children: [
-                        Expanded(
-                          child: Text(
-                            'R\$ ${_moeda(profissional.profissional_preco)} - Total',
-                            style: const TextStyle(
-                              fontSize: 19,
-                              fontFamily: 'Montserrat',
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF22C55E),
+                        if(profissional.profissional_tipo_cobranca == 'Negociar') ... [
+                          Expanded(
+                            child: Text(
+                                "A negociar",
+                              style: TextStyle(
+                                fontSize: 19,
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF22C55E),
+
+                              ),
                             ),
                           ),
-                        ),
+
+                        ] else ... [
+                          Expanded(
+                            child: Text(
+                              'R\$ ${_moeda(profissional.profissional_preco)} - ${profissional.profissional_tipo_cobranca}',
+                              style: const TextStyle(
+                                fontSize: 19,
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF22C55E),
+                              ),
+                            ),
+                          ),
+
+                        ],
+
+
                         FilledButton(
                           onPressed: () {
                             Navigator.of(context).push(
