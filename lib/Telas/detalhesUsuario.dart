@@ -4,10 +4,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:laborhub/Formularios/forms.dart';
 import 'package:laborhub/Model/profissional.dart';
+import 'package:laborhub/Model/solicitacaoProfissional.dart';
 import '../Model/servico.dart';
 import '../Model/pessoJuridica.dart';
 import '../Model/pessoaFisica.dart';
 import '../Model/usuarios.dart';
+import '../Utils/validacao.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import '../Repository/solicitacao_repository.dart';
 
 
 
@@ -26,6 +30,46 @@ class  DetalhesUsuario extends StatefulWidget{
 
 
 class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
+
+  final _formKey = GlobalKey<FormState>();
+  final _servicos_data = TextEditingController();
+  final _servicos_quantidade = TextEditingController();
+  final _solicitacao_observacao = TextEditingController();
+
+  Future<void> _enviarSolicitacao(int clienteId) async {
+    if(!(_formKey.currentState?.validate() ?? false)) return;
+
+    final textoData = _servicos_data.text.trim(); //transofmrando dateTime para String
+
+    final partes = textoData.split('/');
+    final dataServico = DateTime(
+      int.parse(partes[2]),
+      int.parse(partes[1]),
+      int.parse(partes[0]),
+    );
+
+    final agora = DateTime.now();
+
+  await SolicitacaoRepository().enviarSolicitacao(
+      solicitacao_data: dataServico,
+      solicitacao_data_atual: agora,
+      solicitacao_quantidade: int.parse(_servicos_quantidade.text.trim()),
+      solicitacao_observacao: _solicitacao_observacao.text.trim(),
+      solicitacao_criada_em: agora,
+      solicitacao_endereco_id: widget.profissional.profissional_endereco_id,
+      solicitacao_usuarios_id: clienteId,
+      servicos_id: widget.profissional.profissional_servicos_id,
+  );
+
+
+  }
+
+
+
+  final _mascaraData = MaskTextInputFormatter(
+    mask: '##/##/####',
+    filter: {'#': RegExp(r'[0-9]')},
+  );
 
   Widget _barraAvaliacao(
       int estrelas,
@@ -153,7 +197,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                         children: [
                           const Icon(
                             Icons.location_on_outlined,
-                            size: 19,
+                            size: 17,
                             color: Colors.black,
                           ),
                           const SizedBox(width: 2),
@@ -161,7 +205,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                             child: Text(
                               "${widget.profissional.profissional_cidade} - ${widget.profissional.profissional_uf}",
                               style: const TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                               ),
                             ),
                           )
@@ -175,7 +219,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                         children: [
                           const Icon(
                             Icons.phone,
-                            size: 19,
+                            size: 17,
                             color: Colors.black,
                           ),
                           const SizedBox(width: 3),
@@ -183,7 +227,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                             child: Text(
                               "${widget.profissional.profissional_telefone}",
                               style: const TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                               ),
                             ),
                           )
@@ -198,7 +242,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                         children: [
                           const Icon(
                             Icons.mail,
-                            size: 19,
+                            size: 17,
                             color: Colors.black,
                           ),
                           const SizedBox(width: 5),
@@ -265,7 +309,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                             child: Text(
                               'R\$ ${profissional.profissional_preco.toStringAsFixed(2).replaceAll('.', ',')} - ${widget.profissional.profissional_tipo_cobranca}',
                               style: TextStyle(
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.normal,
                                 fontSize: 20,
                                 color: Color.fromARGB(1000, 34, 197, 94),
                               ),
@@ -306,6 +350,10 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                       Text(
                           "Profissional: ${widget.profissional.profissional_experiencia} - ${widget.profissional.profissional_observacao}",
                         textAlign: TextAlign.justify,
+                        style: const TextStyle(
+                          fontSize: 12,
+                        ),
+
                       ),
                     ],
                   ),
@@ -316,6 +364,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
 
             const SizedBox(height: 20),
 
+            // card de avaliacao
             Card(
               color: Colors.white,
               elevation: 2,
@@ -392,6 +441,239 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                 ),
               ),
             ),
+
+            const SizedBox(height: 10),
+
+            // Ver Comentario
+            Align(
+              alignment: Alignment.centerRight,
+              child: InkWell(
+                onTap: () {
+                  // Botao para mandar pra uma proxima tela
+                  // Navigator.push(
+                  //   context,
+                  //   MaterialPageRoute(
+                  //     builder: (context) => (),
+                  //   ),
+                  // );
+                },
+                child: const Text(
+                  'Ver comentarios',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontFamily: 'Montserrat',
+                    color: Color(0xFF3B82F6),
+                    decoration: TextDecoration.underline,
+                    decorationColor: Color(0xFF3B82F6),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 160),
+
+        FilledButton(
+          onPressed: () async {
+            bool enviando = false;
+            final messenger = ScaffoldMessenger.of(context);
+
+            await showDialog<void>(
+              context: context,
+              barrierDismissible: false,
+              builder: (dialogContext) {
+                return StatefulBuilder(
+                  builder: (modalContext, setStateModal) {
+                    return PopScope(
+                      canPop: !enviando,
+                      child: Dialog(
+                        backgroundColor: Colors.white,
+                        insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: SizedBox(
+                          width: 500,
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(20),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Solicitação de Serviço',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 30),
+
+                                  const Text(
+                                    'Data para serviço',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+
+                                  Forms(
+                                    controlador: _servicos_data,
+                                    tipagemValor: TextInputType.datetime,
+                                    rotulo: 'dd/mm/aaaa',
+                                    formatadores: [_mascaraData],
+                                    validador: Validacao.servicosData,
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  const Text(
+                                    'Quantidade de dias',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+
+                                  Forms(
+                                    controlador: _servicos_quantidade,
+                                    tipagemValor: TextInputType.number,
+                                    rotulo: 'Quantidade de dias',
+                                    validador: Validacao.quantidade,
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  const Text(
+                                    'Observação',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+
+                                  Forms(
+                                    controlador: _solicitacao_observacao,
+                                    tipagemValor: TextInputType.multiline,
+                                    rotulo: 'Descreva um pouco da solicitação...',
+                                    maxLinha: 5,
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      TextButton(
+                                        onPressed: enviando
+                                            ? null
+                                            : () {
+                                          Navigator.of(dialogContext).pop();
+                                        },
+                                        child: const Text('Cancelar'),
+                                      ),
+                                      const SizedBox(width: 12),
+
+                                      FilledButton(
+                                        onPressed: enviando
+                                            ? null
+                                            : () async {
+                                          if (!(_formKey.currentState
+                                              ?.validate() ??
+                                              false)) {
+                                            return;
+                                          }
+
+                                          setStateModal(() {
+                                            enviando = true;
+                                          });
+
+                                          try {
+                                            await _enviarSolicitacao(
+                                              widget.profissional
+                                                  .profissional_usuarios_id,
+                                            );
+                                          } catch (erro) {
+                                            if (!modalContext.mounted) return;
+
+                                            setStateModal(() {
+                                              enviando = false;
+                                            });
+
+                                            messenger.showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Não foi possível enviar: $erro',
+                                                ),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                            return;
+                                          }
+
+                                          if (!dialogContext.mounted) return;
+
+                                          Navigator.of(dialogContext).pop();
+
+                                          messenger.showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Solicitação de serviço enviada!',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              backgroundColor: Colors.green,
+
+                                            ),
+                                          );
+                                        },
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: const Color(0xFF3B82F6),
+                                          minimumSize: const Size(100, 40),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(5),
+                                          ),
+                                        ),
+                                        child: enviando
+                                            ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Color(0xFF3B82F6),
+                                          ),
+                                        )
+                                            : const Text('Enviar'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            );
+          },
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF3B82F6),
+            minimumSize: const Size(500, 35),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            textStyle: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w400,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5),
+            ),
+          ),
+          child: const Text('Enviar solicitação'),
+        ),
+
+
           ],
         ),
       ),

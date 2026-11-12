@@ -436,7 +436,7 @@ class _ClienteTelas extends State<Cliente> {
 
                               Forms(
                                 controlador: _usuarios_email,
-                                tipagemValor: TextInputType.text,
+                                tipagemValor: TextInputType.emailAddress,
                                 rotulo: "email@gmail.com",
                                 validador: Validacao.email,
 

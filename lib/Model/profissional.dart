@@ -16,6 +16,11 @@ class Profissional{
   final String profissional_data;
   final String profissional_tipo_cobranca;
   final String profissional_experiencia;
+  final int profissional_servicos_id;
+  final int profissional_endereco_id;
+  final int profissional_usuarios_id;
+
+
   final List<int> avaliacoesPorEstrela;
 
 
@@ -35,10 +40,13 @@ class Profissional{
     required this.profissional_data,
     required this.profissional_tipo_cobranca,
     required this.profissional_experiencia,
+    required this.profissional_servicos_id,
+    required this.profissional_endereco_id,
+    required this.profissional_usuarios_id,
     required this.avaliacoesPorEstrela
   });
 
-  factory Profissional.fromMap(Map<String, Object?> map){
+  factory Profissional.fromMap(Map<String,  Object?> map){
     return Profissional(
       profissional_nome: map['profissional_nome'] as String,
       profissional_profissao: map['profissional_profissao'] as String,
@@ -55,6 +63,10 @@ class Profissional{
       profissional_data:  map['profissional_data'] as String? ?? '',
       profissional_tipo_cobranca:  map['profissional_tipo_cobranca'] as String? ?? '',
       profissional_experiencia:  map['profissional_experiencia'] as String? ?? '',
+      profissional_endereco_id: map['profissional_endereco_id'] as int,
+      profissional_servicos_id: map['profissional_servicos_id'] as int,
+      profissional_usuarios_id: map['profissional_usuarios_id'] as int,
+
       avaliacoesPorEstrela: List.generate(
         5,
             (index) => int.parse(

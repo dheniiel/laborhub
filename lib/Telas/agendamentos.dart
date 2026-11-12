@@ -6,6 +6,7 @@ import '../Model/solicitacao.dart';
 import '../Model/usuarios.dart';
 import '../Repository/solicitacao_repository.dart';
 import 'editarPerfil.dart';
+import 'historico.dart';
 
 
 class Agendamentos extends StatefulWidget {
@@ -60,6 +61,15 @@ class _AgendamentosState extends State<Agendamentos> {
   Future<void> _abrirEdicaoPerfil() async {
     final atualizado = await Navigator.of(context).push<Usuarios>(
       MaterialPageRoute(builder: (context) => EditarPerfil(usuario: _usuario)),
+    );
+    if (atualizado != null && mounted) {
+      setState(() => _usuario = atualizado);
+    }
+  }
+
+  Future<void> _abrirHistorico() async {
+    final atualizado = await Navigator.of(context).push<Usuarios>(
+      MaterialPageRoute(builder: (context) => Historico(usuario: _usuario)),
     );
     if (atualizado != null && mounted) {
       setState(() => _usuario = atualizado);
@@ -287,7 +297,7 @@ class _AgendamentosState extends State<Agendamentos> {
                         ),
                         const Spacer(),
                         IconButton(
-                          icon: const Icon(Icons.notifications, size: 30),
+                          icon: const Icon(Icons.notifications, size: 25),
                           color: Colors.black,
                           tooltip: 'Notificações',
                           onPressed: () {
@@ -295,7 +305,7 @@ class _AgendamentosState extends State<Agendamentos> {
                           },
                         ),
                         IconButton(
-                          icon: const Icon(Icons.settings, size: 30),
+                          icon: const Icon(Icons.settings, size: 25),
                           color: Colors.black,
                           tooltip: 'Configurações',
                           onPressed: _abrirEdicaoPerfil,
@@ -369,21 +379,19 @@ class _AgendamentosState extends State<Agendamentos> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.history_toggle_off, size: 44),
+                          icon: const Icon(Icons.assignment_outlined, size: 38),
                           color: const Color(0xFF424242),
                           tooltip: 'Histórico',
-                          onPressed: () {
-                            // Navegação para tela de histórico
-                          },
+                          onPressed: _abrirHistorico,
                         ),
                         IconButton(
-                          icon: const Icon(Icons.home, size: 44),
+                          icon: const Icon(Icons.home, size: 38),
                           color: const Color(0xFF424242),
                           tooltip: 'Início',
                           onPressed: _voltarParaHome,
                         ),
                         IconButton(
-                          icon: const Icon(Icons.event_available, size: 44),
+                          icon: const Icon(Icons.event_available, size: 38),
                           color: const Color(0xFF3B82F6),
                           tooltip: 'Agendamentos',
                           onPressed: () {

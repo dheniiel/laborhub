@@ -7,6 +7,7 @@ import '../Model/solicitacao.dart';
 import '../Model/usuarios.dart';
 import '../Repository/solicitacao_repository.dart';
 import 'editarPerfil.dart';
+import 'agendamentos.dart';
 
 
 class Historico extends StatefulWidget {
@@ -79,6 +80,19 @@ class _HistoricoState extends State<Historico> {
       setState(() => _usuario = atualizado);
     }
   }
+
+  Future<void> _abrirAgendamentos() async {
+    final atualizado = await Navigator.of(context).push<Usuarios>(
+      MaterialPageRoute(
+        builder: (context) => Agendamentos(usuario: _usuario),
+      ),
+    );
+
+    if (atualizado != null && mounted) {
+      setState(() => _usuario = atualizado);
+    }
+  }
+
 
   // Volta para a Home levando o usuário (atualizado, se o perfil foi editado).
   void _voltarParaHome() => Navigator.pop(context, _usuario);
@@ -175,7 +189,7 @@ class _HistoricoState extends State<Historico> {
           backgroundColor: selecionado ? const Color(0xFF3B82F6) : Colors.white,
           foregroundColor: selecionado ? Colors.white : Colors.black,
           side: const BorderSide(color: Color(0xFF3B82F6)),
-          textStyle: const TextStyle(fontSize: 16, fontFamily: 'Montserrat'),
+          textStyle: const TextStyle(fontSize: 14, fontFamily: 'Montserrat'),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
         ),
         child: Text(rotulo),
@@ -216,7 +230,7 @@ class _HistoricoState extends State<Historico> {
                         ),
                         const Spacer(),
                         IconButton(
-                          icon: const Icon(Icons.notifications, size: 30),
+                          icon: const Icon(Icons.notifications, size: 25),
                           color: Colors.black,
                           tooltip: 'Notificações',
                           onPressed: () {
@@ -224,7 +238,7 @@ class _HistoricoState extends State<Historico> {
                           },
                         ),
                         IconButton(
-                          icon: const Icon(Icons.settings, size: 30),
+                          icon: const Icon(Icons.settings, size: 25),
                           color: Colors.black,
                           tooltip: 'Configurações',
                           onPressed: _abrirEdicaoPerfil,
@@ -259,7 +273,7 @@ class _HistoricoState extends State<Historico> {
                           child: Text(
                             'Pesquise no histórico',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 14,
                               fontFamily: 'Montserrat',
                               color: Colors.black,
                             ),
@@ -334,7 +348,7 @@ class _HistoricoState extends State<Historico> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.history_toggle_off, size: 44),
+                          icon: const Icon(Icons.assignment_outlined, size: 38),
                           color: const Color(0xFF3B82F6),
                           tooltip: 'Histórico',
                           onPressed: () {
@@ -342,18 +356,16 @@ class _HistoricoState extends State<Historico> {
                           },
                         ),
                         IconButton(
-                          icon: const Icon(Icons.home, size: 44),
+                          icon: const Icon(Icons.home, size: 38),
                           color: const Color(0xFF424242),
                           tooltip: 'Início',
                           onPressed: _voltarParaHome,
                         ),
                         IconButton(
-                          icon: const Icon(Icons.event_available, size: 44),
+                          icon: const Icon(Icons.event_available, size: 38),
                           color: const Color(0xFF424242),
                           tooltip: 'Agendamentos',
-                          onPressed: () {
-                            // Navegação para tela de agendamentos
-                          },
+                          onPressed: _abrirAgendamentos,
                         ),
                       ],
                     ),
@@ -425,23 +437,25 @@ class _CardSolicitacao extends StatelessWidget {
               children: [
                 Text(
                   solicitacao.profissional_nome,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 16,
                     fontFamily: 'Montserrat',
                     color: Colors.black,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 5),
                 Text(
                   solicitacao.profissional_profissao,
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 13,
                     fontFamily: 'Montserrat',
                     color: Colors.black,
                   ),
                 ),
                 const SizedBox(height: 2),
-                _rotuloValor('Data solicitação:', _data(solicitacao.solicitacao_data), 10.5),
+                _rotuloValor('Data Solicitada:', _data(solicitacao.solicitacao_data), 10.5),
                 if (conclusao != null)
                   _rotuloValor('Data conclusão:', _data(conclusao), 10.5),
               ],

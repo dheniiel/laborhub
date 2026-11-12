@@ -48,6 +48,10 @@ final class Auth
             return $this->cancelarSolicitacao($token, $dados);
         }
 
+        if($rota === 'solicitacoes/enviarSolicitacao') {
+            return $this->enviarSolicitacao($token, $dados);
+        }
+
         $email = $this->email($dados);
         return match ($rota) {
             'auth/register' => $this->cadastrar($dados, $email, $ip),
@@ -332,6 +336,129 @@ final class Auth
         return $this->renovarSessao($token);
     }
 
+    private function enviarSolicitacao(?string $token, array $dados): array
+    {
+        $usuario = $this->usuarioDaSessao($token);
+
+        $servicoId = $dados['servicos_id'] ?? null;
+        $enderecoId = $dados['solicitacao_endereco_id'] ?? null;
+        $quantidade = $dados['solicitacao_quantidade'] ?? null;
+        $data = $this->data($dados, 'solicitacao_data');
+        $observacao = $this->opcional(
+            $dados,
+            'solicitacao_observacao',
+            1000
+        );
+
+        if (!is_int($servicoId) || $servicoId <= 0) {
+            throw new ApiError(400, 'Informe um serviço válido.');
+        }
+
+        if (!is_int($enderecoId) || $enderecoId <= 0) {
+            throw new ApiError(400, 'Informe um endereço válido.');
+        }
+
+        if (!is_int($quantidade) || $quantidade < 1 || $quantidade > 100) {
+            throw new ApiError(400, 'Informe uma quantidade entre 1 e 100.');
+        }
+
+        if ($data === null) {
+            throw new ApiError(400, 'Informe a data do serviço.');
+        }
+
+       $fuso = new DateTimeZone('America/Sao_Paulo');
+
+       $hoje = new DateTimeImmutable('today', $fuso);
+       $dataServico = new DateTimeImmutable($data, $fuso);
+
+        if ($dataServico < $hoje || $dataServico > $hoje->modify('+60 days')) {
+            throw new ApiError(
+                400,
+                'Escolha uma data entre hoje e os próximos 60 dias.'
+            );
+        }
+
+        $this->db->beginTransaction();
+
+        try {
+            // Confere se o serviço está ativo e se o endereço
+            // pertence ao profissional que oferece esse serviço.
+            $consulta = $this->db->prepare(
+                'SELECT se.servicos_id
+                 FROM servicos se
+                 JOIN usuarios u
+                   ON u.usuarios_id = se.servicos_usuarios_id
+                 JOIN endereco e
+                   ON e.endereco_usuarios_id = u.usuarios_id
+                 WHERE se.servicos_id = ?
+                   AND e.endereco_id = ?
+                   AND u.usuarios_ativo = 1
+                   AND u.usuarios_deletado_em IS NULL'
+            );
+
+            $consulta->execute([$servicoId, $enderecoId]);
+
+            if ($consulta->fetchColumn() === false) {
+                throw new ApiError(
+                    400,
+                    'Serviço ou endereço do profissional inválido.'
+                );
+            }
+
+            // Cadastra a solicitação usando o cliente identificado pelo token.
+            $inserir = $this->db->prepare(
+                "INSERT INTO solicitacao (
+                    solicitacao_data,
+                    solicitacao_data_atual,
+                    solicitacao_status,
+                    solicitacao_quantidade,
+                    solicitacao_observacao,
+                    solicitacao_criada_em,
+                    solicitacao_endereco_id,
+                    solicitacao_usuarios_id
+                 ) VALUES (
+                    ?,
+                    UTC_TIMESTAMP(),
+                    'Pendente',
+                    ?,
+                    ?,
+                    UTC_TIMESTAMP(),
+                    ?,
+                    ?
+                 )"
+            );
+
+            $inserir->execute([
+                $data,
+                $quantidade,
+                $observacao,
+                $enderecoId,
+                (int) $usuario['usuarios_id'],
+            ]);
+
+            // Obtém o ID gerado pelo INSERT da solicitação.
+            $solicitacaoId = (int) $this->db->lastInsertId();
+
+            // Cadastra o vínculo na tabela N:N.
+            $vincular = $this->db->prepare(
+                'INSERT INTO solicitacaoServico (
+                    solicitacaoServico_solicitacao_id,
+                    solicitacaoServico_servicos_id
+                 ) VALUES (?, ?)'
+            );
+
+            $vincular->execute([$solicitacaoId, $servicoId]);
+
+            $this->db->commit();
+
+            return [201, ['solicitacao_id' => $solicitacaoId]];
+        } catch (Throwable $erro) {
+            $this->db->rollBack();
+            throw $erro;
+        }
+    }
+
+
 
         /** Serviços de profissionais ativos, no formato de Profissional.fromMap. */
     private function listarProfissionais(?string $token): array
@@ -340,13 +467,16 @@ final class Auth
         $linhas = $this->db->query(
             "SELECT
                COALESCE(CONCAT(pf.pf_nome, ' ', pf.pf_sobrenome), pj.pj_nomeFantasia, '') AS profissional_nome,
+               se.servicos_id as profissional_servicos_id,
                COALESCE(se.servicos_nome, '') AS profissional_profissao,
                COALESCE(e.endereco_cidade, '') AS profissional_cidade,
                COALESCE(e.endereco_uf, '') AS profissional_uf,
+               e.endereco_id AS profissional_endereco_id,
                COALESCE(av.media, 0) AS profissional_avaliacao,
                COALESCE(av.total, 0) AS profissional_total_avaliacoes,
                COALESCE(se.servicos_descricao, '') AS profissional_observacao,
                COALESCE(se.servicos_valor, 0) AS profissional_preco,
+               u.usuarios_id AS profissional_usuarios_id,
                COALESCE(u.usuarios_imagem, '') AS profissional_imagem,
                COALESCE(u.usuarios_telefone, '') AS profissional_telefone,
                COALESCE(u.usuarios_email, '') as profissional_email,
@@ -364,7 +494,7 @@ final class Auth
              JOIN usuarios u ON u.usuarios_id = se.servicos_usuarios_id
              LEFT JOIN pessoaFisica pf ON pf.pf_usuarios_id = u.usuarios_id
              LEFT JOIN pessoaJuridica pj ON pj.pj_usuarios_id = u.usuarios_id
-             LEFT JOIN endereco e ON e.endereco_id =
+             JOIN endereco e ON e.endereco_id =
                (SELECT MIN(endereco_id) FROM endereco WHERE endereco_usuarios_id = u.usuarios_id)
              LEFT JOIN (
                SELECT
