@@ -16,6 +16,7 @@ import '../Model/pessoaFisica.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:path_provider/path_provider.dart';
 import 'login.dart';
+import '../Repository/cep_repository.dart';
 
 
 class EnderecoTela  extends StatefulWidget{
@@ -76,11 +77,50 @@ class _EnderecoTelaState extends State<EnderecoTela> {
   final _endereco_uf = TextEditingController();
   final _endereco_nome = TextEditingController();
 
+  String _ultimoCepBuscado = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // Busca o endereço quando o CEP tiver 8 números.
+    _endereco_cep.addListener(_buscarCep);
+  }
+
+  Future<void> _buscarCep() async {
+    final cep = _endereco_cep.text.replaceAll(RegExp(r'\D'), '');
+
+    // Evita buscar CEP incompleto ou repetir a mesma busca.
+    if (cep.length != 8 || cep == _ultimoCepBuscado) return;
+    _ultimoCepBuscado = cep;
+
+    final dados = await CepRepository().buscar(cep);
+    if (!mounted) return;
+
+    if (dados == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('CEP não encontrado. Preencha o endereço manualmente.'),
+        ),
+      );
+      return;
+    }
+
+    // Preenche os campos. O usuário ainda pode editar.
+    _endereco_rua.text = dados['logradouro'] ?? '';
+    _endereco_bairro.text = dados['bairro'] ?? '';
+    _endereco_cidade.text = dados['localidade'] ?? '';
+    _endereco_uf.text = dados['uf'] ?? '';
+    if (_endereco_complemento.text.isEmpty) {
+      _endereco_complemento.text = dados['complemento'] ?? '';
+    }
+  }
+
   @override
   void dispose() {
     _endereco_rua.dispose();
     _endereco_numero.dispose();
     _endereco_bairro.dispose();
+    _endereco_cep.removeListener(_buscarCep);
     _endereco_cep.dispose();
     _endereco_complemento.dispose();
     _endereco_cidade.dispose();
