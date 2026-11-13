@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+// import 'package:path/path.dart';
 
 import '../Formularios/forms.dart';
 import '../Repository/usuarios_repository.dart';
@@ -8,6 +9,7 @@ import 'escolhaUsuario.dart';
 import 'recuperarSenha.dart';
 import '../Repository/auth_api.dart';
 import 'homeCliente.dart';
+import 'homeProfissional.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -35,17 +37,21 @@ class _LoginState extends State<Login> {
   Future<void> _restaurarSessao() async {
     try {
       final sessao = await _sessao.restaurar();
-      if (!mounted || sessao == null || sessao.tipo != 'Cliente') return;
-      _abrirHome(sessao.usuario);
+      if (!mounted || sessao == null) return;
+
+      if(sessao.tipo != 'Cliente' && sessao.tipo != 'Profissional') return;
+      _abrirHome(sessao.usuario, sessao.tipo!);
     } catch (_) {
       // Banco local indisponível: segue no login normal.
     }
   }
 
-  void _abrirHome(Usuarios usuario) {
+  void _abrirHome(Usuarios usuario, String tipo) {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
-        builder: (context) => HomeCliente(usuario: usuario),
+        builder: (_) => tipo == 'Cliente'
+          ? HomeCliente(usuario: usuario)
+          : Homeprofissional(usuarios: usuario),
       ),
       (route) => false,
     );
@@ -90,17 +96,15 @@ class _LoginState extends State<Login> {
 
       if (!mounted) return;
 
-      if (tipo != 'Cliente') {
+      if (tipo != 'Cliente' && tipo != 'Profissional') {
         // Sem área para este perfil no app: não mantém a sessão aberta.
         await _sessao.sair();
         if (!mounted) return;
-        _mostrarMensagem(tipo == null
-            ? 'Perfil não encontrado.'
-            : 'Esta área está disponível apenas para clientes.');
+        _mostrarMensagem('Perfil não encontrado.');
         return;
       }
 
-      _abrirHome(usuario);
+      _abrirHome(usuario, tipo!);
     } on AuthException catch (error) {
       if (mounted) _mostrarMensagem(error.mensagem);
     } catch (_) {
