@@ -26,6 +26,18 @@ class SolicitacaoRepository {
     );
   }
 
+  // Pega a quantidade de solicitacao pendente
+
+  Future<int> listarServicoPendente() async {
+    final body = await _api.post(
+      'solicitacoes/listarServicoPendente',
+      {},
+      token: await _token(),
+    );
+
+    return (body['totalPendente'] as num).toInt();
+  }
+
   Future<String> _token() async {
     final sessao = await _dao.buscar();
     if (sessao == null) {

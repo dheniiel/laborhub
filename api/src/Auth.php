@@ -52,6 +52,17 @@ final class Auth
             return $this->enviarSolicitacao($token, $dados);
         }
 
+         if($rota === 'SolicitacaoPendentes/listarServicoPendente') {
+            return $this->listarServicoPendente($usuarioId);
+
+            return [
+                    200,
+                    [
+                        'totalPendente' => $this->listarServicoPendente($usuarioId),
+                    ],
+                ];
+         }
+
         $email = $this->email($dados);
         return match ($rota) {
             'auth/register' => $this->cadastrar($dados, $email, $ip),
@@ -729,6 +740,19 @@ final class Auth
         $consulta = $this->db->prepare('SELECT * FROM usuarios WHERE usuarios_email = ? AND ' . self::ATIVO);
         $consulta->execute([$email]);
         return $consulta->fetch() ?: null;
+    }
+
+    public function listarServicoPendente($usuarioid) {
+
+    $consulta = $this->db->prepare('SELECT Count(*) as totalPendente
+                                    from solicitacaoServico as ss
+                                    INNER JOIN servicos as s on s.servicos_id = ss.solicitacaoServico_servicos_id
+                                    INNER JOIN solicitacao as so on so.solicitacao_id = ss.solicitacaoServico_solicitacao_id
+                                    WHERE s.servicos_usuarios_id = :usuarioid
+                                    and so.solicitacao_status = :status ';
+            $consulta->execute(['usuarioid' => $usuarioid, 'status' => 'Pendente']);
+            return (int) $consulta->fetchColumn();
+
     }
 
     /** 256 bits aleatórios em base64url (43 caracteres). */

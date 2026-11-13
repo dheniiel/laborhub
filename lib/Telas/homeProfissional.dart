@@ -7,6 +7,7 @@ import '../Model/profissional.dart';
 import '../Model/usuarios.dart';
 import '../Repository/profissional_repository.dart';
 import '../Repository/sessao_repository.dart';
+import '../Repository/solicitacao_repository.dart';
 import 'login.dart';
 import 'perfilProfissional.dart';
 import 'editarPerfil.dart';
@@ -33,8 +34,32 @@ class Homeprofissional  extends StatefulWidget{
 class _HomeProfissionalState extends State<Homeprofissional> {
 
   final SessaoRepository _sessao = SessaoRepository();
+  final SolicitacaoRepository _solicitacaoRepository = SolicitacaoRepository();
 
   late Usuarios _usuario = widget.usuarios;
+   int _totalPendente = 0;
+
+
+  Future<void> _carregarPendente() async {
+
+    try {
+      final total = await _solicitacaoRepository.listarServicoPendente();
+
+      if(!mounted) return;
+
+      setState(() {
+        _totalPendente = total;
+
+      });
+
+    } catch(_){
+      if(!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Não foi possível carregar solicitações pendentes")),
+      );
+    }
+  }
 
 
   Future<void> _abrirEdicaoPerfil() async {
@@ -79,7 +104,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                 const SizedBox(height: 55),
 
                 Text(
-                    "Veja os status das suas solicitações",
+                    "Veja os status das suas solicitações ",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 17,
@@ -88,6 +113,35 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                     color: Colors.black,
                   ),
                 ),
+
+                const SizedBox(height: 20),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: CardServico(
+                          titulo: "Serviços pendentes",
+                          quantidade: _totalPendente,
+                          message: "Veja quem solicitou seu servuiço.",
+                      ),
+
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    Expanded(
+                      child: CardServico(
+                          titulo: "Serviços ativos",
+                          quantidade: _totalPendente,
+                          message: "Veja seus serviços atuais.",
+                      ),
+                    )
+
+                  ],
+
+                )
+
+
 
               ],
             ),
@@ -143,17 +197,19 @@ class _Avatar extends StatelessWidget {
 class CardServico extends StatelessWidget {
   final String titulo;
   final int quantidade;
+  final String message;
 
   const CardServico({
     required this.titulo,
     required this.quantidade,
+    required this.message,
   });
 
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(4, 5, 5, 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -165,17 +221,28 @@ class CardServico extends StatelessWidget {
           Text(
             titulo,
             textAlign: TextAlign.start,
-            style: const TextStyle(fontSize: 20),
+            style: const TextStyle(fontSize: 14),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 5),
           Text(
-            '$quantidade',
+            'Quantidade(s): $quantidade',
+            textAlign: TextAlign.start,
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 12,
               color: Color.fromARGB(1000, 59, 130, 246),
               fontWeight: FontWeight.bold,
             ),
-          )
+          ),
+          const SizedBox(height: 5),
+
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 8,
+              color: Colors.grey,
+              fontWeight: FontWeight.w200,
+            ),
+          ),
         ],
       ),
     );

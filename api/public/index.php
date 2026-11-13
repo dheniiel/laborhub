@@ -30,3 +30,5 @@ try {
     error_log(sprintf('LaborHub API: %s (%s) em %s:%d', $erro::class, $erro->getCode(), $erro->getFile(), $erro->getLine()));
     responder(500, ['message' => 'Não foi possível concluir. Tente novamente.']);
 }
+
+
