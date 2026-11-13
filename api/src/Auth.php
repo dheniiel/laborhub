@@ -63,6 +63,19 @@ final class Auth
                 ];
          }
 
+         // Rota para pegar os serviços pendentes do usuario logado - usdado para listar em homeProfissional
+         if($rota === 'solicitacoes/solicitacaoPendente') {
+             return $this->solicitacaoPendente($token);
+
+             return [
+                 200,
+                 [
+                     'solicitacoes' => $this->SolicitacaoPendente($usuarioIdLogado),
+                 ],
+             ];
+
+         }
+
         $email = $this->email($dados);
         return match ($rota) {
             'auth/register' => $this->cadastrar($dados, $email, $ip),
@@ -749,11 +762,66 @@ final class Auth
                                     INNER JOIN servicos as s on s.servicos_id = ss.solicitacaoServico_servicos_id
                                     INNER JOIN solicitacao as so on so.solicitacao_id = ss.solicitacaoServico_solicitacao_id
                                     WHERE s.servicos_usuarios_id = :usuarioid
-                                    and so.solicitacao_status = :status ';
+                                    and so.solicitacao_status = :status ');
             $consulta->execute(['usuarioid' => $usuarioid, 'status' => 'Pendente']);
             return (int) $consulta->fetchColumn();
 
     }
+
+ public function listarServicoAtivo($usuarioid) {
+
+    $consulta = $this->db->prepare('SELECT Count(*) as totalPendente
+                                    from solicitacaoServico as ss
+                                    INNER JOIN servicos as s on s.servicos_id = ss.solicitacaoServico_servicos_id
+                                    INNER JOIN solicitacao as so on so.solicitacao_id = ss.solicitacaoServico_solicitacao_id
+                                    WHERE s.servicos_usuarios_id = :usuarioid
+                                    and so.solicitacao_status = :status ');
+            $consulta->execute(['usuarioid' => $usuarioid, 'status' => 'Ativo']);
+            return (int) $consulta->fetchColumn();
+
+    }
+
+    //Listagem de serviços ativos
+    private function SolicitacaoPendente(int $usuarioIdLogado): array
+        {
+            $consulta = $this->db->query(
+                "SELECT
+                   COALESCE(CONCAT(pf.pf_nome, ' ', pf.pf_sobrenome), pj.pj_nomeFantasia, '') AS profissional_nome, <!--Nome de quem solicitou-->
+                   COALESCE(e.endereco_cidade, '') AS cliente_cidade,
+                   COALESCE(e.endereco_uf, '') AS cliente_uf,
+                   e.endereco_id AS cliente_endereco_id,
+                   u.usuarios_id AS profissional_usuarios_id,
+                   COALESCE(uCliente.usuarios_imagem, '') AS cliente_imagem,
+                   COALESCE(uCliente.usuarios_telefone, '') AS cliente_telefone,
+                   COALESCE(uCliente.usuarios_email, '') as cliente_email,
+                   COALESCE(so.solicitacao_data, '') as cliente_solicitacao_data,
+                   COALESCE(so.solicitacao_data_atual, '') as cliente_solicitacao_data_atual,
+                   COALESCE(so.solicitacao_quantidade) as cliente_solitacao_quantidade,
+                   COALESCE(so.solicitacao_descricao, '') as cliente_solicitacao_descricao
+
+                FROM solicitacaoServicos as ss
+
+                INNER JOIN servicos as se on se.servicos_id = ss.solicitacaoServico_servicos_id
+                INNER JOIN solicitacao as so on so.solicitacao_id = ss.solicitacaoServico_solicitacao_id
+                INNER JOIN usuarios as uCliente on uCliente.usuarios_id = so.solicitacao_usuarios_id  <!--Conecta com cliente que fez a solicitacao-->
+                INNER JOIN usuarios as uProfissional on uProfissional.usuarios_id = se.servicos_usuarios_id <!--Conecta com prestadores de serviço-->
+                INNER JOIN endereco as e on e.enderececo_usuarios_id = uCliente.usuarios_id
+                LEFT JOIN pessoaFisica as pf on pf.pf_usuarios_id = uCliente.usuarios_id
+                LEFT JOIN pessoaJuridica as pj on pj.pf_usuarios_id = uCliente.usuarios
+                WHERE uProfissional.usuarios_id = :idLogado
+                and so.solicitacao_status = :status
+                and so.solicitacao_deletada is NULL"
+
+
+            );
+
+            $consulta->execute(['idLogado' => $usuarioIdLogado, 'status' => 'Pendente']);
+
+            return $consulta->fetchAll(PDO::FETCH_OBJ);
+    }
+
+
+
 
     /** 256 bits aleatórios em base64url (43 caracteres). */
     private function tokenAleatorio(): string

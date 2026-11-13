@@ -38,6 +38,34 @@ class SolicitacaoRepository {
     return (body['totalPendente'] as num).toInt();
   }
 
+
+  Future<int> listarServicoAtivos() async {
+    final body = await _api.post(
+      'solicitacoes/listarServicoAtivos',
+      {},
+      token: await _token(),
+    );
+
+    return (body['totalAtivo'] as num).toInt();
+  }
+
+  Future<List<Map<String, dynamic>>> solicitacaoPendente(
+      int usuarioId,
+      ) async {
+    final body = await _api.post(
+      'solicitacoes/pendentes',
+      {'usuario_id': usuarioId},
+      token: await _token(),
+    );
+
+    return (body['solicitacoes'] as List)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+
+
+
   Future<String> _token() async {
     final sessao = await _dao.buscar();
     if (sessao == null) {

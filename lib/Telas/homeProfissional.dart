@@ -38,17 +38,27 @@ class _HomeProfissionalState extends State<Homeprofissional> {
 
   late Usuarios _usuario = widget.usuarios;
    int _totalPendente = 0;
+   int _totalAtivo = 0;
+   bool _tipoServico = true;
 
 
   Future<void> _carregarPendente() async {
 
     try {
       final total = await _solicitacaoRepository.listarServicoPendente();
+      final totalAtivo = await _solicitacaoRepository.listarServicoAtivos();
+      final usuarioId = widget.usuarios.usuarios_id;
+
+      if (usuarioId == null) return;
+
+      final solicitacoes = await _solicitacaoRepository
+          .solicitacaoPendente(usuarioId);
 
       if(!mounted) return;
 
       setState(() {
         _totalPendente = total;
+        _totalAtivo = totalAtivo;
 
       });
 
@@ -56,7 +66,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
       if(!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Não foi possível carregar solicitações pendentes")),
+        const SnackBar(content: Text("Não foi possível carregar suas solicitações")),
       );
     }
   }
@@ -119,10 +129,14 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                 Row(
                   children: [
                     Expanded(
-                      child: CardServico(
-                          titulo: "Serviços pendentes",
-                          quantidade: _totalPendente,
-                          message: "Veja quem solicitou seu servuiço.",
+                      child: SizedBox(
+                          height: 80,
+                          width: 60,
+                          child: CardServico(
+                              titulo: "Serviços pendentes - ${s}",
+                              quantidade: _totalPendente,
+                              message: "Veja quem solicitou seu serviço.",
+                          ),
                       ),
 
                     ),
@@ -130,16 +144,85 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                     const SizedBox(width: 10),
 
                     Expanded(
-                      child: CardServico(
-                          titulo: "Serviços ativos",
-                          quantidade: _totalPendente,
-                          message: "Veja seus serviços atuais.",
-                      ),
+                      child:  SizedBox(
+                        height: 80,
+                        width: 60,
+                        child: CardServico(
+                            titulo: "Serviços ativos",
+                            quantidade: _totalAtivo,
+                            message: "Veja seus serviços atuais.",
+                        ),
+                      )
                     )
 
                   ],
 
-                )
+                ),
+
+                const SizedBox(height: 30),
+
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    //   Pessoa fisica
+                    Expanded(
+                      flex: 1,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setState(() {
+                            _tipoServico = true;
+                          });
+                        },
+
+                        style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0,40),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            backgroundColor: _tipoServico
+                                ? Color.fromARGB(1000, 59, 130, 246)
+                                : Colors.white,
+                            foregroundColor: _tipoServico
+                                ? Colors.white
+                                : Colors.black,
+                            side: const BorderSide(color: Color.fromARGB(1000, 59, 130, 246)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5),
+
+                            )
+                        ),
+                        child: const Text("Pendentes"),
+                      ),
+                    ),
+
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 1,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setState(() {
+                            _tipoServico = false;
+                          });
+                        },
+
+                        style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0,40),
+                            backgroundColor: !_tipoServico
+                                ? Color.fromARGB(1000, 59, 130, 246)
+                                : Colors.white,
+                            foregroundColor: !_tipoServico
+                                ? Colors.white
+                                : Colors.black,
+                            side: const BorderSide(color: Color.fromARGB(1000, 59, 130, 246)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5),
+
+                            )
+                        ),
+                        child: const Text("Ativos"),
+                      ),
+                    ),
+
+                  ],
+                ),
 
 
 
@@ -209,7 +292,7 @@ class CardServico extends StatelessWidget {
   Widget build(BuildContext context) {
     // TODO: implement build
     return Container(
-      padding: const EdgeInsets.fromLTRB(4, 5, 5, 10),
+      padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -238,7 +321,7 @@ class CardServico extends StatelessWidget {
           Text(
             message,
             style: TextStyle(
-              fontSize: 8,
+              fontSize: 9,
               color: Colors.grey,
               fontWeight: FontWeight.w200,
             ),
