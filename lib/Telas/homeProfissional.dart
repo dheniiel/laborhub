@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../Formularios/forms.dart';
@@ -129,6 +130,8 @@ class _HomeProfissionalState extends State<Homeprofissional> {
 
                 const SizedBox(height: 20),
 
+
+                // Cards de quantidade
                 Row(
                   children: [
                     Expanded(
@@ -164,6 +167,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
 
                 const SizedBox(height: 30),
 
+                // Botao para mudar as solicitações
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -276,6 +280,45 @@ class _HomeProfissionalState extends State<Homeprofissional> {
 
         )
       ),
+
+      bottomNavigationBar: Container(
+        color: const Color(0xFFEFF6FF),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(44, 4, 44, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.assignment_outlined, size: 38),
+                  color: const Color(0xFF424242),
+                  tooltip: 'Histórico',
+                  onPressed: () {},
+                ),
+
+                IconButton(
+                  icon: const Icon(Icons.home, size: 38),
+                  color: const Color(0xFF3B82F6),
+                  tooltip: 'Início',
+                  onPressed: () {
+                    // Já está na Home.
+                  },
+                ),
+
+                IconButton(
+                  icon: const Icon(Icons.event_available, size: 38),
+                  color: const Color(0xFF424242),
+                  tooltip: 'Agendamentos',
+                  onPressed: (){},
+                ),
+              ],
+            ),
+          ),
+      ),
+
+      ),
+
 
 
 
