@@ -14,6 +14,7 @@ import 'editarPerfil.dart';
 import 'historico.dart';
 import 'agendamentos.dart';
 import 'detalhesUsuario.dart';
+import 'cardsSolicitacaoPendenteProfissional.dart';
 
 
 class Homeprofissional  extends StatefulWidget{
@@ -133,7 +134,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                           height: 80,
                           width: 60,
                           child: CardServico(
-                              titulo: "Serviços pendentes - ${s}",
+                              titulo: "Serviços pendentes",
                               quantidade: _totalPendente,
                               message: "Veja quem solicitou seu serviço.",
                           ),
@@ -223,6 +224,15 @@ class _HomeProfissionalState extends State<Homeprofissional> {
 
                   ],
                 ),
+
+                const SizedBox(height: 30),
+
+                Column(
+                  children: [
+
+                    for(final solicitacao)
+                  ],
+                )
 
 
 
