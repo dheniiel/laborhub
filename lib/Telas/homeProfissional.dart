@@ -45,32 +45,45 @@ class _HomeProfissionalState extends State<Homeprofissional> {
   List<Map<String, dynamic>> _solicitacoes = [];
 
 
-  Future<void> _carregarPendente() async {
+  @override
+  void initState() {
+    super.initState();
+    _carregarPendente();
+  }
 
+
+  Future<void> _carregarPendente() async {
     try {
-      final total = await _solicitacaoRepository.listarServicoPendente();
-      final totalAtivo = await _solicitacaoRepository.listarServicoAtivos();
       final usuarioId = widget.usuarios.usuarios_id;
 
       if (usuarioId == null) return;
 
+      final total = await _solicitacaoRepository
+          .listarServicoPendente(usuarioId);
+
+      // final totalAtivo =
+      // await _solicitacaoRepository.listarServicoAtivos();
+
       final solicitacoes = await _solicitacaoRepository
           .solicitacaoPendente(usuarioId);
 
-      if(!mounted) return;
+      if (!mounted) return;
 
       setState(() {
         _totalPendente = total;
-        _totalAtivo = totalAtivo;
-        _solicitacoes = _solicitacoes;
-
+        // _totalAtivo = totalAtivo;
+        _solicitacoes = solicitacoes;
       });
+    } catch (erro, pilha) {
+      debugPrint('ERRO AO CARREGAR: $erro');
+      debugPrintStack(stackTrace: pilha);
 
-    } catch(_){
-      if(!mounted) return;
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Não foi possível carregar suas solicitações")),
+        const SnackBar(
+          content: Text('Não foi possível carregar suas solicitações'),
+        ),
       );
     }
   }
@@ -85,6 +98,28 @@ class _HomeProfissionalState extends State<Homeprofissional> {
     }
   }
 
+  Future<void> _sair() async {
+    try {
+      await _sessao.sair();
+    } catch (_) {
+      // Mesmo com erro local, volta ao login.
+    }
+    _voltarAoLogin(null);
+  }
+
+  void _voltarAoLogin(String? mensagem) {
+    if (!mounted) return;
+    final mensageiro = ScaffoldMessenger.of(context);
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const Login()),
+          (route) => false,
+    );
+    if (mensagem != null) {
+      mensageiro.showSnackBar(SnackBar(content: Text(mensagem)));
+    }
+  }
+
+
 
 
 
@@ -94,185 +129,212 @@ class _HomeProfissionalState extends State<Homeprofissional> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 500),
-            child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsetsGeometry.fromLTRB(16, 10, 12, 0),
-                  child: Row(
-                    children: [
-                      Tooltip(
-                        message: "Meu perfil",
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: _abrirEdicaoPerfil,
-                          child: _Avatar(caminho: _usuario.usuarios_imagem, raio: 23),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsetsGeometry.fromLTRB(16, 10, 12, 0),
+                    child: Row(
+                      children: [
+                        Tooltip(
+                          message: "Meu perfil",
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: _abrirEdicaoPerfil,
+                            child: _Avatar(caminho: _usuario.usuarios_imagem, raio: 23),
+                          ),
                         ),
-                      )
-                    ],
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.notifications, size: 25),
+                          color: Colors.black,
+                          tooltip: 'Notificações',
+                          onPressed: () {
+                            // Navegação para tela de notificações
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.settings, size: 25),
+                          color: Colors.black,
+                          tooltip: 'Configurações',
+                          onPressed: _abrirEdicaoPerfil,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.logout, size: 25),
+                          color: Colors.black,
+                          tooltip: 'Sair',
+                          onPressed: _sair,
+                        ),
+                      ],
+                    ),
+
+                  ),
+                  const SizedBox(height: 55),
+
+                  Text(
+                      "Veja os status das suas solicitações ",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black,
+                    ),
                   ),
 
-                ),
-                const SizedBox(height: 55),
-
-                Text(
-                    "Veja os status das suas solicitações ",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontFamily: 'Montserrat',
-                    fontWeight: FontWeight.w400,
-                    color: Colors.black,
-                  ),
-                ),
-
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
 
-                // Cards de quantidade
-                Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
+                  // Cards de quantidade
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                            height: 80,
+                            width: 60,
+                            child: CardServico(
+                                titulo: "Serviços pendentes",
+                                quantidade: _totalPendente,
+                                message: "Veja quem solicitou seu serviço.",
+                            ),
+                        ),
+
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      Expanded(
+                        child:  SizedBox(
                           height: 80,
                           width: 60,
                           child: CardServico(
-                              titulo: "Serviços pendentes",
-                              quantidade: _totalPendente,
-                              message: "Veja quem solicitou seu serviço.",
+                              titulo: "Serviços ativos",
+                              quantidade: 90,
+                              message: "Veja seus serviços atuais.",
                           ),
-                      ),
-
-                    ),
-
-                    const SizedBox(width: 10),
-
-                    Expanded(
-                      child:  SizedBox(
-                        height: 80,
-                        width: 60,
-                        child: CardServico(
-                            titulo: "Serviços ativos",
-                            quantidade: _totalAtivo,
-                            message: "Veja seus serviços atuais.",
-                        ),
+                        )
                       )
-                    )
-
-                  ],
-
-                ),
-
-                const SizedBox(height: 30),
-
-                // Botao para mudar as solicitações
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    //   Pessoa fisica
-                    Expanded(
-                      flex: 1,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          setState(() {
-                            _tipoServico = true;
-                          });
-                        },
-
-                        style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0,40),
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            backgroundColor: _tipoServico
-                                ? Color.fromARGB(1000, 59, 130, 246)
-                                : Colors.white,
-                            foregroundColor: _tipoServico
-                                ? Colors.white
-                                : Colors.black,
-                            side: const BorderSide(color: Color.fromARGB(1000, 59, 130, 246)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5),
-
-                            )
-                        ),
-                        child: const Text("Pendentes"),
-                      ),
-                    ),
-
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 1,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          setState(() {
-                            _tipoServico = false;
-                          });
-                        },
-
-                        style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0,40),
-                            backgroundColor: !_tipoServico
-                                ? Color.fromARGB(1000, 59, 130, 246)
-                                : Colors.white,
-                            foregroundColor: !_tipoServico
-                                ? Colors.white
-                                : Colors.black,
-                            side: const BorderSide(color: Color.fromARGB(1000, 59, 130, 246)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5),
-
-                            )
-                        ),
-                        child: const Text("Ativos"),
-                      ),
-                    ),
-
-                  ],
-                ),
-
-                const SizedBox(height: 30),
-
-
-                if(_tipoServico == true) ... [
-                  Column(
-                    children: [
-
-                      if(_solicitacoes.isEmpty) ... [
-                        const Text(
-                            "Não há solicitação pendente",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-
-                      ] else ...[
-                      for(final solicitacao in _solicitacoes)
-                        CardsSolicitacaopendenteprofissional(
-                            nome: solicitacao['cliente_nome']?.toString() ?? 'Sem nome',
-                            endereco: '${solicitacao['cliente_rua']?? ''}  ${solicitacao['cliente_complemento']?? ''} - ${solicitacao['cliente_bairro']?? ''} - ${solicitacao['cliente_cidade'] ?? ''}, ${solicitacao['cliente_uf'].toUpperCase()?? ''}',
-                            dataSolicitacao: solicitacao['cliente_solicitacao_data_atual']?.toString() ?? '',
-                            dataServico: solicitacao['cliente_solicitacao_data']?.toString() ?? '',
-                            dias: int.tryParse(solicitacao['cliente_solicitacao_quantidade'].toString(),) ?? 0,
-
-                        ),
-
-                      ],
 
                     ],
-                  )
 
-                ] else ... [
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // Botao para mudar as solicitações
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      //   Pessoa fisica
+                      Expanded(
+                        flex: 1,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setState(() {
+                              _tipoServico = true;
+                            });
+                          },
+
+                          style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0,40),
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              backgroundColor: _tipoServico
+                                  ? Color.fromARGB(1000, 59, 130, 246)
+                                  : Colors.white,
+                              foregroundColor: _tipoServico
+                                  ? Colors.white
+                                  : Colors.black,
+                              side: const BorderSide(color: Color.fromARGB(1000, 59, 130, 246)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5),
+
+                              )
+                          ),
+                          child: const Text("Pendentes"),
+                        ),
+                      ),
+
+                      const SizedBox(width: 10),
+                      Expanded(
+                        flex: 1,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setState(() {
+                              _tipoServico = false;
+                            });
+                          },
+
+                          style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0,40),
+                              backgroundColor: !_tipoServico
+                                  ? Color.fromARGB(1000, 59, 130, 246)
+                                  : Colors.white,
+                              foregroundColor: !_tipoServico
+                                  ? Colors.white
+                                  : Colors.black,
+                              side: const BorderSide(color: Color.fromARGB(1000, 59, 130, 246)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5),
+
+                              )
+                          ),
+                          child: const Text("Ativos"),
+                        ),
+                      ),
+
+                    ],
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  if(_tipoServico == true) ... [
+                    Column(
+                      children: [
+
+                        if(_solicitacoes.isEmpty) ... [
+                          const Text(
+                              "Não há solicitação pendente",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+
+                        ] else ...[
+                        for(final solicitacao in _solicitacoes)
+
+                          CardsSolicitacaopendenteprofissional(
+                              nome: solicitacao['cliente_nome']?.toString() ?? 'Sem nome',
+                              endereco: '${solicitacao['cliente_rua']?? ''}  ${solicitacao['cliente_complemento']?? ''} - ${solicitacao['cliente_bairro']?? ''} - ${solicitacao['cliente_cidade'] ?? ''}, ${solicitacao['cliente_uf'].toUpperCase()?? ''}',
+                              dataSolicitacao: solicitacao['cliente_solicitacao_data_atual']?.toString() ?? '',
+                              dataServico: solicitacao['cliente_solicitacao_data']?.toString() ?? '',
+                              dias: int.tryParse(solicitacao['cliente_solicitacao_quantidade'].toString(),) ?? 0,
+                              imagemUrl: solicitacao['cliente_imagem'] ?? '',
+
+                          ),
+
+                        ],
+
+                      ],
+                    )
+
+                  ] else ... [
+
+
+                  ],
+
+
 
 
                 ],
+              ),
 
-
-
-
-              ],
             ),
+
 
 
 

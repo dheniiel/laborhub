@@ -52,29 +52,43 @@ final class Auth
             return $this->enviarSolicitacao($token, $dados);
         }
 
-         if($rota === 'SolicitacaoPendentes/listarServicoPendente') {
-            return $this->listarServicoPendente($usuarioId);
+        // Contagem para o card.
+        if ($rota === 'solicitacoes/listarServicoPendente') {
+            $usuarioId = filter_var(
+                $dados['usuario_id'] ?? null,
+                FILTER_VALIDATE_INT
+            );
+
+            if ($usuarioId === false || $usuarioId === null || $usuarioId <= 0) {
+                throw new ApiError(400, 'ID do usuário inválido.');
+            }
 
             return [
-                    200,
-                    [
-                        'totalPendente' => $this->listarServicoPendente($usuarioId),
-                    ],
-                ];
-         }
+                200,
+                [
+                    'totalPendente' => $this->listarServicoPendente($usuarioId),
+                ],
+            ];
+        }
 
-         // Rota para pegar os serviços pendentes do usuario logado - usdado para listar em homeProfissional
-         if($rota === 'solicitacoes/solicitacaoPendente') {
-             return $this->solicitacaoPendente($token);
+        // Listagem dos pedidos recebidos.
+        if ($rota === 'solicitacoes/solicitacaoPendente') {
+            $usuarioId = filter_var(
+                $dados['usuario_id'] ?? null,
+                FILTER_VALIDATE_INT
+            );
 
-             return [
-                 200,
-                 [
-                     'solicitacoes' => $this->SolicitacaoPendente($usuarioIdLogado),
-                 ],
-             ];
+            if ($usuarioId === false || $usuarioId === null || $usuarioId <= 0) {
+                throw new ApiError(400, 'ID do usuário inválido.');
+            }
 
-         }
+            return [
+                200,
+                [
+                    'solicitacoes' => $this->SolicitacaoPendente($usuarioId),
+                ],
+            ];
+        }
 
         $email = $this->email($dados);
         return match ($rota) {
@@ -781,47 +795,59 @@ final class Auth
 
     }
 
-    //Listagem de serviços ativos
+    //Listagem de serviços pendentes
     private function SolicitacaoPendente(int $usuarioIdLogado): array
-        {
-            $consulta = $this->db->query(
-                "SELECT
-                   COALESCE(CONCAT(pf.pf_nome, ' ', pf.pf_sobrenome), pj.pj_nomeFantasia, '') AS profissional_nome, <!--Nome de quem solicitou-->
-                   COALESCE(e.endereco_cidade, '') AS cliente_cidade,
-                   COALESCE(e.endereco_uf, '') AS cliente_uf,
-                   COALESCE(e.endereco_rua, ' ') as clientes_ruas,
-                   COALESCE(e.endereco_bairro, ' ') as clientes_bairro,
-                   COALESCE(e.endereco_complemento ' ') as clientes_complemento,
-                   COALESCE(e.endereco_numero' ') as clientes_numero,
-                   e.endereco_id AS cliente_endereco_id,
-                   u.usuarios_id AS profissional_usuarios_id,
-                   COALESCE(uCliente.usuarios_imagem, '') AS cliente_imagem,
-                   COALESCE(uCliente.usuarios_telefone, '') AS cliente_telefone,
-                   COALESCE(uCliente.usuarios_email, '') as cliente_email,
-                   COALESCE(so.solicitacao_data, '') as cliente_solicitacao_data,
-                   COALESCE(so.solicitacao_data_atual, '') as cliente_solicitacao_data_atual,
-                   COALESCE(so.solicitacao_quantidade) as cliente_solitacao_quantidade,
-                   COALESCE(so.solicitacao_descricao, '') as cliente_solicitacao_descricao
+    {
+        $consulta = $this->db->prepare(
+            "SELECT
+                so.solicitacao_id,
+                COALESCE(
+                    CONCAT(pf.pf_nome, ' ', pf.pf_sobrenome),
+                    pj.pj_nomeFantasia,
+                    ''
+                ) AS cliente_nome,
+                COALESCE(e.endereco_cidade, '') AS cliente_cidade,
+                COALESCE(e.endereco_uf, '') AS cliente_uf,
+                COALESCE(e.endereco_rua, '') AS cliente_rua,
+                COALESCE(e.endereco_bairro, '') AS cliente_bairro,
+                COALESCE(e.endereco_complemento, '') AS cliente_complemento,
+                COALESCE(e.endereco_numero, '') AS cliente_numero,
+                e.endereco_id AS cliente_endereco_id,
+                uCliente.usuarios_id AS cliente_usuarios_id,
+                se.servicos_usuarios_id AS profissional_usuarios_id,
+                COALESCE(uCliente.usuarios_imagem, '') AS cliente_imagem,
+                COALESCE(uCliente.usuarios_telefone, '') AS cliente_telefone,
+                COALESCE(uCliente.usuarios_email, '') AS cliente_email,
+                COALESCE(uCliente.usuarios_imagem, '') as cliente_imagem,
+                so.solicitacao_data AS cliente_solicitacao_data,
+                so.solicitacao_data_atual AS cliente_solicitacao_data_atual,
+                so.solicitacao_quantidade AS cliente_solicitacao_quantidade,
+                COALESCE(so.solicitacao_observacao, '')
+                    AS cliente_solicitacao_observacao
+             FROM solicitacaoServico AS ss
+             INNER JOIN servicos AS se
+                 ON se.servicos_id = ss.solicitacaoServico_servicos_id
+             INNER JOIN solicitacao AS so
+                 ON so.solicitacao_id = ss.solicitacaoServico_solicitacao_id
+             INNER JOIN usuarios AS uCliente
+                 ON uCliente.usuarios_id = so.solicitacao_usuarios_id
+             LEFT JOIN endereco AS e
+                 ON e.endereco_id = so.solicitacao_endereco_id
+             LEFT JOIN pessoaFisica AS pf
+                 ON pf.pf_usuarios_id = uCliente.usuarios_id
+             LEFT JOIN pessoaJuridica AS pj
+                 ON pj.pj_usuarios_id = uCliente.usuarios_id
+             WHERE se.servicos_usuarios_id = :idLogado
+               AND so.solicitacao_status = :status
+               AND so.solicitacao_deletada_em IS NULL"
+        );
 
-                FROM solicitacaoServicos as ss
+        $consulta->execute([
+            'idLogado' => $usuarioIdLogado,
+            'status' => 'Pendente',
+        ]);
 
-                INNER JOIN servicos as se on se.servicos_id = ss.solicitacaoServico_servicos_id
-                INNER JOIN solicitacao as so on so.solicitacao_id = ss.solicitacaoServico_solicitacao_id
-                INNER JOIN usuarios as uCliente on uCliente.usuarios_id = so.solicitacao_usuarios_id  <!--Conecta com cliente que fez a solicitacao-->
-                INNER JOIN usuarios as uProfissional on uProfissional.usuarios_id = se.servicos_usuarios_id <!--Conecta com prestadores de serviço-->
-                INNER JOIN endereco as e on e.enderececo_usuarios_id = uCliente.usuarios_id
-                LEFT JOIN pessoaFisica as pf on pf.pf_usuarios_id = uCliente.usuarios_id
-                LEFT JOIN pessoaJuridica as pj on pj.pf_usuarios_id = uCliente.usuarios
-                WHERE uProfissional.usuarios_id = :idLogado
-                and so.solicitacao_status = :status
-                and so.solicitacao_deletada is NULL"
-
-
-            );
-
-            $consulta->execute(['idLogado' => $usuarioIdLogado, 'status' => 'Pendente']);
-
-            return $consulta->fetchAll(PDO::FETCH_OBJ);
+        return $consulta->fetchAll(PDO::FETCH_ASSOC);
     }
 
 

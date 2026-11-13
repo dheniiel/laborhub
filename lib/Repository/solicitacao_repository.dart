@@ -28,10 +28,10 @@ class SolicitacaoRepository {
 
   // Pega a quantidade de solicitacao pendente
 
-  Future<int> listarServicoPendente() async {
+  Future<int> listarServicoPendente(int usuarioId) async {
     final body = await _api.post(
       'solicitacoes/listarServicoPendente',
-      {},
+      {'usuario_id': usuarioId},
       token: await _token(),
     );
 
@@ -53,7 +53,7 @@ class SolicitacaoRepository {
       int usuarioId,
       ) async {
     final body = await _api.post(
-      'solicitacoes/pendentes',
+      'solicitacoes/solicitacaoPendente',
       {'usuario_id': usuarioId},
       token: await _token(),
     );
