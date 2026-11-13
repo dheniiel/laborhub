@@ -43,6 +43,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
    int _totalAtivo = 0;
    bool _tipoServico = true;
   List<Map<String, dynamic>> _solicitacoes = [];
+  List<Map<String, dynamic>> _solicitacaoAtivas = [];
 
 
   @override
@@ -61,17 +62,20 @@ class _HomeProfissionalState extends State<Homeprofissional> {
       final total = await _solicitacaoRepository
           .listarServicoPendente(usuarioId);
 
-      // final totalAtivo =
-      // await _solicitacaoRepository.listarServicoAtivos();
+      final totalAtivo =
+      await _solicitacaoRepository.listarServicoAtivo();
 
       final solicitacoes = await _solicitacaoRepository
           .solicitacaoPendente(usuarioId);
+
+      final solicitacoesAtivo = await _solicitacaoRepository.SolicitacaoProfissionalAtivo(usuarioId);
 
       if (!mounted) return;
 
       setState(() {
         _totalPendente = total;
-        // _totalAtivo = totalAtivo;
+        _totalAtivo = totalAtivo;
+        _solicitacaoAtivas = solicitacoesAtivo;
         _solicitacoes = solicitacoes;
       });
     } catch (erro, pilha) {
@@ -213,7 +217,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                           width: 60,
                           child: CardServico(
                               titulo: "Serviços ativos",
-                              quantidade: 90,
+                              quantidade: _totalAtivo,
                               message: "Veja seus serviços atuais.",
                           ),
                         )

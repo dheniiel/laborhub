@@ -39,9 +39,9 @@ class SolicitacaoRepository {
   }
 
 
-  Future<int> listarServicoAtivos() async {
+  Future<int> listarServicoAtivo() async {
     final body = await _api.post(
-      'solicitacoes/listarServicoAtivos',
+      'solicitacoes/listarServicoAtivo',
       {},
       token: await _token(),
     );
@@ -54,6 +54,20 @@ class SolicitacaoRepository {
       ) async {
     final body = await _api.post(
       'solicitacoes/solicitacaoPendente',
+      {'usuario_id': usuarioId},
+      token: await _token(),
+    );
+
+    return (body['solicitacoes'] as List)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> SolicitacaoProfissionalAtivo(
+      int usuarioId,
+      ) async {
+    final body = await _api.post(
+      'solicitacoes/SolicitacaoProfissionalAtivo',
       {'usuario_id': usuarioId},
       token: await _token(),
     );
