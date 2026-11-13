@@ -8,7 +8,7 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
   final String dataServico;
   final int dias;
   final String? imagemUrl;
-  final VoidCallback onVer;
+  // final  onVer;
 
 
   const CardsSolicitacaopendenteprofissional ({
@@ -18,7 +18,7 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
     required this.dataSolicitacao,
     required this.dataServico,
     required this.dias,
-    required this.onVer,
+    // required this.onVer,
     this.imagemUrl,
   });
 
@@ -81,7 +81,7 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerRight,
                   child: FilledButton(
-                    onPressed: onVer,
+                    onPressed: () {} ,
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xff3b82f6),
                       padding: const EdgeInsets.symmetric(

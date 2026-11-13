@@ -789,6 +789,10 @@ final class Auth
                    COALESCE(CONCAT(pf.pf_nome, ' ', pf.pf_sobrenome), pj.pj_nomeFantasia, '') AS profissional_nome, <!--Nome de quem solicitou-->
                    COALESCE(e.endereco_cidade, '') AS cliente_cidade,
                    COALESCE(e.endereco_uf, '') AS cliente_uf,
+                   COALESCE(e.endereco_rua, ' ') as clientes_ruas,
+                   COALESCE(e.endereco_bairro, ' ') as clientes_bairro,
+                   COALESCE(e.endereco_complemento ' ') as clientes_complemento,
+                   COALESCE(e.endereco_numero' ') as clientes_numero,
                    e.endereco_id AS cliente_endereco_id,
                    u.usuarios_id AS profissional_usuarios_id,
                    COALESCE(uCliente.usuarios_imagem, '') AS cliente_imagem,

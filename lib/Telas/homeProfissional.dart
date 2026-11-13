@@ -41,6 +41,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
    int _totalPendente = 0;
    int _totalAtivo = 0;
    bool _tipoServico = true;
+  List<Map<String, dynamic>> _solicitacoes = [];
 
 
   Future<void> _carregarPendente() async {
@@ -60,6 +61,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
       setState(() {
         _totalPendente = total;
         _totalAtivo = totalAtivo;
+        _solicitacoes = _solicitacoes;
 
       });
 
@@ -227,12 +229,41 @@ class _HomeProfissionalState extends State<Homeprofissional> {
 
                 const SizedBox(height: 30),
 
-                Column(
-                  children: [
 
-                    for(final solicitacao)
-                  ],
-                )
+                if(_tipoServico == true) ... [
+                  Column(
+                    children: [
+
+                      if(_solicitacoes.isEmpty) ... [
+                        const Text(
+                            "Não há solicitação pendente",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+
+                      ] else ...[
+                      for(final solicitacao in _solicitacoes)
+                        CardsSolicitacaopendenteprofissional(
+                            nome: solicitacao['cliente_nome']?.toString() ?? 'Sem nome',
+                            endereco: '${solicitacao['cliente_rua']?? ''}  ${solicitacao['cliente_complemento']?? ''} - ${solicitacao['cliente_bairro']?? ''} - ${solicitacao['cliente_cidade'] ?? ''}, ${solicitacao['cliente_uf'].toUpperCase()?? ''}',
+                            dataSolicitacao: solicitacao['cliente_solicitacao_data_atual']?.toString() ?? '',
+                            dataServico: solicitacao['cliente_solicitacao_data']?.toString() ?? '',
+                            dias: int.tryParse(solicitacao['cliente_solicitacao_quantidade'].toString(),) ?? 0,
+
+                        ),
+
+                      ],
+
+                    ],
+                  )
+
+                ] else ... [
+
+
+                ],
+
 
 
 
