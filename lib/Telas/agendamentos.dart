@@ -7,6 +7,7 @@ import '../Model/usuarios.dart';
 import '../Repository/solicitacao_repository.dart';
 import 'editarPerfil.dart';
 import 'historico.dart';
+import 'encontrarProfissionais.dart';
 
 
 class Agendamentos extends StatefulWidget {
@@ -61,6 +62,16 @@ class _AgendamentosState extends State<Agendamentos> {
   Future<void> _abrirEdicaoPerfil() async {
     final atualizado = await Navigator.of(context).push<Usuarios>(
       MaterialPageRoute(builder: (context) => EditarPerfil(usuario: _usuario)),
+    );
+    if (atualizado != null && mounted) {
+      setState(() => _usuario = atualizado);
+    }
+  }
+  Future<void> _abrirProfissionais() async {
+    final atualizado = await Navigator.of(context).push<Usuarios>(
+      MaterialPageRoute(
+        builder: (context) => EncontrarProfissionais(usuario: _usuario),
+      ),
     );
     if (atualizado != null && mounted) {
       setState(() => _usuario = atualizado);
@@ -390,6 +401,14 @@ class _AgendamentosState extends State<Agendamentos> {
                           tooltip: 'Início',
                           onPressed: _voltarParaHome,
                         ),
+                        
+                        IconButton(
+                          icon: const Icon(Icons.engineering, size: 38),
+                          color: const Color(0xFF424242),
+                          tooltip: 'Profissionais',
+                          onPressed: _abrirProfissionais,
+                        ),
+                        
                         IconButton(
                           icon: const Icon(Icons.event_available, size: 38),
                           color: const Color(0xFF3B82F6),

@@ -8,7 +8,7 @@ import '../Model/usuarios.dart';
 import '../Repository/solicitacao_repository.dart';
 import 'editarPerfil.dart';
 import 'agendamentos.dart';
-
+import 'encontrarProfissionais.dart';
 
 class Historico extends StatefulWidget {
   // Usuário da sessão, recebido da HomeCliente.
@@ -93,7 +93,16 @@ class _HistoricoState extends State<Historico> {
     }
   }
 
-
+  Future<void> _abrirProfissionais() async {
+    final atualizado = await Navigator.of(context).push<Usuarios>(
+      MaterialPageRoute(
+        builder: (context) => EncontrarProfissionais(usuario: _usuario),
+      ),
+    );
+    if (atualizado != null && mounted) {
+      setState(() => _usuario = atualizado);
+    }
+  }
   // Volta para a Home levando o usuário (atualizado, se o perfil foi editado).
   void _voltarParaHome() => Navigator.pop(context, _usuario);
 
@@ -361,6 +370,14 @@ class _HistoricoState extends State<Historico> {
                           tooltip: 'Início',
                           onPressed: _voltarParaHome,
                         ),
+                        
+                        IconButton(
+                          icon: const Icon(Icons.engineering, size: 38),
+                          color: const Color(0xFF424242),
+                          tooltip: 'Profissionais',
+                          onPressed: _abrirProfissionais,
+                        ),
+
                         IconButton(
                           icon: const Icon(Icons.event_available, size: 38),
                           color: const Color(0xFF424242),

@@ -13,6 +13,7 @@ import 'editarPerfil.dart';
 import 'historico.dart';
 import 'agendamentos.dart';
 import 'detalhesUsuario.dart';
+import 'encontrarProfissionais.dart';
 
 
 class HomeCliente extends StatefulWidget {
@@ -65,6 +66,17 @@ class _HomeClienteState extends State<HomeCliente> {
       setState(() => _usuario = atualizado);
     }
   }
+
+  Future<void> _abrirProfissionais() async {
+  final atualizado = await Navigator.of(context).push<Usuarios>(
+    MaterialPageRoute(
+      builder: (context) => EncontrarProfissionais(usuario: _usuario),
+    ),
+  );
+  if (atualizado != null && mounted) {
+    setState(() => _usuario = atualizado);
+  }
+}
 
   @override
   void initState() {
@@ -266,7 +278,7 @@ class _HomeClienteState extends State<HomeCliente> {
                               separatorBuilder: (_, _) =>
                                   const SizedBox(height: 24),
                               itemBuilder: (context, indice) =>
-                                  _CardProfissional(
+                                  CardProfissional(
                                     profissional: profissionais[indice],
                                   ),
                             ),
@@ -295,6 +307,13 @@ class _HomeClienteState extends State<HomeCliente> {
                       ),
 
                       IconButton(
+                        icon: const Icon(Icons.engineering, size: 38),
+                        color: const Color(0xFF424242),
+                        tooltip: 'Profissionais',
+                        onPressed: _abrirProfissionais,
+                      ),
+
+                      IconButton(
                         icon: const Icon(Icons.event_available, size: 38),
                         color: const Color(0xFF424242),
                         tooltip: 'Agendamentos',
@@ -313,11 +332,11 @@ class _HomeClienteState extends State<HomeCliente> {
 }
 
 
-class _CardProfissional extends StatelessWidget {
+class CardProfissional extends StatelessWidget {
 
   final Profissional profissional;
 
-  const _CardProfissional({required this.profissional});
+  const CardProfissional({required this.profissional});
 
   static const _estiloPequeno = TextStyle(
     fontSize: 10.5,
