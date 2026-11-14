@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'detalheSolicitacaoServico.dart';
 
 class CardsSolicitacaopendenteprofissional extends StatelessWidget {
 
@@ -9,7 +10,8 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
   final String dataServico;
   final int dias;
   final String? imagemUrl;
-  // final  onVer;
+  final Map<String, dynamic> solicitacaoPendente;
+  final String? descricao;
 
 
   const CardsSolicitacaopendenteprofissional ({
@@ -19,8 +21,9 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
     required this.dataSolicitacao,
     required this.dataServico,
     required this.dias,
-    // required this.onVer,
+    this.descricao,
     this.imagemUrl,
+    required this.solicitacaoPendente,
   });
 
   String _formatarData(String valor) {
@@ -85,12 +88,12 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    // const SizedBox(height: 4),
-                    //
-                    // Text(
-                    //     endereco,
-                    //   style: const TextStyle(fontSize: 14),
-                    // ),
+                    const SizedBox(height: 4),
+
+                    Text(
+                        endereco,
+                      style: const TextStyle(fontSize: 14),
+                    ),
 
                     const SizedBox(height: 8),
 
@@ -104,7 +107,14 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
                     Align(
                       alignment: Alignment.centerRight,
                       child: FilledButton(
-                        onPressed: () {} ,
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DetalhesSolicitacaoServico(solicitacao: solicitacaoPendente,),
+                            )
+                          );
+                        } ,
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xff3b82f6),
                           padding: const EdgeInsets.symmetric(

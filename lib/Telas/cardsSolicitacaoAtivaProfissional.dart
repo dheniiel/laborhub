@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'detalheSolicitacaoServico.dart';
 
 class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
 
@@ -100,7 +101,14 @@ class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
                     Align(
                       alignment: Alignment.centerRight,
                       child: FilledButton(
-                        onPressed: () {} ,
+                        onPressed: () {
+                          // Navigator.push(
+                          //   context,
+                          //   MaterialPageRoute(
+                          //     builder: (_) => DetalhesSolicitacaoServico(solicitacao: soli,)
+                          //   ),
+                          // ),
+                        } ,
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xff3b82f6),
                           padding: const EdgeInsets.symmetric(

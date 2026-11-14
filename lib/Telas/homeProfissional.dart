@@ -319,12 +319,14 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                         for(final solicitacao in _solicitacoes)
 
                           CardsSolicitacaopendenteprofissional(
+                            solicitacaoPendente: solicitacao, // mandando o objeto para
                               nome: solicitacao['cliente_nome']?.toString() ?? 'Sem nome',
                               endereco: '${solicitacao['cliente_rua']?? ''}  ${solicitacao['cliente_complemento']?? ''} - ${solicitacao['cliente_bairro']?? ''} - ${solicitacao['cliente_cidade'] ?? ''}, ${solicitacao['cliente_uf'].toUpperCase()?? ''}',
                               dataSolicitacao: solicitacao['cliente_solicitacao_data_atual']?.toString() ?? '',
                               dataServico: solicitacao['cliente_solicitacao_data']?.toString() ?? '',
                               dias: int.tryParse(solicitacao['cliente_solicitacao_quantidade'].toString(),) ?? 0,
                               imagemUrl: solicitacao['cliente_imagem'] ?? '',
+                              descricao: solicitacao['cliente_solicitacao_observacao'] ?? '',
 
                           ),
 
@@ -351,13 +353,14 @@ class _HomeProfissionalState extends State<Homeprofissional> {
 
                           for(final ativos in _solicitacaoAtivas)
 
-                            CardsSolicitacaopendenteprofissional(
+                            CardsSolicitacaoAtivaProfissional(
                               nome: ativos['cliente_nome']?.toString() ?? 'Sem nome',
                               endereco: '${ativos['cliente_rua']?? ''}  ${ativos['cliente_complemento']?? ''} - ${ativos['cliente_bairro']?? ''} - ${ativos['cliente_cidade'] ?? ''}, ${ativos['cliente_uf'].toUpperCase()?? ''}',
                               dataSolicitacao: ativos['cliente_solicitacao_data_atual']?.toString() ?? '',
                               dataServico: ativos['cliente_solicitacao_data']?.toString() ?? '',
                               dias: int.tryParse(ativos['cliente_solicitacao_quantidade'].toString(),) ?? 0,
                               imagemUrl: ativos['cliente_imagem'] ?? '',
+                              descricao: ativos['cliente_solicitacao_observacao'],
 
                             ),
 
