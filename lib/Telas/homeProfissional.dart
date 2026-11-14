@@ -16,6 +16,7 @@ import 'historico.dart';
 import 'agendamentos.dart';
 import 'detalhesUsuario.dart';
 import 'cardsSolicitacaoPendenteProfissional.dart';
+import 'cardsSolicitacaoAtivaProfissional.dart';
 
 
 class Homeprofissional  extends StatefulWidget{
@@ -58,16 +59,19 @@ class _HomeProfissionalState extends State<Homeprofissional> {
       final usuarioId = widget.usuarios.usuarios_id;
 
       if (usuarioId == null) return;
-
+      // QUANTIDADE TOTAL DE SERVIÇOS PEDENTES
       final total = await _solicitacaoRepository
           .listarServicoPendente(usuarioId);
 
+      // QUANTIDADE TOAL DE SERVIÇOS ATIVOS
       final totalAtivo = await _solicitacaoRepository
           .listarServicoAtivo(usuarioId);
 
+      // OBJETO COM DADOS DOS USUARIOS QUE ESTAO PEDENTE
       final solicitacoes = await _solicitacaoRepository
           .solicitacaoPendente(usuarioId);
 
+      // OBJETO COM DADOS DE USUARIOS QUE ESTAO ATIVOS
       final solicitacoesAtivo = await _solicitacaoRepository
           .SolicitacaoProfissionalAtivo(usuarioId);
 
@@ -302,6 +306,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                       children: [
 
                         if(_solicitacoes.isEmpty) ... [
+                          const SizedBox(height: 130),
                           const Text(
                               "Não há solicitação pendente",
                             style: TextStyle(
@@ -329,6 +334,37 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                     )
 
                   ] else ... [
+
+                    Column(
+                      children: [
+                        if(_solicitacaoAtivas.isEmpty) ... [
+                          const SizedBox(height: 130),
+                          const Text(
+                            "Não há nenhum serviço ativo!",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+
+                        ] else ... [
+
+                          for(final ativos in _solicitacaoAtivas)
+
+                            CardsSolicitacaopendenteprofissional(
+                              nome: ativos['cliente_nome']?.toString() ?? 'Sem nome',
+                              endereco: '${ativos['cliente_rua']?? ''}  ${ativos['cliente_complemento']?? ''} - ${ativos['cliente_bairro']?? ''} - ${ativos['cliente_cidade'] ?? ''}, ${ativos['cliente_uf'].toUpperCase()?? ''}',
+                              dataSolicitacao: ativos['cliente_solicitacao_data_atual']?.toString() ?? '',
+                              dataServico: ativos['cliente_solicitacao_data']?.toString() ?? '',
+                              dias: int.tryParse(ativos['cliente_solicitacao_quantidade'].toString(),) ?? 0,
+                              imagemUrl: ativos['cliente_imagem'] ?? '',
+
+                            ),
+
+
+                        ],
+                      ],
+                    )
 
 
                   ],
