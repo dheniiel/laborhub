@@ -814,7 +814,8 @@ final class Auth
                                     INNER JOIN servicos as s on s.servicos_id = ss.solicitacaoServico_servicos_id
                                     INNER JOIN solicitacao as so on so.solicitacao_id = ss.solicitacaoServico_solicitacao_id
                                     WHERE s.servicos_usuarios_id = :usuarioid
-                                    and so.solicitacao_status = :status ');
+                                    and so.solicitacao_status = :status
+                                    AND so.solicitacao_deletada_em is NULL');
             $consulta->execute(['usuarioid' => $usuarioid, 'status' => 'Pendente']);
             return (int) $consulta->fetchColumn();
 
@@ -827,7 +828,8 @@ final class Auth
                                     INNER JOIN servicos as s on s.servicos_id = ss.solicitacaoServico_servicos_id
                                     INNER JOIN solicitacao as so on so.solicitacao_id = ss.solicitacaoServico_solicitacao_id
                                     WHERE s.servicos_usuarios_id = :usuarioid
-                                    and so.solicitacao_status = :status ');
+                                    and so.solicitacao_status = :status
+                                    AND so.solicitacao_deletada_em is NULL');
             $consulta->execute(['usuarioid' => $usuarioid, 'status' => 'Ativo']);
             return (int) $consulta->fetchColumn();
 
@@ -911,7 +913,6 @@ final class Auth
                     COALESCE(uCliente.usuarios_imagem, '') AS cliente_imagem,
                     COALESCE(uCliente.usuarios_telefone, '') AS cliente_telefone,
                     COALESCE(uCliente.usuarios_email, '') AS cliente_email,
-                    COALESCE(uCliente.usuarios_imagem, '') as cliente_imagem,
                     so.solicitacao_data AS cliente_solicitacao_data,
                     so.solicitacao_data_atual AS cliente_solicitacao_data_atual,
                     so.solicitacao_quantidade AS cliente_solicitacao_quantidade,

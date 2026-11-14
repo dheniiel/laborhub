@@ -39,10 +39,10 @@ class SolicitacaoRepository {
   }
 
 
-  Future<int> listarServicoAtivo() async {
+  Future<int> listarServicoAtivo(int usuarioId) async {
     final body = await _api.post(
       'solicitacoes/listarServicoAtivo',
-      {},
+      {'usuario_id': usuarioId},
       token: await _token(),
     );
 
@@ -72,7 +72,7 @@ class SolicitacaoRepository {
       token: await _token(),
     );
 
-    return (body['solicitacoes'] as List)
+    return (body['solicitacoesAtivas'] as List)
         .map((item) => Map<String, dynamic>.from(item as Map))
         .toList();
   }

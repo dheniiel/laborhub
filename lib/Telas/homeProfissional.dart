@@ -62,13 +62,15 @@ class _HomeProfissionalState extends State<Homeprofissional> {
       final total = await _solicitacaoRepository
           .listarServicoPendente(usuarioId);
 
-      final totalAtivo =
-      await _solicitacaoRepository.listarServicoAtivo();
+      final totalAtivo = await _solicitacaoRepository
+          .listarServicoAtivo(usuarioId);
 
       final solicitacoes = await _solicitacaoRepository
           .solicitacaoPendente(usuarioId);
 
-      final solicitacoesAtivo = await _solicitacaoRepository.SolicitacaoProfissionalAtivo(usuarioId);
+      final solicitacoesAtivo = await _solicitacaoRepository
+          .SolicitacaoProfissionalAtivo(usuarioId);
+
 
       if (!mounted) return;
 
