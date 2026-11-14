@@ -85,12 +85,12 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 4),
-
-                    Text(
-                        endereco,
-                      style: const TextStyle(fontSize: 14),
-                    ),
+                    // const SizedBox(height: 4),
+                    //
+                    // Text(
+                    //     endereco,
+                    //   style: const TextStyle(fontSize: 14),
+                    // ),
 
                     const SizedBox(height: 8),
 
