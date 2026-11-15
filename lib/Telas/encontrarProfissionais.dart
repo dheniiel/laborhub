@@ -9,8 +9,8 @@ import '../Repository/profissional_repository.dart';
 import 'agendamentos.dart';
 import 'editarPerfil.dart';
 import 'historico.dart';
-import 'homeCliente.dart' show CardProfissional;
-
+import 'homeCliente.dart' show CardProfissional, HomeCliente;
+import 'menuLateral.dart';
 
 class EncontrarProfissionais extends StatefulWidget {
   // Usuário da sessão, recebido da HomeCliente.
@@ -51,6 +51,9 @@ class _EncontrarProfissionaisState extends State<EncontrarProfissionais> {
   // Cópia do usuário que pode mudar após editar o perfil.
   late Usuarios _usuario = widget.usuario;
 
+  // Permite abrir a barra lateral pelo ícone do cabeçalho.
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   void initState() {
     super.initState();
@@ -78,7 +81,8 @@ class _EncontrarProfissionaisState extends State<EncontrarProfissionais> {
   List<Profissional> get _filtrados {
     return _profissionais.where((profissional) {
       if (_categoria != _todos &&
-          profissional.profissional_profissao != _categoria) return false;
+          profissional.profissional_profissao != _categoria)
+        return false;
       if (_cidade != _todos && profissional.profissional_cidade != _cidade) {
         return false;
       }
@@ -90,9 +94,12 @@ class _EncontrarProfissionaisState extends State<EncontrarProfissionais> {
   }
 
   // Quantidade de filtros em uso (aparece no botão Filtrar).
-  int get _ativos => [_categoria, _cidade, _avaliacao, _nivel]
-      .where((filtro) => filtro != _todos)
-      .length;
+  int get _ativos => [
+    _categoria,
+    _cidade,
+    _avaliacao,
+    _nivel,
+  ].where((filtro) => filtro != _todos).length;
 
   // "Todos" + valores distintos vindos dos profissionais carregados.
   List<String> _opcoes(Iterable<String> valores) {
@@ -110,26 +117,20 @@ class _EncontrarProfissionaisState extends State<EncontrarProfissionais> {
     }
   }
 
-  Future<void> _abrirHistorico() async {
-    final atualizado = await Navigator.of(context).push<Usuarios>(
-      MaterialPageRoute(builder: (context) => Historico(usuario: _usuario)),
-    );
-    if (atualizado != null && mounted) {
-      setState(() => _usuario = atualizado);
-    }
-  }
+  // Troca de aba: substitui a tela atual para não empilhar.
+  void _abrirHistorico() => Navigator.of(context).pushReplacement(
+    MaterialPageRoute(builder: (context) => Historico(usuario: _usuario)),
+  );
 
-  Future<void> _abrirAgendamentos() async {
-    final atualizado = await Navigator.of(context).push<Usuarios>(
-      MaterialPageRoute(builder: (context) => Agendamentos(usuario: _usuario)),
-    );
-    if (atualizado != null && mounted) {
-      setState(() => _usuario = atualizado);
-    }
-  }
+  void _abrirAgendamentos() => Navigator.of(context).pushReplacement(
+    MaterialPageRoute(builder: (context) => Agendamentos(usuario: _usuario)),
+  );
 
-  // Volta para a Home levando o usuário (atualizado, se o perfil foi editado).
-  void _voltarParaHome() => Navigator.pop(context, _usuario);
+  // Limpa a pilha e abre a Home levando o usuário (atualizado, se o perfil foi editado).
+  void _voltarParaHome() => Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (context) => HomeCliente(usuario: _usuario)),
+    (route) => false,
+  );
 
   // Modal de filtros: mesmo padrão do modal de solicitação (DetalhesUsuario).
   Future<void> _abrirFiltros() async {
@@ -177,12 +178,7 @@ class _EncontrarProfissionaisState extends State<EncontrarProfissionais> {
                   avaliacao,
                   (valor) => avaliacao = valor,
                 ),
-                _campoFiltro(
-                  'Nível',
-                  _niveis,
-                  nivel,
-                  (valor) => nivel = valor,
-                ),
+                _campoFiltro('Nível', _niveis, nivel, (valor) => nivel = valor),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -259,7 +255,12 @@ class _EncontrarProfissionaisState extends State<EncontrarProfissionais> {
         if (!didPop) _voltarParaHome();
       },
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: Colors.white,
+        drawer: MenuLateral(
+          onEditarPerfil: _abrirEdicaoPerfil,
+          onSair: () => sairDaConta(context),
+        ),
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -267,17 +268,17 @@ class _EncontrarProfissionaisState extends State<EncontrarProfissionais> {
               child: Column(
                 children: [
                   // Cabeçalho
+                  // Cabeçalho
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 12, 0),
+                    padding: const EdgeInsets.fromLTRB(12, 10, 16, 0),
                     child: Row(
                       children: [
-                        Tooltip(
-                          message: 'Meu perfil',
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: _abrirEdicaoPerfil,
-                            child: _Avatar(caminho: _usuario.usuarios_imagem, raio: 23),
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.menu, size: 25),
+                          color: Colors.black,
+                          tooltip: 'Menu',
+                          onPressed: () =>
+                              _scaffoldKey.currentState?.openDrawer(),
                         ),
                         const Spacer(),
                         IconButton(
@@ -288,12 +289,8 @@ class _EncontrarProfissionaisState extends State<EncontrarProfissionais> {
                             // Navegação para tela de notificações
                           },
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.settings, size: 25),
-                          color: Colors.black,
-                          tooltip: 'Configurações',
-                          onPressed: _abrirEdicaoPerfil,
-                        ),
+                        const SizedBox(width: 4),
+                        _Avatar(caminho: _usuario.usuarios_imagem, raio: 23),
                       ],
                     ),
                   ),
@@ -329,7 +326,9 @@ class _EncontrarProfissionaisState extends State<EncontrarProfissionais> {
                             ),
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size(114, 30),
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                              ),
                               backgroundColor: const Color(0xFFEFF6FF),
                               foregroundColor: const Color(0xFF3B82F6),
                               side: const BorderSide(color: Color(0xFF3B82F6)),
@@ -352,27 +351,30 @@ class _EncontrarProfissionaisState extends State<EncontrarProfissionais> {
                   Expanded(
                     child: _carregando
                         ? const Center(
-                            child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF3B82F6),
+                            ),
                           )
                         : profissionais.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'Nenhum profissional encontrado',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontFamily: 'Montserrat',
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              )
-                            : ListView.separated(
-                                padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-                                itemCount: profissionais.length,
-                                separatorBuilder: (_, _) => const SizedBox(height: 24),
-                                itemBuilder: (context, indice) => CardProfissional(
-                                  profissional: profissionais[indice],
-                                ),
+                        ? const Center(
+                            child: Text(
+                              'Nenhum profissional encontrado',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontFamily: 'Montserrat',
+                                color: Colors.grey,
                               ),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+                            itemCount: profissionais.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 24),
+                            itemBuilder: (context, indice) => CardProfissional(
+                              profissional: profissionais[indice],
+                            ),
+                          ),
                   ),
 
                   // Barra inferior (Profissionais selecionado)
@@ -423,10 +425,8 @@ class _EncontrarProfissionaisState extends State<EncontrarProfissionais> {
   }
 }
 
-
 // Mesmo avatar da HomeCliente (a classe de lá é privada).
 class _Avatar extends StatelessWidget {
-
   final String caminho;
   final double raio;
 
@@ -442,7 +442,11 @@ class _Avatar extends StatelessWidget {
       backgroundImage: temFoto ? FileImage(File(caminho)) : null,
       child: temFoto
           ? null
-          : Icon(Icons.person, size: raio * 1.4, color: const Color(0xFF3B82F6)),
+          : Icon(
+              Icons.person,
+              size: raio * 1.4,
+              color: const Color(0xFF3B82F6),
+            ),
     );
   }
 }

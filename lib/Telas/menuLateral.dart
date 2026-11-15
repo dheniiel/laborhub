@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-class MenuLateral extends StatelessWidget {
+import '../Repository/sessao_repository.dart';
+import 'login.dart';
 
+class MenuLateral extends StatelessWidget {
   final VoidCallback onEditarPerfil;
   final VoidCallback onSair;
 
@@ -55,4 +57,17 @@ class MenuLateral extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> sairDaConta(BuildContext context) async {
+  final navegador = Navigator.of(context);
+  try {
+    await SessaoRepository().sair();
+  } catch (_) {
+    // Mesmo com erro local, volta ao login.
+  }
+  navegador.pushAndRemoveUntil(
+    MaterialPageRoute(builder: (context) => const Login()),
+    (route) => false,
+  );
 }
