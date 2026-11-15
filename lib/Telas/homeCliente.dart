@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-
 import '../Formularios/forms.dart';
 import '../Model/profissional.dart';
 import '../Model/usuarios.dart';
@@ -14,6 +13,7 @@ import 'historico.dart';
 import 'agendamentos.dart';
 import 'detalhesUsuario.dart';
 import 'encontrarProfissionais.dart';
+import 'menuLateral.dart';
 
 
 class HomeCliente extends StatefulWidget {
@@ -30,6 +30,7 @@ class _HomeClienteState extends State<HomeCliente> {
   final _pesquisaController = TextEditingController();
   final ProfissionalRepository _repository = ProfissionalRepository();
   final SessaoRepository _sessao = SessaoRepository();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   List<Profissional> _profissionais = [];
   bool _carregando = true;
@@ -158,7 +159,12 @@ class _HomeClienteState extends State<HomeCliente> {
     final profissionais = _filtrados;
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Colors.white,
+      drawer: MenuLateral(
+        onEditarPerfil: _abrirEdicaoPerfil,
+        onSair: _sair,
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -167,19 +173,14 @@ class _HomeClienteState extends State<HomeCliente> {
               children: [
                 // Cabeçalho
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 12, 0),
+                  padding: const EdgeInsets.fromLTRB(12, 10, 16, 0),
                   child: Row(
                     children: [
-                      Tooltip(
-                        message: 'Meu perfil',
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: _abrirEdicaoPerfil,
-                          child: _Avatar(
-                            caminho: _usuario.usuarios_imagem, // antes: widget.usuario.usuarios_imagem
-                            raio: 23,
-                          ),
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.menu, size: 25),
+                        color: Colors.black,
+                        tooltip: 'Menu',
+                        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                       ),
                       const Spacer(),
                       IconButton(
@@ -190,17 +191,10 @@ class _HomeClienteState extends State<HomeCliente> {
                           // Navegação para tela de notificações
                         },
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.settings, size: 25),
-                        color: Colors.black,
-                        tooltip: 'Configurações',
-                        onPressed: _abrirEdicaoPerfil,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.logout, size: 25),
-                        color: Colors.black,
-                        tooltip: 'Sair',
-                        onPressed: _sair,
+                      const SizedBox(width: 4),
+                      _Avatar(
+                        caminho: _usuario.usuarios_imagem,
+                        raio: 23,
                       ),
                     ],
                   ),
