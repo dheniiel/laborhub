@@ -623,7 +623,7 @@ class _ClienteTelas extends State<Cliente> {
                                 tipagemValor: TextInputType.datetime,
                                 rotulo: "dd/mm/YYYY",
                                 formatadores: [_mascaraData],
-                                validador: Validacao.data,
+                                validador: Validacao.dataFundacao,
 
                               ),
 
