@@ -47,33 +47,30 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
     return '$dia/$mes/${data.year}';
   }
 
-  Future<void> _enviarSolicitacao(int clienteId) async {
-    if(!(_formKey.currentState?.validate() ?? false)) return;
 
-    final textoData = _servicos_data.text.trim(); //transofmrando dateTime para String
+  // Recusando solicitação
+  Future<void> _recusarSolicitacao (int solicitacaoId, String motivo) async {
 
-    final partes = textoData.split('/');
-    final dataServico = DateTime(
-      int.parse(partes[2]),
-      int.parse(partes[1]),
-      int.parse(partes[0]),
+    await SolicitacaoRepository().recusarSolicitacao(
+      solicitacaoId, motivo,
+
     );
 
-    final agora = DateTime.now();
-
-  // await SolicitacaoRepository().enviarSolicitacao(
-  //     solicitacao_data: dataServico,
-  //     solicitacao_data_atual: agora,
-  //     solicitacao_quantidade: int.parse(_servicos_quantidade.text.trim()),
-  //     solicitacao_observacao: _solicitacao_observacao.text.trim(),
-  //     solicitacao_criada_em: agora,
-  //     solicitacao_endereco_id: widget.profissional.profissional_endereco_id,
-  //     solicitacao_usuarios_id: clienteId,
-  //     servicos_id: widget.profissional.profissional_servicos_id,
-  // );
 
 
   }
+
+  // Aceitando solicitação
+  Future<void> _aceitarSolicitacao (int solicitacaoId) async {
+
+
+    await SolicitacaoRepository().aceitarSolicitacao(
+      solicitacaoId,
+    );
+
+
+  }
+
 
 
 
@@ -499,11 +496,14 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
                                                     });
 
                                                     try {
-                                                      await _enviarSolicitacao(
-                                                        widget.solicitacao['profissional_usuarios_id'],
+                                                      await _recusarSolicitacao(
+                                                        widget.solicitacao['cliente_solicitacao_id'],
+                                                          _solicitacao_motivo.text.trim(),
+
                                                       );
-                                                    } catch (erro) {
+                                                    } catch (erro, stackTrace) {
                                                       if (!modalContext.mounted) return;
+
 
                                                       setStateModal(() {
                                                         enviando = false;
@@ -517,12 +517,15 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
                                                           backgroundColor: Colors.red,
                                                         ),
                                                       );
+                                                      debugPrint('ERRO AO RECUSAR: $erro');
+                                                      debugPrintStack(stackTrace: stackTrace);
                                                       return;
                                                     }
 
                                                     if (!dialogContext.mounted) return;
 
-                                                    Navigator.of(dialogContext).pop();
+                                                    Navigator.of(dialogContext).pop(); // Fecha o modal.
+                                                    Navigator.of(context).pop(true); // volta para tela anterior
 
                                                     messenger.showSnackBar(
                                                       const SnackBar(
@@ -671,8 +674,8 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
                                                     });
 
                                                     try {
-                                                      await _enviarSolicitacao(
-                                                        widget.solicitacao['profissional_usuarios_id'],
+                                                      await _aceitarSolicitacao(
+                                                        widget.solicitacao['cliente_solicitacao_id'],
                                                       );
                                                     } catch (erro) {
                                                       if (!modalContext.mounted) return;
@@ -694,7 +697,8 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
 
                                                     if (!dialogContext.mounted) return;
 
-                                                    Navigator.of(dialogContext).pop();
+                                                    Navigator.of(dialogContext).pop(); // Fecha o modal.
+                                                    Navigator.of(context).pop(true); // volta para tela anterior
 
                                                     messenger.showSnackBar(
                                                       const SnackBar(

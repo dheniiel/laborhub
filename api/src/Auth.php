@@ -128,6 +128,22 @@ final class Auth
                 ];
             }
 
+        if ($rota === 'solicitacoes/recusarSolicitacao') {
+            $resultado = $this->recusarSolicitacao(
+                (int) ($dados['solicitacao_id'] ?? 0),
+                (string) ($dados['motivo'] ?? '')
+            );
+
+            return [200, $resultado];
+        }
+
+        if ($rota === 'solicitacoes/aceitarSolicitacao') {
+            $resultado = $this->aceitarSolicitacao(
+                (int) ($dados['solicitacao_id'] ?? 0)
+            );
+            return [200, $resultado];
+        }
+
         $email = $this->email($dados);
         return match ($rota) {
             'auth/register' => $this->cadastrar($dados, $email, $ip),
@@ -944,6 +960,45 @@ final class Auth
 
             return $consulta->fetchAll(PDO::FETCH_ASSOC);
         }
+
+
+    private function recusarSolicitacao(
+        int $solicitacaoId,
+        string $motivo
+    ): array {
+        $consulta = $this->db->prepare(
+            "UPDATE solicitacao
+             SET solicitacao_status = 'Recusada',
+                 solicitacao_motivo = :motivo
+             WHERE solicitacao_id = :solicitacaoId
+               AND solicitacao_status = 'Pendente'
+               AND solicitacao_deletada_em IS NULL"
+        );
+
+        $consulta->execute([
+            'motivo' => $motivo,
+            'solicitacaoId' => $solicitacaoId,
+        ]);
+
+       return ['sucesso' => true];
+    }
+
+    private function aceitarSolicitacao(int $solicitacaoId): array
+    {
+        $consulta = $this->db->prepare(
+            "UPDATE solicitacao
+             SET solicitacao_status = 'Ativo'
+             WHERE solicitacao_id = :solicitacaoId
+               AND solicitacao_status = 'Pendente'
+               AND solicitacao_deletada_em IS NULL"
+        );
+
+        $consulta->execute([
+            'solicitacaoId' => $solicitacaoId,
+        ]);
+
+        return ['sucesso' => true];
+    }
 
 
 

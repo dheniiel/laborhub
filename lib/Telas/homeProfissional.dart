@@ -319,7 +319,8 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                         for(final solicitacao in _solicitacoes)
 
                           CardsSolicitacaopendenteprofissional(
-                            solicitacaoPendente: solicitacao, // mandando o objeto para
+                              solicitacaoPendente: solicitacao, // mandando o objeto para
+                              onAtualizar: _carregarPendente, // ADICIONE AQUI
                               nome: solicitacao['cliente_nome']?.toString() ?? 'Sem nome',
                               endereco: '${solicitacao['cliente_rua']?? ''}  ${solicitacao['cliente_complemento']?? ''} - ${solicitacao['cliente_bairro']?? ''} - ${solicitacao['cliente_cidade'] ?? ''}, ${solicitacao['cliente_uf'].toUpperCase()?? ''}',
                               dataSolicitacao: solicitacao['cliente_solicitacao_data_atual']?.toString() ?? '',

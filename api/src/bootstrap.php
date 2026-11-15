@@ -121,19 +121,3 @@ function lerToken(): ?string
     return preg_match('/^Bearer\s+(\S+)$/i', trim($cabecalho), $partes) ? $partes[1] : null;
 }
 
-
-private function recusarSolicitacao(int $solicitacaoId, string $motivo ) : array {
-
-    $consulta =  = $this->db->prepare(
-        UPDATE solicitacao AS so
-        SET so.solicitacao_status = 'Recusada',
-            so.solicitacao_motivo = :motivo
-        WHERE so.solicitacao_id = :solicitacaoId
-          AND so.solicitacao_status = 'Pendente'
-          AND so.solicitacao_deletada_em IS NULL
-
-    );
-
-    $consulta->execute([ 'motivo' => $motivo, 'solicitacaoId' => $solicitacaoId]);
-
-}

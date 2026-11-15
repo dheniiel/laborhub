@@ -15,6 +15,7 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
   final String telefone;
   final String email;
   final int idSolicitacao;
+  final Future<void> Function() onAtualizar;
 
 
   const CardsSolicitacaopendenteprofissional ({
@@ -30,6 +31,7 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
     required this.telefone,
     required this.email,
     required this.idSolicitacao,
+    required this.onAtualizar,
   });
 
   String _formatarData(String valor) {
@@ -113,13 +115,20 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
                     Align(
                       alignment: Alignment.centerRight,
                       child: FilledButton(
-                        onPressed: () {
-                          Navigator.push(
+                        onPressed: () async  {
+                         final alterou = await Navigator.push<bool>(
                             context,
                             MaterialPageRoute(
                               builder: (context) => DetalhesSolicitacaoServico(solicitacao: solicitacaoPendente,),
                             )
                           );
+
+                         if (!context.mounted) return;
+
+                         if (alterou == true) {
+                           await onAtualizar();
+                         }
+
                         } ,
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xff3b82f6),

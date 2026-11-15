@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 import 'package:http/http.dart' as http;
 
@@ -42,11 +43,13 @@ class AuthApi {
             body: jsonEncode(data),
           )
           .timeout(const Duration(seconds: 30));
+          
       final body =
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       if (response.statusCode >= 400) {
         throw AuthException(
           body['message'] as String? ?? 'Não foi possível concluir.',
+
           response.statusCode,
         );
       }
