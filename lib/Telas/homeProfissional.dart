@@ -329,6 +329,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                               descricao: solicitacao['cliente_solicitacao_observacao'] ?? '',
                               email: solicitacao['cliente_email'] ?? '',
                               telefone: solicitacao['cliente_telefone'] ?? "Sem telefone",
+                              idSolicitacao: solicitacao['cliente_solicitacao_id'],
 
                           ),
 

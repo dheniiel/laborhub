@@ -14,6 +14,7 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
   final String? descricao;
   final String telefone;
   final String email;
+  final int idSolicitacao;
 
 
   const CardsSolicitacaopendenteprofissional ({
@@ -28,6 +29,7 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
     required this.solicitacaoPendente,
     required this.telefone,
     required this.email,
+    required this.idSolicitacao,
   });
 
   String _formatarData(String valor) {

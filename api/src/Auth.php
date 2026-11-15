@@ -859,6 +859,7 @@ final class Auth
                 COALESCE(uCliente.usuarios_telefone, '') AS cliente_telefone,
                 COALESCE(uCliente.usuarios_email, '') AS cliente_email,
                 COALESCE(uCliente.usuarios_imagem, '') as cliente_imagem,
+                so.solicitacao_id as cliente_solicitacao_id,
                 so.solicitacao_data AS cliente_solicitacao_data,
                 so.solicitacao_data_atual AS cliente_solicitacao_data_atual,
                 so.solicitacao_quantidade AS cliente_solicitacao_quantidade,
