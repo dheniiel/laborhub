@@ -12,7 +12,7 @@ import '../Repository/solicitacao_repository.dart';
 import 'login.dart';
 import 'perfilProfissional.dart';
 import 'editarPerfil.dart';
-import 'historico.dart';
+import 'historico_profissional.dart';
 import 'agendamentos.dart';
 import 'detalhesUsuario.dart';
 import 'cardsSolicitacaoPendenteProfissional.dart';
@@ -405,7 +405,17 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                   icon: const Icon(Icons.assignment_outlined, size: 38),
                   color: const Color(0xFF424242),
                   tooltip: 'Histórico',
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => HistoricoProfissional(
+                          usuario: _usuario,
+                          servicos: const [],
+                          onConfiguracoes: _abrirEdicaoPerfil,
+                        ),
+                      ),
+                    );
+                  },
                 ),
 
                 IconButton(
