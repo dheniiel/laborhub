@@ -165,6 +165,8 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
                       // Texto do nome
                       Text(
                           widget.solicitacao['cliente_nome']?.toString() ?? 'Sem nome',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
@@ -216,8 +218,8 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
                                   ),
                                   TextSpan(
                                     text:
-                                    '${widget.solicitacao['cliente_cidade'] ?? ''} '
-                                        '${widget.solicitacao['cliente_uf'] ?? ''} - '
+                                    '${widget.solicitacao['cliente_cidade'] ?? ''}, '
+                                        '${widget.solicitacao['cliente_uf'].toUpperCase() ?? ''} '
                                   ),
                                 ],
                               ),
@@ -291,7 +293,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
                                 children: [
                                   const TextSpan(
                                     text: 'Dias solicitados: ',
-                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                    style: TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                   TextSpan(
                                       text: '${widget.solicitacao['cliente_solicitacao_quantidade']} dia(s)'
@@ -299,6 +301,56 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
                                 ],
                               ),
                               style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // telefone do cliente
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text.rich(
+                              TextSpan(
+                                children: [
+                                  const TextSpan(
+                                    text: 'Telefone: ',
+                                    style: TextStyle(fontWeight: FontWeight.bold),
+
+                                  ),
+                                  TextSpan(
+                                      text: widget.solicitacao['cliente_telefone']
+                                  ),
+                                ],
+                              ),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 4),
+
+
+                      // telefone do cliente
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text.rich(
+                              TextSpan(
+                                children: [
+                                  const TextSpan(
+                                    text: 'Email: ',
+                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                                  TextSpan(
+                                      text: widget.solicitacao['cliente_email']
+                                  ),
+                                ],
+                              ),
+                              style: const TextStyle(fontSize: 11),
                             ),
                           ),
                         ],
@@ -332,6 +384,23 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
                       ),
 
                       const SizedBox(height: 4),
+
+                      if(widget.solicitacao['cliente_solicitacao_observacao'].isEmpty) ... [
+                        const Text("O cliente não descreveu nenhuma solicitação"),
+
+                      ],
+
+                       Padding(
+                        padding: EdgeInsetsGeometry.only(left: 10),
+                        child: Text(
+                          widget.solicitacao['cliente_solicitacao_observacao'],
+                          textAlign: TextAlign.justify,
+                          style: TextStyle(
+                            fontSize: 12
+
+                          ),
+                        ),
+                      ),
 
 
                     ],

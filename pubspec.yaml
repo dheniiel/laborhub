@@ -29,13 +29,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
   assets:
     - lib/Assets/Images/
 
-fonts:
-  - family: MontSerrat
-    fonts:
-      - asset: 'lib/Assets/Fonts/MontSerrat/MontSerrat-Regular.ttf'
-        weight: 400
-      - asset: 'lib/Assets/Fonts/MontSerrat/MontSerrat-Bold.ttf'
-        weight: 700
+  fonts:
+    - family: MontSerrat
+      fonts:
+        - asset: lib/Assets/Fonts/MontSerrat/Montserrat-Regular.ttf
+          weight: 400
+        - asset: lib/Assets/Fonts/MontSerrat/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: lib/Assets/Fonts/MontSerrat/Montserrat-Bold.ttf
+          weight: 700

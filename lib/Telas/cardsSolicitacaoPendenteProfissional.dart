@@ -12,6 +12,8 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
   final String? imagemUrl;
   final Map<String, dynamic> solicitacaoPendente;
   final String? descricao;
+  final String telefone;
+  final String email;
 
 
   const CardsSolicitacaopendenteprofissional ({
@@ -24,6 +26,8 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
     this.descricao,
     this.imagemUrl,
     required this.solicitacaoPendente,
+    required this.telefone,
+    required this.email,
   });
 
   String _formatarData(String valor) {
