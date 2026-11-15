@@ -327,6 +327,8 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                               dias: int.tryParse(solicitacao['cliente_solicitacao_quantidade'].toString(),) ?? 0,
                               imagemUrl: solicitacao['cliente_imagem'] ?? '',
                               descricao: solicitacao['cliente_solicitacao_observacao'] ?? '',
+                              email: solicitacao['cliente_email'] ?? '',
+                              telefone: solicitacao['cliente_telefone'] ?? "Sem telefone",
 
                           ),
 
