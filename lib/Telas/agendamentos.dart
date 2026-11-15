@@ -8,7 +8,8 @@ import '../Repository/solicitacao_repository.dart';
 import 'editarPerfil.dart';
 import 'historico.dart';
 import 'encontrarProfissionais.dart';
-
+import 'homeCliente.dart' show HomeCliente;
+import 'menuLateral.dart';
 
 class Agendamentos extends StatefulWidget {
   // Usuário da sessão, recebido da HomeCliente.
@@ -22,8 +23,18 @@ class Agendamentos extends StatefulWidget {
 
 class _AgendamentosState extends State<Agendamentos> {
   static const _meses = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+    'Janeiro',
+    'Fevereiro',
+    'Março',
+    'Abril',
+    'Maio',
+    'Junho',
+    'Julho',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Dezembro',
   ];
   static const _semana = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
@@ -37,6 +48,9 @@ class _AgendamentosState extends State<Agendamentos> {
 
   // Cópia do usuário que pode mudar após editar o perfil.
   late Usuarios _usuario = widget.usuario;
+
+  // Permite abrir a barra lateral pelo ícone do cabeçalho.
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -52,7 +66,9 @@ class _AgendamentosState extends State<Agendamentos> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível carregar os agendamentos.')),
+        const SnackBar(
+          content: Text('Não foi possível carregar os agendamentos.'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _carregando = false);
@@ -67,28 +83,23 @@ class _AgendamentosState extends State<Agendamentos> {
       setState(() => _usuario = atualizado);
     }
   }
-  Future<void> _abrirProfissionais() async {
-    final atualizado = await Navigator.of(context).push<Usuarios>(
-      MaterialPageRoute(
-        builder: (context) => EncontrarProfissionais(usuario: _usuario),
-      ),
-    );
-    if (atualizado != null && mounted) {
-      setState(() => _usuario = atualizado);
-    }
-  }
 
-  Future<void> _abrirHistorico() async {
-    final atualizado = await Navigator.of(context).push<Usuarios>(
-      MaterialPageRoute(builder: (context) => Historico(usuario: _usuario)),
-    );
-    if (atualizado != null && mounted) {
-      setState(() => _usuario = atualizado);
-    }
-  }
+  // Troca de aba: substitui a tela atual para não empilhar.
+  void _abrirProfissionais() => Navigator.of(context).pushReplacement(
+    MaterialPageRoute(
+      builder: (context) => EncontrarProfissionais(usuario: _usuario),
+    ),
+  );
 
-  // Volta para a Home levando o usuário (atualizado, se o perfil foi editado).
-  void _voltarParaHome() => Navigator.pop(context, _usuario);
+  void _abrirHistorico() => Navigator.of(context).pushReplacement(
+    MaterialPageRoute(builder: (context) => Historico(usuario: _usuario)),
+  );
+
+  // Limpa a pilha e abre a Home levando o usuário (atualizado, se o perfil foi editado).
+  void _voltarParaHome() => Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (context) => HomeCliente(usuario: _usuario)),
+    (route) => false,
+  );
 
   void _mudarMes(int quantidade) {
     // DateTime ajusta a virada de ano (mês 13 -> janeiro do ano seguinte).
@@ -104,7 +115,8 @@ class _AgendamentosState extends State<Agendamentos> {
       .toList();
 
   // Concluídos no dia (executados).
-  List<Solicitacao> _executados(DateTime dia) => _solicitacoes.where((solicitacao) {
+  List<Solicitacao> _executados(DateTime dia) =>
+      _solicitacoes.where((solicitacao) {
         final conclusao = solicitacao.solicitacao_conclusao;
         return conclusao != null && _mesmoDia(conclusao, dia);
       }).toList();
@@ -188,8 +200,8 @@ class _AgendamentosState extends State<Agendamentos> {
             color: temServico
                 ? Colors.white
                 : hoje
-                    ? const Color(0xFF3B82F6)
-                    : Colors.black,
+                ? const Color(0xFF3B82F6)
+                : Colors.black,
           ),
         ),
       ),
@@ -198,7 +210,8 @@ class _AgendamentosState extends State<Agendamentos> {
 
   Widget _calendario() {
     final diasNoMes = DateTime(_mes.year, _mes.month + 1, 0).day;
-    final inicio = DateTime(_mes.year, _mes.month, 1).weekday % 7; // domingo = 0
+    final inicio =
+        DateTime(_mes.year, _mes.month, 1).weekday % 7; // domingo = 0
 
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
@@ -286,7 +299,12 @@ class _AgendamentosState extends State<Agendamentos> {
         if (!didPop) _voltarParaHome();
       },
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: Colors.white,
+        drawer: MenuLateral(
+          onEditarPerfil: _abrirEdicaoPerfil,
+          onSair: () => sairDaConta(context),
+        ),
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -294,17 +312,17 @@ class _AgendamentosState extends State<Agendamentos> {
               child: Column(
                 children: [
                   // Cabeçalho
+                  // Cabeçalho
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 12, 0),
+                    padding: const EdgeInsets.fromLTRB(12, 10, 16, 0),
                     child: Row(
                       children: [
-                        Tooltip(
-                          message: 'Meu perfil',
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: _abrirEdicaoPerfil,
-                            child: _Avatar(caminho: _usuario.usuarios_imagem, raio: 23),
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.menu, size: 25),
+                          color: Colors.black,
+                          tooltip: 'Menu',
+                          onPressed: () =>
+                              _scaffoldKey.currentState?.openDrawer(),
                         ),
                         const Spacer(),
                         IconButton(
@@ -315,12 +333,8 @@ class _AgendamentosState extends State<Agendamentos> {
                             // Navegação para tela de notificações
                           },
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.settings, size: 25),
-                          color: Colors.black,
-                          tooltip: 'Configurações',
-                          onPressed: _abrirEdicaoPerfil,
-                        ),
+                        const SizedBox(width: 4),
+                        _Avatar(caminho: _usuario.usuarios_imagem, raio: 23),
                       ],
                     ),
                   ),
@@ -328,7 +342,9 @@ class _AgendamentosState extends State<Agendamentos> {
                   Expanded(
                     child: _carregando
                         ? const Center(
-                            child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF3B82F6),
+                            ),
                           )
                         : SingleChildScrollView(
                             padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
@@ -401,14 +417,14 @@ class _AgendamentosState extends State<Agendamentos> {
                           tooltip: 'Início',
                           onPressed: _voltarParaHome,
                         ),
-                        
+
                         IconButton(
                           icon: const Icon(Icons.engineering, size: 38),
                           color: const Color(0xFF424242),
                           tooltip: 'Profissionais',
                           onPressed: _abrirProfissionais,
                         ),
-                        
+
                         IconButton(
                           icon: const Icon(Icons.event_available, size: 38),
                           color: const Color(0xFF3B82F6),
@@ -430,9 +446,7 @@ class _AgendamentosState extends State<Agendamentos> {
   }
 }
 
-
 class _TituloSecao extends StatelessWidget {
-
   final String texto;
 
   const _TituloSecao({required this.texto});
@@ -451,9 +465,7 @@ class _TituloSecao extends StatelessWidget {
   }
 }
 
-
 class _CardServico extends StatelessWidget {
-
   final Solicitacao solicitacao;
   final bool executado; // true: mostra a data de conclusão
 
@@ -526,7 +538,9 @@ class _CardServico extends StatelessWidget {
                   TextSpan(
                     children: [
                       TextSpan(
-                        text: executado ? 'Concluído em:  ' : 'Solicitado em:  ',
+                        text: executado
+                            ? 'Concluído em:  '
+                            : 'Solicitado em:  ',
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       TextSpan(
@@ -577,10 +591,8 @@ class _CardServico extends StatelessWidget {
   }
 }
 
-
 // Mesmo avatar da HomeCliente (a classe de lá é privada).
 class _Avatar extends StatelessWidget {
-
   final String caminho;
   final double raio;
 
@@ -596,11 +608,14 @@ class _Avatar extends StatelessWidget {
       backgroundImage: temFoto ? FileImage(File(caminho)) : null,
       child: temFoto
           ? null
-          : Icon(Icons.person, size: raio * 1.4, color: const Color(0xFF3B82F6)),
+          : Icon(
+              Icons.person,
+              size: raio * 1.4,
+              color: const Color(0xFF3B82F6),
+            ),
     );
   }
 }
-
 
 // 2026-05-15 -> 15/05/2026
 String _data(DateTime data) {

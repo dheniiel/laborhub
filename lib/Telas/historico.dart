@@ -9,6 +9,8 @@ import '../Repository/solicitacao_repository.dart';
 import 'editarPerfil.dart';
 import 'agendamentos.dart';
 import 'encontrarProfissionais.dart';
+import 'homeCliente.dart' show HomeCliente;
+import 'menuLateral.dart';
 
 class Historico extends StatefulWidget {
   // Usuário da sessão, recebido da HomeCliente.
@@ -30,6 +32,9 @@ class _HistoricoState extends State<Historico> {
 
   // Cópia do usuário que pode mudar após editar o perfil.
   late Usuarios _usuario = widget.usuario;
+
+  // Permite abrir a barra lateral pelo ícone do cabeçalho.
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -81,30 +86,22 @@ class _HistoricoState extends State<Historico> {
     }
   }
 
-  Future<void> _abrirAgendamentos() async {
-    final atualizado = await Navigator.of(context).push<Usuarios>(
-      MaterialPageRoute(
-        builder: (context) => Agendamentos(usuario: _usuario),
-      ),
-    );
+  // Troca de aba: substitui a tela atual para não empilhar.
+  void _abrirAgendamentos() => Navigator.of(context).pushReplacement(
+    MaterialPageRoute(builder: (context) => Agendamentos(usuario: _usuario)),
+  );
 
-    if (atualizado != null && mounted) {
-      setState(() => _usuario = atualizado);
-    }
-  }
+  void _abrirProfissionais() => Navigator.of(context).pushReplacement(
+    MaterialPageRoute(
+      builder: (context) => EncontrarProfissionais(usuario: _usuario),
+    ),
+  );
 
-  Future<void> _abrirProfissionais() async {
-    final atualizado = await Navigator.of(context).push<Usuarios>(
-      MaterialPageRoute(
-        builder: (context) => EncontrarProfissionais(usuario: _usuario),
-      ),
-    );
-    if (atualizado != null && mounted) {
-      setState(() => _usuario = atualizado);
-    }
-  }
-  // Volta para a Home levando o usuário (atualizado, se o perfil foi editado).
-  void _voltarParaHome() => Navigator.pop(context, _usuario);
+  // Limpa a pilha e abre a Home levando o usuário (atualizado, se o perfil foi editado).
+  void _voltarParaHome() => Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (context) => HomeCliente(usuario: _usuario)),
+    (route) => false,
+  );
 
   Future<void> _cancelar(Solicitacao solicitacao) async {
     final confirmar = await showDialog<bool>(
@@ -133,13 +130,15 @@ class _HistoricoState extends State<Historico> {
       await _repository.cancelar(solicitacao.solicitacao_id);
       if (!mounted) return;
       setState(() => _solicitacoes.remove(solicitacao));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Solicitação cancelada.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Solicitação cancelada.')));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível cancelar a solicitação.')),
+        const SnackBar(
+          content: Text('Não foi possível cancelar a solicitação.'),
+        ),
       );
     }
   }
@@ -173,10 +172,18 @@ class _HistoricoState extends State<Historico> {
             ),
             const SizedBox(height: 16),
             _rotuloValor('Status:', solicitacao.solicitacao_status, 14),
-            _rotuloValor('Data solicitação:', _data(solicitacao.solicitacao_data), 14),
+            _rotuloValor(
+              'Data solicitação:',
+              _data(solicitacao.solicitacao_data),
+              14,
+            ),
             if (conclusao != null)
               _rotuloValor('Data conclusão:', _data(conclusao), 14),
-            _rotuloValor('Valor:', 'R\$ ${_moeda(solicitacao.servicos_valor)} - Total', 14),
+            _rotuloValor(
+              'Valor:',
+              'R\$ ${_moeda(solicitacao.servicos_valor)} - Total',
+              14,
+            ),
             if (motivo != null) _rotuloValor('Motivo:', motivo, 14),
             if (observacao != null) _rotuloValor('Observação:', observacao, 14),
           ],
@@ -217,7 +224,12 @@ class _HistoricoState extends State<Historico> {
         if (!didPop) _voltarParaHome();
       },
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: Colors.white,
+        drawer: MenuLateral(
+          onEditarPerfil: _abrirEdicaoPerfil,
+          onSair: () => sairDaConta(context),
+        ),
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -226,16 +238,15 @@ class _HistoricoState extends State<Historico> {
                 children: [
                   // Cabeçalho
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 12, 0),
+                    padding: const EdgeInsets.fromLTRB(12, 10, 16, 0),
                     child: Row(
                       children: [
-                        Tooltip(
-                          message: 'Meu perfil',
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: _abrirEdicaoPerfil,
-                            child: _Avatar(caminho: _usuario.usuarios_imagem, raio: 23),
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.menu, size: 25),
+                          color: Colors.black,
+                          tooltip: 'Menu',
+                          onPressed: () =>
+                              _scaffoldKey.currentState?.openDrawer(),
                         ),
                         const Spacer(),
                         IconButton(
@@ -246,12 +257,8 @@ class _HistoricoState extends State<Historico> {
                             // Navegação para tela de notificações
                           },
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.settings, size: 25),
-                          color: Colors.black,
-                          tooltip: 'Configurações',
-                          onPressed: _abrirEdicaoPerfil,
-                        ),
+                        const SizedBox(width: 4),
+                        _Avatar(caminho: _usuario.usuarios_imagem, raio: 23),
                       ],
                     ),
                   ),
@@ -317,34 +324,38 @@ class _HistoricoState extends State<Historico> {
                   Expanded(
                     child: _carregando
                         ? const Center(
-                            child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF3B82F6),
+                            ),
                           )
                         : solicitacoes.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'Nenhuma solicitação encontrada',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontFamily: 'Montserrat',
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              )
-                            : ListView.separated(
-                                padding: const EdgeInsets.fromLTRB(40, 38, 40, 16),
-                                itemCount: solicitacoes.length,
-                                separatorBuilder: (_, _) => const SizedBox(height: 16),
-                                itemBuilder: (context, indice) {
-                                  final solicitacao = solicitacoes[indice];
-                                  return _CardSolicitacao(
-                                    solicitacao: solicitacao,
-                                    // Pendente: cancelar. Finalizado/Recusado: detalhar.
-                                    onAcao: solicitacao.solicitacao_status == 'Pendente'
-                                        ? () => _cancelar(solicitacao)
-                                        : () => _detalhar(solicitacao),
-                                  );
-                                },
+                        ? const Center(
+                            child: Text(
+                              'Nenhuma solicitação encontrada',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontFamily: 'Montserrat',
+                                color: Colors.grey,
                               ),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(40, 38, 40, 16),
+                            itemCount: solicitacoes.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 16),
+                            itemBuilder: (context, indice) {
+                              final solicitacao = solicitacoes[indice];
+                              return _CardSolicitacao(
+                                solicitacao: solicitacao,
+                                // Pendente: cancelar. Finalizado/Recusado: detalhar.
+                                onAcao:
+                                    solicitacao.solicitacao_status == 'Pendente'
+                                    ? () => _cancelar(solicitacao)
+                                    : () => _detalhar(solicitacao),
+                              );
+                            },
+                          ),
                   ),
 
                   // Barra inferior (Histórico selecionado)
@@ -370,7 +381,7 @@ class _HistoricoState extends State<Historico> {
                           tooltip: 'Início',
                           onPressed: _voltarParaHome,
                         ),
-                        
+
                         IconButton(
                           icon: const Icon(Icons.engineering, size: 38),
                           color: const Color(0xFF424242),
@@ -397,9 +408,7 @@ class _HistoricoState extends State<Historico> {
   }
 }
 
-
 class _CardSolicitacao extends StatelessWidget {
-
   final Solicitacao solicitacao;
   final VoidCallback onAcao; // Detalhar ou Cancelar
 
@@ -408,25 +417,30 @@ class _CardSolicitacao extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Cor do botão, texto de destaque, cor do destaque e rótulo do botão por status.
-    final (corBotao, destaque, corDestaque, acao) = switch (solicitacao.solicitacao_status) {
+    final (
+      corBotao,
+      destaque,
+      corDestaque,
+      acao,
+    ) = switch (solicitacao.solicitacao_status) {
       'Finalizado' => (
-          const Color(0xFF3B82F6),
-          'R\$${_moeda(solicitacao.servicos_valor)} - Total',
-          const Color(0xFF22C55E),
-          'Detalhar',
-        ),
+        const Color(0xFF3B82F6),
+        'R\$${_moeda(solicitacao.servicos_valor)} - Total',
+        const Color(0xFF22C55E),
+        'Detalhar',
+      ),
       'Pendente' => (
-          const Color(0xFFF97316),
-          'Pendente',
-          const Color(0xFFF97316),
-          'Cancelar',
-        ),
+        const Color(0xFFF97316),
+        'Pendente',
+        const Color(0xFFF97316),
+        'Cancelar',
+      ),
       _ => (
-          const Color(0xFFEF4444),
-          'Recusado',
-          const Color(0xFFEF4444),
-          'Detalhar',
-        ),
+        const Color(0xFFEF4444),
+        'Recusado',
+        const Color(0xFFEF4444),
+        'Detalhar',
+      ),
     };
 
     final conclusao = solicitacao.solicitacao_conclusao;
@@ -472,7 +486,11 @@ class _CardSolicitacao extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                _rotuloValor('Data Solicitada:', _data(solicitacao.solicitacao_data), 10.5),
+                _rotuloValor(
+                  'Data Solicitada:',
+                  _data(solicitacao.solicitacao_data),
+                  10.5,
+                ),
                 if (conclusao != null)
                   _rotuloValor('Data conclusão:', _data(conclusao), 10.5),
               ],
@@ -498,8 +516,13 @@ class _CardSolicitacao extends StatelessWidget {
                   backgroundColor: corBotao,
                   minimumSize: const Size(88, 30),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
-                  textStyle: const TextStyle(fontSize: 14, fontFamily: 'Montserrat'),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                  textStyle: const TextStyle(
+                    fontSize: 14,
+                    fontFamily: 'Montserrat',
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5),
+                  ),
                 ),
                 child: Text(acao),
               ),
@@ -511,10 +534,8 @@ class _CardSolicitacao extends StatelessWidget {
   }
 }
 
-
 // Mesmo avatar da HomeCliente (a classe de lá é privada).
 class _Avatar extends StatelessWidget {
-
   final String caminho;
   final double raio;
 
@@ -530,11 +551,14 @@ class _Avatar extends StatelessWidget {
       backgroundImage: temFoto ? FileImage(File(caminho)) : null,
       child: temFoto
           ? null
-          : Icon(Icons.person, size: raio * 1.4, color: const Color(0xFF3B82F6)),
+          : Icon(
+              Icons.person,
+              size: raio * 1.4,
+              color: const Color(0xFF3B82F6),
+            ),
     );
   }
 }
-
 
 // "Rótulo: valor" com o rótulo em negrito.
 Widget _rotuloValor(String rotulo, String valor, double tamanho) {
@@ -550,7 +574,11 @@ Widget _rotuloValor(String rotulo, String valor, double tamanho) {
           TextSpan(text: valor),
         ],
       ),
-      style: TextStyle(fontSize: tamanho, fontFamily: 'Montserrat', color: Colors.black),
+      style: TextStyle(
+        fontSize: tamanho,
+        fontFamily: 'Montserrat',
+        color: Colors.black,
+      ),
     ),
   );
 }
