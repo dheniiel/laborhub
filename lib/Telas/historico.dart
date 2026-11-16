@@ -309,7 +309,7 @@ class _HistoricoState extends State<Historico> {
 
                         Row(
                           children: [
-                            _botaoSecao('Finalizado', 'Finalizado'),
+                            _botaoSecao('Finalizado', 'Finalizados'),
                             const SizedBox(width: 8),
                             _botaoSecao('Pendente', 'Pendentes'),
                             const SizedBox(width: 8),
