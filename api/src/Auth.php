@@ -139,10 +139,20 @@ final class Auth
 
         if ($rota === 'solicitacoes/aceitarSolicitacao') {
             $resultado = $this->aceitarSolicitacao(
-                (int) ($dados['solicitacao_id'] ?? 0)
+                (int) ($dados['solicitacao_id'] ?? 0),
+
             );
             return [200, $resultado];
         }
+     if ($rota === 'solicitacoes/finalizarSolicitacao') {
+
+          $conclusao = date('Y-m-d H:i:s');
+         $resultado = $this->finalizarSolicitacao(
+             (int) ($dados['solicitacao_id'] ?? 0),
+             $conclusao
+         );
+         return [200, $resultado];
+    }
 
         $email = $this->email($dados);
         return match ($rota) {
@@ -889,7 +899,7 @@ final class Auth
              INNER JOIN usuarios AS uCliente
                  ON uCliente.usuarios_id = so.solicitacao_usuarios_id
              LEFT JOIN endereco AS e
-                 ON e.endereco_id = so.solicitacao_endereco_id
+                 ON e.endereco_usuarios_id = uCliente.usuarios_id
              LEFT JOIN pessoaFisica AS pf
                  ON pf.pf_usuarios_id = uCliente.usuarios_id
              LEFT JOIN pessoaJuridica AS pj
@@ -930,6 +940,7 @@ final class Auth
                     COALESCE(uCliente.usuarios_imagem, '') AS cliente_imagem,
                     COALESCE(uCliente.usuarios_telefone, '') AS cliente_telefone,
                     COALESCE(uCliente.usuarios_email, '') AS cliente_email,
+                    so.solicitacao_id as cliente_solicitacao_id,
                     so.solicitacao_data AS cliente_solicitacao_data,
                     so.solicitacao_data_atual AS cliente_solicitacao_data_atual,
                     so.solicitacao_quantidade AS cliente_solicitacao_quantidade,
@@ -999,6 +1010,28 @@ final class Auth
 
         return ['sucesso' => true];
     }
+
+private function finalizarSolicitacao(
+    int $solicitacaoId,
+    string $conclusao
+): array {
+    $consulta = $this->db->prepare(
+        "UPDATE solicitacao
+         SET solicitacao_status = 'Finalizado',
+             solicitacao_conclusao = :conclusao,
+             solicitacao_status_profissional = 'Finalizado'
+         WHERE solicitacao_id = :solicitacaoId
+           AND solicitacao_status = 'Ativo'
+           AND solicitacao_deletada_em IS NULL"
+    );
+
+    $consulta->execute([
+        'solicitacaoId' => $solicitacaoId,
+        'conclusao' => $conclusao,
+    ]);
+
+    return ['sucesso' => $consulta->rowCount() > 0];
+}
 
 
 

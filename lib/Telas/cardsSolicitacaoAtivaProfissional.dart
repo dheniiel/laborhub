@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'detalheSolicitacaoServico.dart';
+import '../Repository/solicitacao_repository.dart';
 
 class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
 
@@ -11,10 +12,12 @@ class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
   final int dias;
   final String? imagemUrl;
   final String? descricao;
+  final int idSolicitacao;
+  final Future<void> Function() onAtualizar;
   // final  onVer;
 
 
-  const CardsSolicitacaoAtivaProfissional ({
+   CardsSolicitacaoAtivaProfissional ({
     super.key,
     required this.nome,
     required this.endereco,
@@ -24,7 +27,23 @@ class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
     // required this.onVer,
     this.imagemUrl,
     this.descricao,
+     required this.idSolicitacao,
+     required this.onAtualizar,
   });
+
+  final agora = DateTime.now();
+
+
+  Future<void> finalizarSolicitacao (int solicitacaoId) async {
+
+    await SolicitacaoRepository().finalizarSolicitacao(
+      solicitacaoId,
+
+    );
+
+
+
+  }
 
   String _formatarData(String valor) {
     final data = DateTime.tryParse(valor);
@@ -89,7 +108,7 @@ class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 3),
 
 
                     _informacao('Data solicitada: ', _formatarData(dataSolicitacao)),
@@ -101,14 +120,119 @@ class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
                     Align(
                       alignment: Alignment.centerRight,
                       child: FilledButton(
-                        onPressed: () {
-                          // Navigator.push(
-                          //   context,
-                          //   MaterialPageRoute(
-                          //     builder: (_) => DetalhesSolicitacaoServico(solicitacao: soli,)
-                          //   ),
-                          // ),
-                        } ,
+                        onPressed: () async {
+                          bool enviando = false;
+                          final messenger = ScaffoldMessenger.of(context);
+
+                         final finalizou =  await showDialog<bool>(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (dialogContext) {
+                              return StatefulBuilder(
+                                builder: (modalContext, setStateModal) {
+                                  return PopScope(
+                                    canPop: !enviando,
+                                    child: AlertDialog(
+                                      backgroundColor: Colors.white,
+                                      title: const Text(
+                                        'Finalizar solicitação',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      content: const Text(
+                                        'Deseja realmente finalizar esta solicitação?',
+                                        textAlign: TextAlign.center,
+
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: enviando
+                                              ? null
+                                              : () => Navigator.of(dialogContext).pop(),
+                                          child: const Text('Não'),
+                                        ),
+                                        FilledButton(
+                                          onPressed: enviando
+                                              ? null
+                                              : () async {
+                                            setStateModal(() {
+                                              enviando = true;
+                                            });
+
+                                            try {
+                                              await finalizarSolicitacao(
+                                                idSolicitacao
+                                              );
+                                            } catch (erro, stackTrace) {
+                                              if (!modalContext.mounted) return;
+
+                                              setStateModal(() {
+                                                enviando = false;
+                                              });
+
+                                              messenger.showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'Não foi possível finalizar: $erro',
+                                                  ),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+
+                                              debugPrint('ERRO AO RECUSAR: $erro');
+                                              debugPrintStack(stackTrace: stackTrace);
+                                              return;
+                                            }
+
+                                            if (!dialogContext.mounted ||
+                                                !context.mounted) {
+                                              return;
+                                            }
+
+                                            Navigator.of(dialogContext).pop(true);
+
+                                            messenger.showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Solicitação finalizada com sucesso!',
+                                                ),
+                                                backgroundColor: Colors.green,
+                                              ),
+                                            );
+
+                                          },
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: const Color(0xFF3B82F6),
+                                            minimumSize: const Size(100, 40),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(5),
+                                            ),
+                                          ),
+                                          child: enviando
+                                              ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                              : const Text('Sim'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          );
+                          if (finalizou == true && context.mounted) {
+                            await onAtualizar();
+                          }
+                        },
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xff3b82f6),
                           padding: const EdgeInsets.symmetric(
@@ -116,12 +240,10 @@ class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
                             vertical: 10,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)
+                              borderRadius: BorderRadius.circular(10)
                           ),
                         ),
-
-                        child: const Text('Ver'),
-
+                        child: const Text('Finalizar'),
                       ),
                     )
 

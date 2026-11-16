@@ -43,7 +43,7 @@ class AuthApi {
             body: jsonEncode(data),
           )
           .timeout(const Duration(seconds: 30));
-          
+
       final body =
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       if (response.statusCode >= 400) {
