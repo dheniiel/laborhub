@@ -44,6 +44,9 @@ final class Auth
         if ($rota === 'solicitacoes') {
             return $this->listarSolicitacoes($token);
         }
+        if ($rota === 'solicitacoes/agendamentos-profissional') {
+            return $this->listarAgendamentosProfissional($token);
+        }
         if ($rota === 'solicitacoes/cancelar') {
             return $this->cancelarSolicitacao($token, $dados);
         }
@@ -651,6 +654,49 @@ final class Auth
                AND so.solicitacao_status IN ('Finalizado', 'Pendente', 'Recusado')
              GROUP BY so.solicitacao_id
              ORDER BY solicitacao_data DESC"
+        );
+        $consulta->execute([$usuario['usuarios_id']]);
+
+        return [200, ['solicitacoes' => array_map(fn (array $linha): array => [
+            'servicos_valor' => (float) $linha['servicos_valor'],
+        ] + $linha, $consulta->fetchAll())]];
+    }
+
+    private function listarAgendamentosProfissional(?string $token): array
+    {
+        $usuario = $this->usuarioDaSessao($token);
+        $consulta = $this->db->prepare(
+            "SELECT
+               so.solicitacao_id,
+               COALESCE(so.solicitacao_data, so.solicitacao_conclusao,
+                        DATE(so.solicitacao_criada_em)) AS solicitacao_data,
+               so.solicitacao_conclusao,
+               so.solicitacao_status,
+               itens.servicos_valor * so.solicitacao_quantidade AS servicos_valor,
+               itens.servicos_nome,
+               COALESCE(
+                   (SELECT MIN(NULLIF(TRIM(CONCAT_WS(' ', pf.pf_nome, pf.pf_sobrenome)), ''))
+                    FROM pessoaFisica pf WHERE pf.pf_usuarios_id = cliente.usuarios_id),
+                   (SELECT MIN(NULLIF(pj.pj_nomeFantasia, ''))
+                    FROM pessoaJuridica pj WHERE pj.pj_usuarios_id = cliente.usuarios_id),
+                   'Cliente'
+               ) AS cliente_nome,
+               cliente.usuarios_imagem AS cliente_imagem
+             FROM solicitacao so
+             JOIN (
+                 SELECT ss.solicitacaoServico_solicitacao_id AS solicitacao_id,
+                        COALESCE(SUM(se.servicos_valor), 0) AS servicos_valor,
+                        COALESCE(GROUP_CONCAT(DISTINCT se.servicos_nome
+                            ORDER BY se.servicos_nome SEPARATOR ', '), '') AS servicos_nome
+                 FROM solicitacaoServico ss
+                 JOIN servicos se ON se.servicos_id = ss.solicitacaoServico_servicos_id
+                 WHERE se.servicos_usuarios_id = ?
+                 GROUP BY ss.solicitacaoServico_solicitacao_id
+             ) itens ON itens.solicitacao_id = so.solicitacao_id
+             LEFT JOIN usuarios cliente ON cliente.usuarios_id = so.solicitacao_usuarios_id
+             WHERE so.solicitacao_deletada_em IS NULL
+               AND so.solicitacao_status IN ('Ativo', 'Finalizado')
+             ORDER BY solicitacao_data DESC, so.solicitacao_id DESC"
         );
         $consulta->execute([$usuario['usuarios_id']]);
 

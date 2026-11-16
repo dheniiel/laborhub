@@ -12,10 +12,19 @@ import 'homeCliente.dart' show HomeCliente;
 import 'menuLateral.dart';
 
 class Agendamentos extends StatefulWidget {
-  // Usuário da sessão, recebido da HomeCliente.
   final Usuarios usuario;
+  final bool _profissional;
+  final VoidCallback? onHistorico;
 
-  const Agendamentos({super.key, required this.usuario});
+  const Agendamentos({super.key, required this.usuario})
+    : _profissional = false,
+      onHistorico = null;
+
+  const Agendamentos.profissional({
+    super.key,
+    required this.usuario,
+    required this.onHistorico,
+  }) : _profissional = true;
 
   @override
   State<Agendamentos> createState() => _AgendamentosState();
@@ -42,6 +51,7 @@ class _AgendamentosState extends State<Agendamentos> {
 
   List<Solicitacao> _solicitacoes = [];
   bool _carregando = true;
+  bool _falhaAoCarregar = false;
 
   // Mês exibido (sempre no dia 1).
   DateTime _mes = DateTime(DateTime.now().year, DateTime.now().month);
@@ -60,11 +70,17 @@ class _AgendamentosState extends State<Agendamentos> {
 
   Future<void> _carregarSolicitacoes() async {
     try {
-      final solicitacoes = await _repository.Listar();
+      final solicitacoes = widget._profissional
+          ? await _repository.listarAgendamentosProfissional()
+          : await _repository.Listar();
       if (!mounted) return;
       setState(() => _solicitacoes = solicitacoes);
     } catch (_) {
       if (!mounted) return;
+      if (widget._profissional) {
+        setState(() => _falhaAoCarregar = true);
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Não foi possível carregar os agendamentos.'),
@@ -73,6 +89,14 @@ class _AgendamentosState extends State<Agendamentos> {
     } finally {
       if (mounted) setState(() => _carregando = false);
     }
+  }
+
+  void _tentarNovamente() {
+    setState(() {
+      _falhaAoCarregar = false;
+      _carregando = true;
+    });
+    _carregarSolicitacoes();
   }
 
   Future<void> _abrirEdicaoPerfil() async {
@@ -111,15 +135,28 @@ class _AgendamentosState extends State<Agendamentos> {
 
   // Solicitados no dia (agendados).
   List<Solicitacao> _agendados(DateTime dia) => _solicitacoes
-      .where((solicitacao) => _mesmoDia(solicitacao.solicitacao_data, dia))
+      .where(
+        (solicitacao) =>
+            (!widget._profissional ||
+                solicitacao.solicitacao_status == 'Ativo') &&
+            _mesmoDia(solicitacao.solicitacao_data, dia),
+      )
       .toList();
 
   // Concluídos no dia (executados).
-  List<Solicitacao> _executados(DateTime dia) =>
-      _solicitacoes.where((solicitacao) {
-        final conclusao = solicitacao.solicitacao_conclusao;
-        return conclusao != null && _mesmoDia(conclusao, dia);
-      }).toList();
+  List<Solicitacao> _executados(DateTime dia) => _solicitacoes.where((
+    solicitacao,
+  ) {
+    if (widget._profissional) {
+      return solicitacao.solicitacao_status == 'Finalizado' &&
+          _mesmoDia(
+            solicitacao.solicitacao_conclusao ?? solicitacao.solicitacao_data,
+            dia,
+          );
+    }
+    final conclusao = solicitacao.solicitacao_conclusao;
+    return conclusao != null && _mesmoDia(conclusao, dia);
+  }).toList();
 
   bool _temServico(DateTime dia) =>
       _agendados(dia).isNotEmpty || _executados(dia).isNotEmpty;
@@ -154,18 +191,30 @@ class _AgendamentosState extends State<Agendamentos> {
 
             if (agendados.isNotEmpty) ...[
               const SizedBox(height: 20),
-              const _TituloSecao(texto: 'Agendados'),
+              _TituloSecao(
+                texto: widget._profissional ? 'Aceitos' : 'Agendados',
+              ),
               const SizedBox(height: 10),
               for (final solicitacao in agendados)
-                _CardServico(solicitacao: solicitacao, executado: false),
+                _CardServico(
+                  solicitacao: solicitacao,
+                  executado: false,
+                  profissional: widget._profissional,
+                ),
             ],
 
             if (executados.isNotEmpty) ...[
               const SizedBox(height: 20),
-              const _TituloSecao(texto: 'Executados'),
+              _TituloSecao(
+                texto: widget._profissional ? 'Finalizados' : 'Executados',
+              ),
               const SizedBox(height: 10),
               for (final solicitacao in executados)
-                _CardServico(solicitacao: solicitacao, executado: true),
+                _CardServico(
+                  solicitacao: solicitacao,
+                  executado: true,
+                  profissional: widget._profissional,
+                ),
             ],
           ],
         ),
@@ -293,10 +342,10 @@ class _AgendamentosState extends State<Agendamentos> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: widget._profissional,
       // O voltar do sistema também devolve o usuário para a Home.
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _voltarParaHome();
+        if (!didPop && !widget._profissional) _voltarParaHome();
       },
       child: Scaffold(
         key: _scaffoldKey,
@@ -346,14 +395,25 @@ class _AgendamentosState extends State<Agendamentos> {
                               color: Color(0xFF3B82F6),
                             ),
                           )
+                        : _falhaAoCarregar
+                        ? Center(
+                            child: TextButton(
+                              onPressed: _tentarNovamente,
+                              child: const Text(
+                                'Não foi possível carregar os agendamentos. Tentar novamente',
+                              ),
+                            ),
+                          )
                         : SingleChildScrollView(
                             padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
                             child: Column(
                               children: [
-                                const Text(
-                                  'Acompanhe seus serviços\nagendados e executados',
+                                Text(
+                                  widget._profissional
+                                      ? 'Acompanhe seus serviços\naceitos e finalizados'
+                                      : 'Acompanhe seus serviços\nagendados e executados',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontFamily: 'Montserrat',
                                     fontWeight: FontWeight.w400,
@@ -398,9 +458,13 @@ class _AgendamentosState extends State<Agendamentos> {
 
                   // Barra inferior (Agendamentos selecionado)
                   Container(
-                    decoration: const BoxDecoration(
-                      border: Border(top: BorderSide(color: Color(0xFFD9D9D9))),
-                    ),
+                    decoration: widget._profissional
+                        ? const BoxDecoration(color: Color(0xFFEFF6FF))
+                        : const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                          ),
                     padding: const EdgeInsets.fromLTRB(44, 4, 44, 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -409,21 +473,26 @@ class _AgendamentosState extends State<Agendamentos> {
                           icon: const Icon(Icons.assignment_outlined, size: 38),
                           color: const Color(0xFF424242),
                           tooltip: 'Histórico',
-                          onPressed: _abrirHistorico,
+                          onPressed: widget._profissional
+                              ? widget.onHistorico
+                              : _abrirHistorico,
                         ),
                         IconButton(
                           icon: const Icon(Icons.home, size: 38),
                           color: const Color(0xFF424242),
                           tooltip: 'Início',
-                          onPressed: _voltarParaHome,
+                          onPressed: widget._profissional
+                              ? () => Navigator.maybePop(context)
+                              : _voltarParaHome,
                         ),
 
-                        IconButton(
-                          icon: const Icon(Icons.engineering, size: 38),
-                          color: const Color(0xFF424242),
-                          tooltip: 'Profissionais',
-                          onPressed: _abrirProfissionais,
-                        ),
+                        if (!widget._profissional)
+                          IconButton(
+                            icon: const Icon(Icons.engineering, size: 38),
+                            color: const Color(0xFF424242),
+                            tooltip: 'Profissionais',
+                            onPressed: _abrirProfissionais,
+                          ),
 
                         IconButton(
                           icon: const Icon(Icons.event_available, size: 38),
@@ -469,7 +538,13 @@ class _CardServico extends StatelessWidget {
   final Solicitacao solicitacao;
   final bool executado; // true: mostra a data de conclusão
 
-  const _CardServico({required this.solicitacao, required this.executado});
+  final bool profissional;
+
+  const _CardServico({
+    required this.solicitacao,
+    required this.executado,
+    required this.profissional,
+  });
 
   static const _estiloPequeno = TextStyle(
     fontSize: 11.5,
@@ -482,6 +557,7 @@ class _CardServico extends StatelessWidget {
     // Mesmas cores de status do Histórico.
     final corStatus = switch (solicitacao.solicitacao_status) {
       'Finalizado' => const Color(0xFF22C55E),
+      'Ativo' => const Color(0xFF3B82F6),
       'Pendente' => const Color(0xFFF97316),
       _ => const Color(0xFFEF4444),
     };
@@ -498,7 +574,12 @@ class _CardServico extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Avatar(caminho: solicitacao.profissional_imagem, raio: 22),
+          _Avatar(
+            caminho: profissional
+                ? solicitacao.clienteImagem ?? ''
+                : solicitacao.profissional_imagem,
+            raio: 22,
+          ),
 
           const SizedBox(width: 10),
 
@@ -510,7 +591,9 @@ class _CardServico extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        solicitacao.profissional_nome,
+                        profissional
+                            ? solicitacao.clienteNome ?? 'Cliente'
+                            : solicitacao.profissional_nome,
                         style: const TextStyle(
                           fontSize: 16,
                           fontFamily: 'Montserrat',
@@ -519,7 +602,9 @@ class _CardServico extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      solicitacao.solicitacao_status,
+                      profissional && solicitacao.solicitacao_status == 'Ativo'
+                          ? 'Aceito'
+                          : solicitacao.solicitacao_status,
                       style: TextStyle(
                         fontSize: 11.5,
                         fontFamily: 'Montserrat',
@@ -530,7 +615,12 @@ class _CardServico extends StatelessWidget {
                   ],
                 ),
 
-                Text(solicitacao.profissional_profissao, style: _estiloPequeno),
+                Text(
+                  profissional
+                      ? solicitacao.servicosNome ?? ''
+                      : solicitacao.profissional_profissao,
+                  style: _estiloPequeno,
+                ),
 
                 const SizedBox(height: 8),
 
@@ -538,15 +628,20 @@ class _CardServico extends StatelessWidget {
                   TextSpan(
                     children: [
                       TextSpan(
-                        text: executado
+                        text:
+                            executado &&
+                                solicitacao.solicitacao_conclusao != null
                             ? 'Concluído em:  '
+                            : profissional
+                            ? 'Agendado para:  '
                             : 'Solicitado em:  ',
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       TextSpan(
                         text: _data(
                           executado
-                              ? solicitacao.solicitacao_conclusao!
+                              ? solicitacao.solicitacao_conclusao ??
+                                    solicitacao.solicitacao_data
                               : solicitacao.solicitacao_data,
                         ),
                       ),

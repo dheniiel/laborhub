@@ -17,6 +17,17 @@ class SolicitacaoRepository {
         .toList();
   }
 
+  Future<List<Solicitacao>> listarAgendamentosProfissional() async {
+    final body = await _api.post(
+      'solicitacoes/agendamentos-profissional',
+      {},
+      token: await _token(),
+    );
+    return (body['solicitacoes'] as List)
+        .map((item) => Solicitacao.fromMap(Map<String, Object?>.from(item as Map)))
+        .toList();
+  }
+
   // Cancela no banco; a tela remove o item da lista após o sucesso.
   Future<void> cancelar(int solicitacaoId) async {
     await _api.post(

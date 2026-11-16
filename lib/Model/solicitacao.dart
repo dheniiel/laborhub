@@ -12,6 +12,9 @@ class Solicitacao {
   final String profissional_nome;
   final String profissional_profissao;
   final String profissional_imagem;
+  final String? clienteNome;
+  final String? clienteImagem;
+  final String? servicosNome;
 
   const Solicitacao({
     required this.solicitacao_id,
@@ -24,6 +27,9 @@ class Solicitacao {
     required this.profissional_nome,
     required this.profissional_profissao,
     required this.profissional_imagem,
+    this.clienteNome,
+    this.clienteImagem,
+    this.servicosNome,
   });
 
   factory Solicitacao.fromMap(Map<String, Object?> map) {
@@ -37,8 +43,11 @@ class Solicitacao {
       solicitacao_motivo: map['solicitacao_motivo'] as String?,
       solicitacao_observacao: map['solicitacao_observacao'] as String?,
       servicos_valor: (map['servicos_valor'] as num).toDouble(),
-      profissional_nome: map['profissional_nome'] as String,
-      profissional_profissao: map['profissional_profissao'] as String,
+      profissional_nome: map['profissional_nome'] as String? ?? '',
+      clienteNome: map['cliente_nome'] as String?,
+      clienteImagem: map['cliente_imagem'] as String?,
+      servicosNome: map['servicos_nome'] as String?,
+      profissional_profissao: map['profissional_profissao'] as String? ?? '',
       profissional_imagem: map['profissional_imagem'] as String? ?? '',
     );
   }
