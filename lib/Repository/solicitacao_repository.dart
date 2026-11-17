@@ -26,6 +26,19 @@ class SolicitacaoRepository {
     );
   }
 
+  // Avalia o profissional de um serviço finalizado (uma vez por serviço).
+  Future<void> avaliar(int solicitacaoId, int nota, String comentario) async {
+    await _api.post(
+      'solicitacoes/avaliar',
+      {
+        'solicitacao_id': solicitacaoId,
+        'avaliacao_notas': nota,
+        'avaliacao_descricao': comentario,
+      },
+      token: await _token(),
+    );
+  }
+
   // Pega a quantidade de solicitacao pendente
 
   Future<int> listarServicoPendente(int usuarioId) async {

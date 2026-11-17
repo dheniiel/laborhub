@@ -11,6 +11,7 @@ import 'agendamentos.dart';
 import 'encontrarProfissionais.dart';
 import 'homeCliente.dart' show HomeCliente;
 import 'menuLateral.dart';
+import 'avaliacaoServico.dart';
 
 class Historico extends StatefulWidget {
   // Usuário da sessão, recebido da HomeCliente.
@@ -141,6 +142,16 @@ class _HistoricoState extends State<Historico> {
         ),
       );
     }
+  }
+
+  // Finalizado: abre detalhes/avaliação e recarrega se o serviço foi avaliado.
+  Future<void> _avaliar(Solicitacao solicitacao) async {
+    final avaliado = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => AvaliacaoServico(solicitacao: solicitacao),
+      ),
+    );
+    if (avaliado == true && !solicitacao.avaliado) _carregarSolicitacoes();
   }
 
   void _detalhar(Solicitacao solicitacao) {
@@ -349,10 +360,11 @@ class _HistoricoState extends State<Historico> {
                               return _CardSolicitacao(
                                 solicitacao: solicitacao,
                                 // Pendente: cancelar. Finalizado/Recusado: detalhar.
-                                onAcao:
-                                    solicitacao.solicitacao_status == 'Pendente'
-                                    ? () => _cancelar(solicitacao)
-                                    : () => _detalhar(solicitacao),
+                                onAcao: switch (solicitacao.solicitacao_status) {
+                                  'Pendente' => () => _cancelar(solicitacao),
+                                  'Finalizado' => () => _avaliar(solicitacao),
+                                  _ => () => _detalhar(solicitacao),
+                                },
                               );
                             },
                           ),
@@ -493,6 +505,16 @@ class _CardSolicitacao extends StatelessWidget {
                 ),
                 if (conclusao != null)
                   _rotuloValor('Data conclusão:', _data(conclusao), 10.5),
+                  if (solicitacao.avaliado)
+                    const Text(
+                      'Serviço avaliado',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF22C55E),
+                      ),
+                    ),
               ],
             ),
           ),
