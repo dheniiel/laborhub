@@ -17,6 +17,7 @@ import 'agendamentos.dart';
 import 'detalhesUsuario.dart';
 import 'cardsSolicitacaoPendenteProfissional.dart';
 import 'cardsSolicitacaoAtivaProfissional.dart';
+import 'menuLateral.dart';
 
 
 class Homeprofissional  extends StatefulWidget{
@@ -45,6 +46,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
    bool _tipoServico = true;
   List<Map<String, dynamic>> _solicitacoes = [];
   List<Map<String, dynamic>> _solicitacaoAtivas = [];
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
 
   @override
@@ -137,7 +139,12 @@ class _HomeProfissionalState extends State<Homeprofissional> {
   Widget build(BuildContext context) {
     // TODO: implement build
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Colors.white,
+      drawer: MenuLateral(
+        onEditarPerfil: _abrirEdicaoPerfil,
+        onSair: _sair,
+      ),
       body: SafeArea(
         child: Align(
           alignment: Alignment.topCenter,
@@ -147,16 +154,14 @@ class _HomeProfissionalState extends State<Homeprofissional> {
               child: Column(
                 children: [
                   Padding(
-                    padding: EdgeInsetsGeometry.fromLTRB(16, 10, 12, 0),
+                    padding: const EdgeInsets.fromLTRB(12, 10, 16, 0),
                     child: Row(
                       children: [
-                        Tooltip(
-                          message: "Meu perfil",
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: _abrirEdicaoPerfil,
-                            child: _Avatar(caminho: _usuario.usuarios_imagem, raio: 23),
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.menu, size: 25),
+                          color: Colors.black,
+                          tooltip: 'Menu',
+                          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                         ),
                         const Spacer(),
                         IconButton(
@@ -167,21 +172,13 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                             // Navegação para tela de notificações
                           },
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.settings, size: 25),
-                          color: Colors.black,
-                          tooltip: 'Configurações',
-                          onPressed: _abrirEdicaoPerfil,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.logout, size: 25),
-                          color: Colors.black,
-                          tooltip: 'Sair',
-                          onPressed: _sair,
+                        const SizedBox(width: 4),
+                        _Avatar(
+                          caminho: _usuario.usuarios_imagem,
+                          raio: 23,
                         ),
                       ],
                     ),
-
                   ),
                   const SizedBox(height: 55),
 

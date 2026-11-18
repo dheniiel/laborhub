@@ -703,7 +703,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
                                                     messenger.showSnackBar(
                                                       const SnackBar(
                                                         content: Text(
-                                                          'Solicitação recusada com sucesso!',
+                                                          'Solicitação aceita com sucesso!',
                                                           style: TextStyle(
                                                             fontWeight: FontWeight.w600,
                                                           ),
