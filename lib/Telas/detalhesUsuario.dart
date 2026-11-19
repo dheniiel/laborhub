@@ -12,6 +12,8 @@ import '../Model/usuarios.dart';
 import '../Utils/validacao.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../Repository/solicitacao_repository.dart';
+import '../Repository/profissional_repository.dart';
+import '../Model/avaliacao.dart';
 
 
 
@@ -449,34 +451,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
               alignment: Alignment.centerRight,
               child: InkWell(
                 onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    showDragHandle: true,
-                    useSafeArea: true,
-                    builder: (sheetContext) {
-                      return SafeArea(
-                        top: false,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Comentários",
-                                style: Theme.of(sheetContext).textTheme.titleLarge,
-                              ),
-                              const SizedBox(height: 12),
-
-                              Text("Sem comentários ate o momento."),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                  );
-
+                  _abrirComentarios(context, widget.profissional.profissional_usuarios_id);
                 },
                 child: const Text(
                   'Ver comentarios',
@@ -702,6 +677,206 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
 
     );
   }
+
+  // Função para abrir a listagem de comentarios do profissiona
+  void _abrirComentarios(BuildContext context, int profissionalId) {
+    final futureAvaliacoes = ProfissionalRepository().
+    listarAvaliacoes(profissionalId);
+
+    var maioresNotas = true;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: const Color(0xFFF4F2FC),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      builder: (sheetContext) {
+        return FractionallySizedBox(
+          heightFactor: 0.72,
+          child: SafeArea(
+            top: false,
+            child: StatefulBuilder(
+              builder: (context, setModalState) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Comentários',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Fechar comentários',
+                            onPressed: () => Navigator.pop(sheetContext),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                      DropdownButton<bool>(
+                        value: maioresNotas,
+                        borderRadius: BorderRadius.circular(12),
+                        items: const [
+                          DropdownMenuItem(
+                            value: true,
+                            child: Text('Maiores notas'),
+                          ),
+                          DropdownMenuItem(
+                            value: false,
+                            child: Text('Mais recentes'),
+                          ),
+                        ],
+                        onChanged: (valor) {
+                          if (valor == null) return;
+                          setModalState(() => maioresNotas = valor);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: FutureBuilder<List<Avaliacao>>(
+                          future: futureAvaliacoes,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            if (snapshot.hasError) {
+                              return const Center(
+                                child: Text(
+                                  'Não foi possível carregar os comentários.',
+                                ),
+                              );
+                            }
+
+                            final avaliacoes = [...?snapshot.data];
+
+                            if (avaliacoes.isEmpty) {
+                              return const Center(
+                                child: Text('Ainda não há avaliações.'),
+                              );
+                            }
+
+                            avaliacoes.sort((a, b) {
+                              if (maioresNotas) {
+                                final porNota = b.nota.compareTo(a.nota);
+                                if (porNota != 0) return porNota;
+                              }
+
+                              final porData = b.data.compareTo(a.data);
+                              return porData == 0
+                                  ? b.id.compareTo(a.id)
+                                  : porData;
+                            });
+
+                            return ListView.separated(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              itemCount: avaliacoes.length,
+                              separatorBuilder: (_, _) =>
+                              const SizedBox(height: 10),
+                              itemBuilder: (context, index) =>
+                                  _cardComentario(avaliacoes[index]),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
+  // Estilização para cards dos comentarios listados
+  Widget _cardComentario(Avaliacao avaliacao) {
+    final imagem = avaliacao.avaliadorImagem.trim();
+    final data = DateTime.tryParse(avaliacao.data);
+    final dataFormatada = data == null
+        ? avaliacao.data
+        : '${data.day.toString().padLeft(2, '0')}/'
+        '${data.month.toString().padLeft(2, '0')}/${data.year}';
+    final descricao = avaliacao.descricao?.trim() ?? '';
+
+    return Card(
+      margin: EdgeInsets.zero,
+      color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 20,
+              foregroundImage: imagem.isEmpty ? null : NetworkImage(imagem),
+              child: const Icon(Icons.person_outline),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          avaliacao.avaliadorNome,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(dataFormatada, style: const TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      for (var estrela = 1; estrela <= 5; estrela++)
+                        Icon(
+                          estrela <= avaliacao.nota
+                              ? Icons.star
+                              : Icons.star_border,
+                          size: 16,
+                          color: Colors.amber,
+                        ),
+                      const SizedBox(width: 6),
+                      Text('${avaliacao.nota}/5'),
+                    ],
+                  ),
+                  if (descricao.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(descricao),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
 
 
 
