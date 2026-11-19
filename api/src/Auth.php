@@ -155,6 +155,12 @@ final class Auth
             );
             return [200, $resultado];
         }
+         if ($rota === 'profissional/avaliacoes') {
+             $resultado = $this->listarAvaliacoesProfissional($token, $dados);
+
+             return [200, $resultado];
+         }
+
 
         $email = $this->email($dados);
         return match ($rota) {
@@ -739,6 +745,54 @@ final class Auth
         }
 
         return [201, ['message' => 'Avaliação enviada.']];
+    }
+
+//     listar dados de quem avaliou os servicos
+    private function listarAvaliacoesProfissional(
+        ?string $token,
+        array $dados
+    ): array {
+        $this->usuarioDaSessao($token);
+
+        $profissionalId = filter_var(
+            $dados['profissional_usuarios_id'] ?? null,
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1]]
+        );
+
+        if ($profissionalId === false) {
+            return [400, ['mensagem' => 'Informe um profissional válido.']];
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT
+                a.avaliacao_id,
+                a.avaliacao_assunto,
+                a.avaliacao_descricao,
+                a.avaliacao_resposta,
+                a.avaliacao_notas,
+                a.avaliacao_data,
+                COALESCE(
+                    NULLIF(TRIM(CONCAT_WS(' ', pf.pf_nome, pf.pf_sobrenome)), ''),
+                    NULLIF(TRIM(pj.pj_nomeFantasia), ''),
+                    'Usuário'
+                ) AS avaliador_nome,
+                COALESCE(u.usuarios_imagem, '') AS avaliador_imagem
+             FROM avaliacao a
+             LEFT JOIN usuarios u
+                ON u.usuarios_id = a.avaliador_usuarios_id
+             LEFT JOIN pessoaFisica pf
+                ON pf.pf_usuarios_id = u.usuarios_id
+             LEFT JOIN pessoaJuridica pj
+                ON pj.pj_usuarios_id = u.usuarios_id
+             WHERE a.avaliado_usuarios_id = :profissional_id
+             ORDER BY a.avaliacao_data DESC, a.avaliacao_id DESC"
+        );
+
+        $stmt->bindValue(':profissional_id', $profissionalId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return [200, ['avaliacoes' => $stmt->fetchAll(PDO::FETCH_ASSOC)]];
     }
 
 

@@ -449,13 +449,34 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
               alignment: Alignment.centerRight,
               child: InkWell(
                 onTap: () {
-                  // Botao para mandar pra uma proxima tela
-                  // Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(
-                  //     builder: (context) => (),
-                  //   ),
-                  // );
+                  showModalBottomSheet(
+                    context: context,
+                    showDragHandle: true,
+                    useSafeArea: true,
+                    builder: (sheetContext) {
+                      return SafeArea(
+                        top: false,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Comentários",
+                                style: Theme.of(sheetContext).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 12),
+
+                              Text("Sem comentários ate o momento."),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                  );
+
                 },
                 child: const Text(
                   'Ver comentarios',

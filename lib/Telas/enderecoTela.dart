@@ -367,6 +367,28 @@ class _EnderecoTelaState extends State<EnderecoTela> {
                      const SizedBox(height: 30),
 
                      const Padding(
+                       padding: EdgeInsets.only(left: 12),
+                       child: Text(
+                         "CEP",
+                         style: TextStyle(
+                           fontSize: 15,
+                           fontWeight: FontWeight.w600,
+                         ),
+                       ),
+                     ),
+                     const SizedBox(height: 5),
+
+                     Forms(
+                       controlador: _endereco_cep,
+                       tipagemValor: TextInputType.text,
+                       validador: Validacao.cep,
+                       formatadores: [_mascaraCep],
+                       rotulo: "000000-000",
+
+                     ),
+                     const SizedBox(height: 24),
+
+                     const Padding(
                          padding: EdgeInsets.only(left: 12),
                          child: Text(
                            "Rua",
@@ -424,29 +446,6 @@ class _EnderecoTelaState extends State<EnderecoTela> {
                        controlador: _endereco_complemento,
                        tipagemValor: TextInputType.text,
                        rotulo: "Complemento",
-
-                     ),
-                     const SizedBox(height: 24),
-
-
-                     const Padding(
-                       padding: EdgeInsets.only(left: 12),
-                       child: Text(
-                         "CEP",
-                         style: TextStyle(
-                           fontSize: 15,
-                           fontWeight: FontWeight.w600,
-                         ),
-                       ),
-                     ),
-                     const SizedBox(height: 5),
-
-                     Forms(
-                       controlador: _endereco_cep,
-                       tipagemValor: TextInputType.text,
-                       validador: Validacao.cep,
-                       formatadores: [_mascaraCep],
-                       rotulo: "000000-000",
 
                      ),
                      const SizedBox(height: 24),

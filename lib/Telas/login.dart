@@ -146,6 +146,14 @@ class _LoginState extends State<Login> {
                             children: [
                               const Spacer(flex: 5),
 
+
+                              // Image.asset(
+                              //   'Assets/Images/laborHub.png',
+                              //   height: 100,
+                              //   fit: BoxFit.contain,
+                              // ),
+
+
                               const Text(
                                 'Login',
                                 textAlign: TextAlign.center,
