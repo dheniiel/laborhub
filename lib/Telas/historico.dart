@@ -54,6 +54,9 @@ class _HistoricoState extends State<Historico> {
   Future<void> _carregarSolicitacoes() async {
     try {
       final solicitacoes = await _repository.Listar();
+      // debugPrint(
+      //   'Status recebidos: ${solicitacoes.map((item) => '"${item.solicitacao_status}"').join(', ')}',
+      // );
       if (!mounted) return;
       setState(() => _solicitacoes = solicitacoes);
     } catch (_) {
@@ -170,6 +173,8 @@ class _HistoricoState extends State<Historico> {
           children: [
             Text(
               solicitacao.profissional_nome,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 20,
                 fontFamily: 'Montserrat',
@@ -190,11 +195,22 @@ class _HistoricoState extends State<Historico> {
             ),
             if (conclusao != null)
               _rotuloValor('Data conclusão:', _data(conclusao), 14),
-            _rotuloValor(
-              'Valor:',
-              'R\$ ${_moeda(solicitacao.servicos_valor)} - Total',
-              14,
-            ),
+
+              if(solicitacao.servicos_tipo_cobranca == 'Negociar') ... [
+                _rotuloValor(
+                  'Valor:',
+                  solicitacao.servicos_tipo_cobranca,
+                  14,
+                ),
+
+              ] else ... [
+                _rotuloValor(
+                  'Valor:',
+                  'R\$ ${_moeda(solicitacao.servicos_valor)} - ${solicitacao.servicos_tipo_cobranca}',
+                  14,
+                ),
+
+              ],
             if (motivo != null) _rotuloValor('Motivo:', motivo, 14),
             if (observacao != null) _rotuloValor('Observação:', observacao, 14),
           ],
@@ -371,47 +387,101 @@ class _HistoricoState extends State<Historico> {
                   ),
 
                   // Barra inferior (Histórico selecionado)
-                  Container(
-                    decoration: const BoxDecoration(
-                      border: Border(top: BorderSide(color: Color(0xFFD9D9D9))),
-                    ),
-                    padding: const EdgeInsets.fromLTRB(44, 4, 44, 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.assignment_outlined, size: 38),
-                          color: const Color(0xFF3B82F6),
-                          tooltip: 'Histórico',
-                          onPressed: () {
-                            // Já está no Histórico
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.home, size: 38),
-                          color: const Color(0xFF424242),
-                          tooltip: 'Início',
-                          onPressed: _voltarParaHome,
-                        ),
-
-                        IconButton(
-                          icon: const Icon(Icons.engineering, size: 38),
-                          color: const Color(0xFF424242),
-                          tooltip: 'Profissionais',
-                          onPressed: _abrirProfissionais,
-                        ),
-
-                        IconButton(
-                          icon: const Icon(Icons.event_available, size: 38),
-                          color: const Color(0xFF424242),
-                          tooltip: 'Agendamentos',
-                          onPressed: _abrirAgendamentos,
-                        ),
-                      ],
-                    ),
-                  ),
+                  // Container(
+                  //   decoration: const BoxDecoration(
+                  //     border: Border(top: BorderSide(color: Color(0xFFD9D9D9))),
+                  //   ),
+                  //   padding: const EdgeInsets.fromLTRB(44, 4, 44, 12),
+                  //   child: Row(
+                  //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  //     children: [
+                  //       IconButton(
+                  //         icon: const Icon(Icons.assignment_outlined, size: 38),
+                  //         color: const Color(0xFF3B82F6),
+                  //         tooltip: 'Histórico',
+                  //         onPressed: () {
+                  //           // Já está no Histórico
+                  //         },
+                  //       ),
+                  //       IconButton(
+                  //         icon: const Icon(Icons.home, size: 38),
+                  //         color: const Color(0xFF424242),
+                  //         tooltip: 'Início',
+                  //         onPressed: _voltarParaHome,
+                  //       ),
+                  //
+                  //       IconButton(
+                  //         icon: const Icon(Icons.engineering, size: 38),
+                  //         color: const Color(0xFF424242),
+                  //         tooltip: 'Profissionais',
+                  //         onPressed: _abrirProfissionais,
+                  //       ),
+                  //
+                  //       IconButton(
+                  //         icon: const Icon(Icons.event_available, size: 38),
+                  //         color: const Color(0xFF424242),
+                  //         tooltip: 'Agendamentos',
+                  //         onPressed: _abrirAgendamentos,
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
                 ],
               ),
+            ),
+          ),
+        ),
+
+        bottomNavigationBar: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3B82F6),
+              borderRadius: BorderRadius.circular(40),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 16,
+                  offset: Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.assignment_outlined),
+                  isSelected: true,
+                  tooltip: 'Histórico',
+                  onPressed: () {},
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    minimumSize: const Size(48, 48),
+                    shape: const CircleBorder(),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.home_rounded),
+                  color: Colors.black,
+                  tooltip: 'Início',
+                  onPressed: _voltarParaHome,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.engineering_outlined),
+                  color: Colors.black,
+                  tooltip: 'Profissionais',
+                  onPressed: _abrirProfissionais,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.event_available_outlined),
+                  color: Colors.black,
+                  tooltip: 'Agendamentos',
+                  onPressed: _abrirAgendamentos,
+                ),
+              ],
             ),
           ),
         ),
@@ -490,7 +560,7 @@ class _CardSolicitacao extends StatelessWidget {
                     color: Colors.black,
                   ),
                 ),
-                const SizedBox(height: 5),
+                // const SizedBox(height: 1),
                 Text(
                   solicitacao.profissional_profissao,
                   style: const TextStyle(
@@ -499,7 +569,7 @@ class _CardSolicitacao extends StatelessWidget {
                     color: Colors.black,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 5),
                 _rotuloValor(
                   'Data Solicitada:',
                   _data(solicitacao.solicitacao_data),

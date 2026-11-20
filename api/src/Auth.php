@@ -1094,7 +1094,7 @@ final class Auth
     ): array {
         $consulta = $this->db->prepare(
             "UPDATE solicitacao
-             SET solicitacao_status = 'Recusada',
+             SET solicitacao_status = 'Recusado',
                  solicitacao_motivo = :motivo
              WHERE solicitacao_id = :solicitacaoId
                AND solicitacao_status = 'Pendente'

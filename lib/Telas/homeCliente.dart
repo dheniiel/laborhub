@@ -279,48 +279,104 @@ class _HomeClienteState extends State<HomeCliente> {
                 ),
 
                 // Barra inferior
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(44, 4, 44, 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.assignment_outlined, size: 38),
-                        color: const Color(0xFF424242),
-                        tooltip: 'Histórico',
-                        onPressed: _abrirHistorico,
-                      ),
-
-                      IconButton(
-                        icon: const Icon(Icons.home, size: 38),
-                        color: const Color(0xFF3B82F6),
-                        tooltip: 'Início',
-                        onPressed: () {
-                        // Já está na Home
-                        },
-                      ),
-
-                      IconButton(
-                        icon: const Icon(Icons.engineering, size: 38),
-                        color: const Color(0xFF424242),
-                        tooltip: 'Profissionais',
-                        onPressed: _abrirProfissionais,
-                      ),
-
-                      IconButton(
-                        icon: const Icon(Icons.event_available, size: 38),
-                        color: const Color(0xFF424242),
-                        tooltip: 'Agendamentos',
-                        onPressed: _abrirAgendamentos,
-                      ),
-                    ],
-                  ),
-                ),
+                // Padding(
+                //   padding: const EdgeInsets.fromLTRB(44, 4, 44, 12),
+                //   child: Row(
+                //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //     children: [
+                //       IconButton(
+                //         icon: const Icon(Icons.assignment_outlined, size: 38),
+                //         color: const Color(0xFF424242),
+                //         tooltip: 'Histórico',
+                //         onPressed: _abrirHistorico,
+                //       ),
+                //
+                //       IconButton(
+                //         icon: const Icon(Icons.home, size: 38),
+                //         color: const Color(0xFF3B82F6),
+                //         tooltip: 'Início',
+                //         onPressed: () {
+                //         // Já está na Home
+                //         },
+                //       ),
+                //
+                //       IconButton(
+                //         icon: const Icon(Icons.engineering, size: 38),
+                //         color: const Color(0xFF424242),
+                //         tooltip: 'Profissionais',
+                //         onPressed: _abrirProfissionais,
+                //       ),
+                //
+                //       IconButton(
+                //         icon: const Icon(Icons.event_available, size: 38),
+                //         color: const Color(0xFF424242),
+                //         tooltip: 'Agendamentos',
+                //         onPressed: _abrirAgendamentos,
+                //       ),
+                //     ],
+                //   ),
+                // ),
               ],
             ),
           ),
         ),
       ),
+
+      bottomNavigationBar: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFF3B82F6),
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 16,
+                offset: Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.assignment_outlined),
+                color: Colors.black,
+                tooltip: 'Histórico',
+                onPressed: _abrirHistorico,
+              ),
+              IconButton(
+                icon: const Icon(Icons.home_rounded),
+                isSelected: true,
+                tooltip: 'Início',
+                onPressed: () {},
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  minimumSize: const Size(48, 48),
+                  shape: const CircleBorder(),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.engineering_outlined),
+                color: Colors.black,
+                tooltip: 'Profissionais',
+                onPressed: _abrirProfissionais,
+              ),
+              IconButton(
+                icon: const Icon(Icons.event_available_outlined),
+                color: Colors.black,
+                tooltip: 'Agendamentos',
+                onPressed: _abrirAgendamentos,
+              ),
+            ],
+          ),
+        ),
+      ),
+
+
     );
   }
 }

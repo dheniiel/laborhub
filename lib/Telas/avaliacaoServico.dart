@@ -117,7 +117,8 @@ class _AvaliacaoServicoState extends State<AvaliacaoServico> {
           ),
         ),
         body: SafeArea(
-          child: Center(
+          child: Align(
+            alignment: Alignment.topCenter,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 500),
               child: SingleChildScrollView(
