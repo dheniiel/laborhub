@@ -164,14 +164,24 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(16), // Arredonda os cantos.
+                  borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    width: 120,  // Define a largura.
-                    height: 150, // Define a altura.
-                    color: Colors.white,
+                    width: 120,
+                    height: 150,
+                    color: const Color(0xFFF4F4F4),
+                    alignment: Alignment.center,
                     child: temFoto
-                        ? Image.file(File(caminho), fit: BoxFit.cover)
-                        : const Icon(Icons.person, size: 60),
+                        ? Image.file(
+                      File(caminho),
+                      width: 120,
+                      height: 150,
+                      fit: BoxFit.cover,
+                    )
+                        : const Icon(
+                      Icons.person,
+                      size: 60,
+                      color: Color(0xFF3B82F6),
+                    ),
                   ),
                 ),
 
