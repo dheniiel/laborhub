@@ -47,6 +47,7 @@ class AuthApi {
       final body =
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       if (response.statusCode >= 400) {
+        print('[AuthApi] HTTP ${response.statusCode}');
         throw AuthException(
           body['message'] as String? ?? 'Não foi possível concluir.',
 

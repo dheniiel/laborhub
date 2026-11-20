@@ -386,6 +386,8 @@ class CardProfissional extends StatelessWidget {
 
                         Text(
                           profissional.profissional_nome,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 17,
                             fontFamily: 'Montserrat',

@@ -9,6 +9,7 @@ class Solicitacao {
   final String? solicitacao_motivo;
   final String? solicitacao_observacao;
   final double servicos_valor;
+  final String servicos_tipo_cobranca;
 
   // Dados do profissional exibidos no card e nos detalhes.
   final String profissional_nome;
@@ -35,6 +36,7 @@ class Solicitacao {
     this.solicitacao_motivo,
     this.solicitacao_observacao,
     required this.servicos_valor,
+    required this.servicos_tipo_cobranca,
     required this.profissional_nome,
     required this.profissional_profissao,
     required this.profissional_imagem,
@@ -44,6 +46,7 @@ class Solicitacao {
     required this.profissional_uf,
     this.avaliacao_notas,
     this.avaliacao_descricao,
+
   });
 
   factory Solicitacao.fromMap(Map<String, Object?> map) {
@@ -57,8 +60,9 @@ class Solicitacao {
       solicitacao_quantidade: map['solicitacao_quantidade'] as int,
       solicitacao_status: map['solicitacao_status'] as String,
       solicitacao_motivo: map['solicitacao_motivo'] as String?,
-      solicitacao_observacao: map['solicitacao_observacao'] as String?,
+      solicitacao_observacao: map['solicitacao_observacao'] as String,
       servicos_valor: (map['servicos_valor'] as num).toDouble(),
+      servicos_tipo_cobranca: (map['servicos_tipo_cobranca'] as String?) ?? '',
       profissional_nome: map['profissional_nome'] as String,
       profissional_profissao: map['profissional_profissao'] as String,
       profissional_imagem: map['profissional_imagem'] as String? ?? '',

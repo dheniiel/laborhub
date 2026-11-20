@@ -63,7 +63,13 @@ class _AgendamentosState extends State<Agendamentos> {
       final solicitacoes = await _repository.Listar();
       if (!mounted) return;
       setState(() => _solicitacoes = solicitacoes);
-    } catch (_) {
+    } catch (erro, stackTrace) {
+      debugPrint('[Agendamentos] ${erro.runtimeType}: $erro');
+      debugPrintStack(
+        label: '[Agendamentos] Origem do erro',
+        stackTrace: stackTrace,
+      );
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -511,8 +517,10 @@ class _CardServico extends StatelessWidget {
                     Expanded(
                       child: Text(
                         solicitacao.profissional_nome,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontFamily: 'Montserrat',
                           color: Colors.black,
                         ),
@@ -573,15 +581,32 @@ class _CardServico extends StatelessWidget {
 
                 const SizedBox(height: 8),
 
-                Text(
-                  'R\$ ${_moeda(solicitacao.servicos_valor)} - Total',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontFamily: 'Montserrat',
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF22C55E),
+                if(solicitacao.servicos_tipo_cobranca == 'Negociar') ... [
+
+                  Text(
+                    solicitacao.servicos_tipo_cobranca,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF22C55E),
+                    ),
                   ),
-                ),
+
+
+                ] else ... [
+                    Text(
+                      'R\$ ${_moeda(solicitacao.servicos_valor)} - ${solicitacao.servicos_tipo_cobranca}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF22C55E),
+                      ),
+                    ),
+
+                ],
+
               ],
             ),
           ),

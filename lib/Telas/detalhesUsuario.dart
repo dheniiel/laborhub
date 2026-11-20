@@ -184,6 +184,8 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                       // Texto do nome
                       Text(
                           widget.profissional.profissional_nome,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
@@ -271,14 +273,18 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                                children: [
                                  TextSpan(
                                    text: widget.profissional.profissional_servicos_nome,
-                                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+                                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 13),
                                  ),
 
                                  TextSpan(
                                    text: " - ${widget.profissional.profissional_data}",
+                                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 13),
                                  ),
-                               ]
-                             )
+                               ],
+                               style: TextStyle(
+                                 fontSize: 14,
+                               )
+                             ),
                            ),
                          )
                         ],
@@ -305,23 +311,26 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
 
                       ] else ... [
 
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'R\$ ${profissional.profissional_preco.toStringAsFixed(2).replaceAll('.', ',')} - ${widget.profissional.profissional_tipo_cobranca}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.normal,
-                                fontSize: 20,
-                                color: Color.fromARGB(1000, 34, 197, 94),
-                              ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'R\$ ${profissional.profissional_preco.toStringAsFixed(2).replaceAll('.', ',')} - ${widget.profissional.profissional_tipo_cobranca}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.normal,
+                                  fontSize: 20,
+                                  color: Color.fromARGB(1000, 34, 197, 94),
+                                ),
 
-                            ),
-                          )
-                        ],
-                      ),
+                              ),
+                            )
+                          ],
+                        ),
 
                       ],
+
+
+
 
                     ],
                   ),
@@ -754,6 +763,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                             }
 
                             if (snapshot.hasError) {
+                              debugPrint('Erro ao carregar avaliações: ${snapshot.error}');
                               return const Center(
                                 child: Text(
                                   'Não foi possível carregar os comentários.',

@@ -155,11 +155,9 @@ final class Auth
             );
             return [200, $resultado];
         }
-         if ($rota === 'profissional/avaliacoes') {
-             $resultado = $this->listarAvaliacoesProfissional($token, $dados);
-
-             return [200, $resultado];
-         }
+        if ($rota === 'profissional/avaliacoes') {
+            return $this->listarAvaliacoesProfissional($token, $dados);
+        }
 
 
         $email = $this->email($dados);
@@ -654,7 +652,8 @@ final class Auth
                COALESCE(MIN(e.endereco_cidade), '') AS profissional_cidade,
                COALESCE(MIN(e.endereco_uf), '') AS profissional_uf,
                MIN(av.avaliacao_notas) AS avaliacao_notas,
-               MIN(av.avaliacao_descricao) AS avaliacao_descricao
+               MIN(av.avaliacao_descricao) AS avaliacao_descricao,
+               MAX(se.servicos_tipo_cobranca) AS servicos_tipo_cobranca
              FROM solicitacao so
              JOIN solicitacaoServico ss ON ss.solicitacaoServico_solicitacao_id = so.solicitacao_id
              JOIN servicos se ON se.servicos_id = ss.solicitacaoServico_servicos_id
