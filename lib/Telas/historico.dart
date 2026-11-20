@@ -436,10 +436,12 @@ class _CardSolicitacao extends StatelessWidget {
       acao,
     ) = switch (solicitacao.solicitacao_status) {
       'Finalizado' => (
-        const Color(0xFF3B82F6),
-        'R\$${_moeda(solicitacao.servicos_valor)} - Total',
-        const Color(0xFF22C55E),
-        'Detalhar',
+      const Color(0xFF3B82F6),
+      solicitacao.servicos_tipo_cobranca == 'Negociar'
+          ? solicitacao.servicos_tipo_cobranca
+          : 'R\$ ${_moeda(solicitacao.servicos_valor)} - ${solicitacao.servicos_tipo_cobranca}',
+      const Color(0xFF22C55E),
+      'Detalhar',
       ),
       'Pendente' => (
         const Color(0xFFF97316),

@@ -477,212 +477,226 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
 
             const SizedBox(height: 160),
 
-        FilledButton(
-          onPressed: () async {
-            bool enviando = false;
-            final messenger = ScaffoldMessenger.of(context);
 
-            await showDialog<void>(
-              context: context,
-              barrierDismissible: false,
-              builder: (dialogContext) {
-                return StatefulBuilder(
-                  builder: (modalContext, setStateModal) {
-                    return PopScope(
-                      canPop: !enviando,
-                      child: Dialog(
-                        backgroundColor: Colors.white,
-                        insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: SizedBox(
-                          width: 500,
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.all(20),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Solicitação de Serviço',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 30),
-
-                                  const Text(
-                                    'Data para serviço',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-
-                                  Forms(
-                                    controlador: _servicos_data,
-                                    tipagemValor: TextInputType.datetime,
-                                    rotulo: 'dd/mm/aaaa',
-                                    formatadores: [_mascaraData],
-                                    validador: Validacao.servicosData,
-                                  ),
-                                  const SizedBox(height: 24),
-
-                                  const Text(
-                                    'Quantidade de dias',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-
-                                  Forms(
-                                    controlador: _servicos_quantidade,
-                                    tipagemValor: TextInputType.number,
-                                    rotulo: 'Quantidade de dias',
-                                    validador: Validacao.quantidade,
-                                  ),
-                                  const SizedBox(height: 24),
-
-                                  const Text(
-                                    'Observação',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-
-                                  Forms(
-                                    controlador: _solicitacao_observacao,
-                                    tipagemValor: TextInputType.multiline,
-                                    rotulo: 'Descreva um pouco da solicitação...',
-                                    maxLinha: 5,
-                                  ),
-                                  const SizedBox(height: 24),
-
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      TextButton(
-                                        onPressed: enviando
-                                            ? null
-                                            : () {
-                                          Navigator.of(dialogContext).pop();
-                                        },
-                                        child: const Text('Cancelar'),
-                                      ),
-                                      const SizedBox(width: 12),
-
-                                      FilledButton(
-                                        onPressed: enviando
-                                            ? null
-                                            : () async {
-                                          if (!(_formKey.currentState
-                                              ?.validate() ??
-                                              false)) {
-                                            return;
-                                          }
-
-                                          setStateModal(() {
-                                            enviando = true;
-                                          });
-
-                                          try {
-                                            await _enviarSolicitacao(
-                                              widget.profissional
-                                                  .profissional_usuarios_id,
-                                            );
-                                          } catch (erro) {
-                                            if (!modalContext.mounted) return;
-
-                                            setStateModal(() {
-                                              enviando = false;
-                                            });
-
-                                            messenger.showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Não foi possível enviar: $erro',
-                                                ),
-                                                backgroundColor: Colors.red,
-                                              ),
-                                            );
-                                            return;
-                                          }
-
-                                          if (!dialogContext.mounted) return;
-
-                                          Navigator.of(dialogContext).pop();
-
-                                          messenger.showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Solicitação de serviço enviada!',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              backgroundColor: Colors.green,
-
-                                            ),
-                                          );
-                                        },
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor: const Color(0xFF3B82F6),
-                                          minimumSize: const Size(100, 40),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(5),
-                                          ),
-                                        ),
-                                        child: enviando
-                                            ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Color(0xFF3B82F6),
-                                          ),
-                                        )
-                                            : const Text('Enviar'),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            );
-          },
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF3B82F6),
-            minimumSize: const Size(500, 35),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            textStyle: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w400,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(5),
-            ),
-          ),
-          child: const Text('Enviar solicitação'),
-        ),
 
 
           ],
         ),
       ),
 
+        bottomNavigationBar: SafeArea(
+            top: false,
+            child: Padding(
+                padding: const EdgeInsetsGeometry.fromLTRB(20, 8, 20, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                    child:FilledButton(
+                      onPressed: () async {
+                        bool enviando = false;
+                        final messenger = ScaffoldMessenger.of(context);
+
+                        await showDialog<void>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (dialogContext) {
+                            return StatefulBuilder(
+                              builder: (modalContext, setStateModal) {
+                                return PopScope(
+                                  canPop: !enviando,
+                                  child: Dialog(
+                                    backgroundColor: Colors.white,
+                                    insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: SizedBox(
+                                      width: 500,
+                                      child: SingleChildScrollView(
+                                        padding: const EdgeInsets.all(20),
+                                        child: Form(
+                                          key: _formKey,
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                'Solicitação de Serviço',
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 30),
+
+                                              const Text(
+                                                'Data para serviço',
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 5),
+
+                                              Forms(
+                                                controlador: _servicos_data,
+                                                tipagemValor: TextInputType.datetime,
+                                                rotulo: 'dd/mm/aaaa',
+                                                formatadores: [_mascaraData],
+                                                validador: Validacao.servicosData,
+                                              ),
+                                              const SizedBox(height: 24),
+
+                                              const Text(
+                                                'Quantidade de dias',
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 5),
+
+                                              Forms(
+                                                controlador: _servicos_quantidade,
+                                                tipagemValor: TextInputType.number,
+                                                rotulo: 'Quantidade de dias',
+                                                validador: Validacao.quantidade,
+                                              ),
+                                              const SizedBox(height: 24),
+
+                                              const Text(
+                                                'Observação',
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 5),
+
+                                              Forms(
+                                                controlador: _solicitacao_observacao,
+                                                tipagemValor: TextInputType.multiline,
+                                                rotulo: 'Descreva um pouco da solicitação...',
+                                                maxLinha: 5,
+                                              ),
+                                              const SizedBox(height: 24),
+
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  TextButton(
+                                                    onPressed: enviando
+                                                        ? null
+                                                        : () {
+                                                      Navigator.of(dialogContext).pop();
+                                                    },
+                                                    child: const Text('Cancelar'),
+                                                  ),
+                                                  const SizedBox(width: 12),
+
+                                                  FilledButton(
+                                                    onPressed: enviando
+                                                        ? null
+                                                        : () async {
+                                                      if (!(_formKey.currentState
+                                                          ?.validate() ??
+                                                          false)) {
+                                                        return;
+                                                      }
+
+                                                      setStateModal(() {
+                                                        enviando = true;
+                                                      });
+
+                                                      try {
+                                                        await _enviarSolicitacao(
+                                                          widget.profissional
+                                                              .profissional_usuarios_id,
+                                                        );
+                                                      } catch (erro) {
+                                                        if (!modalContext.mounted) return;
+
+                                                        setStateModal(() {
+                                                          enviando = false;
+                                                        });
+
+                                                        messenger.showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                              'Não foi possível enviar: $erro',
+                                                            ),
+                                                            backgroundColor: Colors.red,
+                                                          ),
+                                                        );
+                                                        return;
+                                                      }
+
+                                                      if (!dialogContext.mounted) return;
+
+                                                      Navigator.of(dialogContext).pop();
+
+                                                      messenger.showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                            'Solicitação de serviço enviada!',
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.w600,
+                                                            ),
+                                                          ),
+                                                          backgroundColor: Colors.green,
+
+                                                        ),
+                                                      );
+                                                    },
+                                                    style: FilledButton.styleFrom(
+                                                      backgroundColor: const Color(0xFF3B82F6),
+                                                      minimumSize: const Size(100, 40),
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(5),
+                                                      ),
+                                                    ),
+                                                    child: enviando
+                                                        ? const SizedBox(
+                                                      width: 20,
+                                                      height: 20,
+                                                      child: CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color: Color(0xFF3B82F6),
+                                                      ),
+                                                    )
+                                                        : const Text('Enviar'),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF3B82F6),
+                        minimumSize: const Size(500, 35),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        textStyle: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                      child: const Text('Enviar solicitação'),
+                    ),
+
+                    ),
+                  ],
+                ),
+            ),
+        ),
 
     );
   }
