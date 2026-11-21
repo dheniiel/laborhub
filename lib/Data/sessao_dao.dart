@@ -12,6 +12,7 @@ class SessaoDao {
         final db = await _db;
         final usuario = Usuarios.fromMap(dados);
 
+
         await db.transaction((txn) async {
             await _apagar(txn);
             await txn.insert('usuarios', usuario.toMap());
@@ -24,6 +25,43 @@ class SessaoDao {
 
             for (final endereco in (dados['enderecos'] as List? ?? const [])) {
                 await txn.insert('endereco', Map<String, Object?>.from(endereco as Map));
+            }
+
+            for (final servico in (dados['servicos'] as List? ?? const [])) {
+                await txn.insert('servicos', Map<String, Object?>.from(servico as Map));
+            }
+
+            await txn.insert('sessao', {
+                'sessao_id': 1,
+                'sessao_token': token,
+                'sessao_tipo': dados['tipo'] as String?,
+                'sessao_expira_em': dados['sessao_expira_em'] as String,
+                'sessao_usuarios_id': usuario.usuarios_id,
+            });
+        });
+    }
+
+
+    Future<void> salvarProfissional(String token, Map<String, dynamic> dados) async {
+        final db = await _db;
+        final usuario = Usuarios.fromMap(dados);
+
+        await db.transaction((txn) async {
+            await _apagar(txn);
+            await txn.insert('usuarios', usuario.toMap());
+
+            final pf = dados['pessoaFisica'];
+            if (pf is Map) await txn.insert('pessoaFisica', Map<String, Object?>.from(pf));
+
+            final pj = dados['pessoaJuridica'];
+            if (pj is Map) await txn.insert('pessoaJuridica', Map<String, Object?>.from(pj));
+
+            for (final endereco in (dados['enderecos'] as List? ?? const [])) {
+                await txn.insert('endereco', Map<String, Object?>.from(endereco as Map));
+            }
+
+            for (final servicos in (dados['servicos'] as List? ?? const [])) {
+                await txn.insert('servicos', Map<String, Object?>.from(servicos as Map));
             }
 
             await txn.insert('sessao', {
@@ -63,6 +101,22 @@ class SessaoDao {
             'pessoaFisica': pf.isEmpty ? null : pf.first,
             'pessoaJuridica': pj.isEmpty ? null : pj.first,
             'endereco': endereco.isEmpty ? null : endereco.first,
+        };
+    }
+
+    // Dados do usuario que possui a conta como profissional com serviços para edição de perfil
+    Future<Map<String, Object?>> buscarPerfilProfissional() async {
+        final db = await _db;
+        final pf = await db.query('pessoaFisica', limit: 1);
+        final pj = await db.query('pessoaJuridica', limit: 1);
+        final endereco = await db.query('endereco', orderBy: 'endereco_id', limit: 1);
+        final servico = await db.query('servicos', orderBy: 'servicos_id', limit: 1);
+
+        return {
+            'pessoaFisica': pf.isEmpty ? null : pf.first,
+            'pessoaJuridica': pj.isEmpty ? null : pj.first,
+            'endereco': endereco.isEmpty ? null : endereco.first,
+            'servicos' : servico.isEmpty ? null : servico.first,
         };
     }
 

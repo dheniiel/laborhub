@@ -11,6 +11,8 @@ class PerfilRepository {
 
   // Dados guardados no SQLite: a tela de edição abre mesmo offline.
   Future<Map<String, Object?>> carregar() => _dao.buscarPerfil();
+  Future<Map<String, Object?>> carregarProfissional() =>
+      _dao.buscarPerfilProfissional();
 
   // Grava no MySQL pela API e atualiza a cópia local com a resposta.
   Future<Usuarios> atualizar({
@@ -18,6 +20,7 @@ class PerfilRepository {
     required Map<String, Object?> endereco,
     Map<String, Object?>? pessoaFisica,
     Map<String, Object?>? pessoaJuridica,
+
   }) async {
     if ((pessoaFisica == null) == (pessoaJuridica == null)) {
       throw ArgumentError('Informe pessoa física ou pessoa jurídica, apenas uma.');
@@ -36,6 +39,36 @@ class PerfilRepository {
     }, token: sessao.token);
 
     await _dao.salvar(sessao.token, body);
+    return Usuarios.fromMap(body);
+  }
+
+
+  Future<Usuarios> atualizarProfissional({
+    required Map<String, Object?> usuario,
+    required Map<String, Object?> endereco,
+    Map<String, Object?>? pessoaFisica,
+    Map<String, Object?>? pessoaJuridica,
+    Map<String, Object?>? servicos,
+
+  }) async {
+    if ((pessoaFisica == null) == (pessoaJuridica == null)) {
+      throw ArgumentError('Informe pessoa física ou pessoa jurídica, apenas uma.');
+    }
+
+    final sessao = await _dao.buscar();
+    if (sessao == null) {
+      throw const AuthException('Sua sessão expirou. Entre novamente.', 401);
+    }
+
+    final body = await _api.post('auth/profile', {
+      'usuario': usuario,
+      'endereco': endereco,
+      'servicos': servicos,
+      if (pessoaFisica != null) 'pessoaFisica': pessoaFisica,
+      if (pessoaJuridica != null) 'pessoaJuridica': pessoaJuridica,
+    }, token: sessao.token);
+
+    await _dao.salvarProfissional(sessao.token, body);
     return Usuarios.fromMap(body);
   }
 }

@@ -433,6 +433,43 @@ final class Auth
                 $endereco['endereco_id'],
                 $id,
             ]);
+            if (isset($dados['servicos'])) {
+                $servico = $this->objeto($dados, 'servicos');
+                $servicoId = $servico['servicos_id'] ?? null;
+
+                if (!is_int($servicoId) || $servicoId <= 0) {
+                    throw new ApiError(400, 'Informe um serviço válido.');
+                }
+
+                $valor = $servico['servicos_valor'] ?? null;
+                if ($valor === '') {
+                    $valor = null;
+                }
+
+                if ($valor !== null && (!is_numeric($valor) || (float) $valor < 0)) {
+                    throw new ApiError(400, 'Informe um valor válido para o serviço.');
+                }
+
+                $this->db->prepare(
+                    'UPDATE servicos
+                     SET servicos_nome = ?,
+                         servicos_data = ?,
+                         servicos_valor = ?,
+                         servicos_tipo_cobranca = ?,
+                         servicos_nivel_experiencia = ?,
+                         servicos_descricao = ?
+                     WHERE servicos_id = ? AND servicos_usuarios_id = ?'
+                )->execute([
+                    $this->texto($servico, 'servicos_nome', 100),
+                    $this->opcional($servico, 'servicos_data', 25),
+                    $valor,
+                    $this->opcional($servico, 'servicos_tipo_cobranca', 1000),
+                    $this->opcional($servico, 'servicos_nivel_experiencia', 50),
+                    $this->opcional($servico, 'servicos_descricao', 1000),
+                    $servicoId,
+                    $id,
+                ]);
+            }
             $this->db->commit();
         } catch (Throwable $erro) {
             $this->db->rollBack();
@@ -805,33 +842,60 @@ final class Auth
     }
 
     /** Usuário (formato de Usuarios.fromMap), tipo e dados do perfil, para o app guardar offline. */
-    private function perfil(array $usuario): array
-    {
-        $id = (int) $usuario['usuarios_id'];
-        $buscar = function (string $sql) use ($id): array {
-            $consulta = $this->db->prepare($sql);
-            $consulta->execute([$id]);
-            return $consulta->fetchAll();
-        };
-        $pf = $buscar('SELECT * FROM pessoaFisica WHERE pf_usuarios_id = ? LIMIT 1')[0] ?? null;
-        $pj = $buscar('SELECT * FROM pessoaJuridica WHERE pj_usuarios_id = ? LIMIT 1')[0] ?? null;
-        $criado = $usuario['usuarios_criado_em'] ?? gmdate('Y-m-d H:i:s');
+   private function perfil(array $usuario): array
+   {
+       $id = (int) $usuario['usuarios_id'];
 
-        return [
-            'usuarios_id' => $id,
-            'usuarios_email' => $usuario['usuarios_email'],
-            'usuarios_imagem' => $usuario['usuarios_imagem'] ?? '',
-            'usuarios_telefone' => $usuario['usuarios_telefone'],
-            'usuarios_senha_hash' => '',
-            'usuarios_ativo' => 1,
-            'usuarios_is_admin' => (int) $usuario['usuarios_is_admin'],
-            'usuarios_criado_em' => str_replace(' ', 'T', (string) $criado) . 'Z',
-            'tipo' => $pf['pf_tipo'] ?? $pj['pj_tipo'] ?? null,
-            'pessoaFisica' => $pf,
-            'pessoaJuridica' => $pj,
-            'enderecos' => $buscar('SELECT * FROM endereco WHERE endereco_usuarios_id = ? ORDER BY endereco_id'),
-        ];
-    }
+       $buscar = function (string $sql) use ($id): array {
+           $consulta = $this->db->prepare($sql);
+           $consulta->execute([$id]);
+
+           return $consulta->fetchAll();
+       };
+
+       $pf = $buscar(
+           'SELECT * FROM pessoaFisica WHERE pf_usuarios_id = ? LIMIT 1'
+       )[0] ?? null;
+
+       $pj = $buscar(
+           'SELECT * FROM pessoaJuridica WHERE pj_usuarios_id = ? LIMIT 1'
+       )[0] ?? null;
+
+       $criado = $usuario['usuarios_criado_em'] ?? gmdate('Y-m-d H:i:s');
+       $tipo = $pf['pf_tipo'] ?? $pj['pj_tipo'] ?? null;
+
+       $perfil = [
+           'usuarios_id' => $id,
+           'usuarios_email' => $usuario['usuarios_email'],
+           'usuarios_imagem' => $usuario['usuarios_imagem'] ?? '',
+           'usuarios_telefone' => $usuario['usuarios_telefone'],
+           'usuarios_senha_hash' => '',
+           'usuarios_ativo' => 1,
+           'usuarios_is_admin' => (int) $usuario['usuarios_is_admin'],
+           'usuarios_criado_em' => str_replace(' ', 'T', (string) $criado) . 'Z',
+           'tipo' => $tipo,
+           'pessoaFisica' => $pf,
+           'pessoaJuridica' => $pj,
+           'enderecos' => $buscar(
+               'SELECT * FROM endereco
+                WHERE endereco_usuarios_id = ?
+                ORDER BY endereco_id'
+           ),
+       ];
+
+       if ($tipo === 'Profissional') {
+           $perfil['servicos'] = $buscar(
+               'SELECT servicos_id, servicos_nome, servicos_data, servicos_valor,
+                       servicos_tipo_cobranca, servicos_nivel_experiencia,
+                       servicos_descricao, servicos_usuarios_id
+                FROM servicos
+                WHERE servicos_usuarios_id = ?
+                ORDER BY servicos_id'
+           );
+       }
+
+       return $perfil;
+   }
 
     private function solicitarCodigo(string $email, string $ip): array
     {

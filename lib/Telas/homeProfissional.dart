@@ -11,7 +11,7 @@ import '../Repository/sessao_repository.dart';
 import '../Repository/solicitacao_repository.dart';
 import 'login.dart';
 import 'perfilProfissional.dart';
-import 'editarPerfil.dart';
+import 'editarPerfilProfissional.dart';
 import 'historico_profissional.dart';
 import 'agendamentos.dart';
 import 'detalhesUsuario.dart';
@@ -103,7 +103,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
 
   Future<void> _abrirEdicaoPerfil() async {
     final atualizado = await Navigator.of(context).push<Usuarios>(
-      MaterialPageRoute(builder: (context) => EditarPerfil(usuario: _usuario)),
+      MaterialPageRoute(builder: (context) => EditarPerfilProfissional(usuario: _usuario)),
     );
     if (atualizado != null && mounted) {
       setState(() => _usuario = atualizado);
