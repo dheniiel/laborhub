@@ -139,6 +139,7 @@ class _EditarPerfilState extends State<EditarPerfilProfissional> {
       setState(() {
         _pessoaFisica = pf;
         _endereco = endereco;
+        _servicos = servicos;
 
         if (pf != null) {
           _pf_nome.text = _texto(pf['pf_nome']);
@@ -167,14 +168,25 @@ class _EditarPerfilState extends State<EditarPerfilProfissional> {
           _endereco_uf.text = _texto(endereco['endereco_uf']);
         }
         _servicos = servicos;
-        if(servicos != null) {
-          _servicos_nome.text = _texto(servicos['servicos_nome']);
-          _servicos_data.text = _texto(servicos['servicos_data']);
-          _servicos_valor.text = _texto(servicos['_servicos_valor']);
-          _servicos_tipo_cobranca.text = _texto(servicos['_servicos_tipo_cobranca']);
-          _servicos_nivel_experiencia.text = _texto(servicos['_servicos_nivel_experiencia']);
-          _servicos_descricao.text = _texto(servicos['_servicos_descricao']);
 
+        if (servicos != null) {
+          _servicos_nome.text = _texto(servicos['servicos_nome']);
+          _servicos_descricao.text = _texto(servicos['servicos_descricao']);
+
+          _servicoDataSelecionado = servicos['servicos_data'] as String?;
+          _servicoValor = servicos['servicos_tipo_cobranca'] as String?;
+          _nivelCobranca = servicos['servicos_nivel_experiencia'] as String?;
+
+          final preco = servicos['servicos_valor'];
+          _servicos_valor.text = _servicoValor == 'Negociar'
+              ? ''
+              : (double.tryParse(preco?.toString() ?? '')?.toStringAsFixed(2) ?? '');
+
+          debugPrint(
+            'Serviço carregado: id=${servicos['servicos_id']}, '
+                'dias=$_servicoDataSelecionado, cobrança=$_servicoValor, '
+                'experiência=$_nivelCobranca, preço=$preco',
+          );
         }
       });
     } catch (_) {
@@ -254,6 +266,11 @@ class _EditarPerfilState extends State<EditarPerfilProfissional> {
 
     try {
       novaFoto = await _salvarFotoPerfil();
+      final digitos = _servicos_valor.text.replaceAll(RegExp(r'\D'), '');
+      final double? valorServico =
+      _servicoValor == 'Negociar' || digitos.isEmpty
+          ? null
+          : int.parse(digitos) / 100;
 
       final usuario = await _repository.atualizarProfissional(
         usuario: {
@@ -291,12 +308,12 @@ class _EditarPerfilState extends State<EditarPerfilProfissional> {
         servicos: {
           'servicos_id': _servicos!['servicos_id'],
           'servicos_nome': _servicos_nome.text.trim(),
-          'servicos_data' : _servicos_data.text.trim(),
-          'servicos_valor' : _servicos_valor.text.trim(),
-          'servicos_tipo_cobranca' : _servicos_tipo_cobranca.text.trim(),
-          'servicos_nivel_experiencia' : _servicos_nivel_experiencia.text.trim(),
-          'servicos_descricao' : _servicos_descricao.text.trim(),
-        }
+          'servicos_data': _servicoDataSelecionado,
+          'servicos_tipo_cobranca': _servicoValor,
+          'servicos_nivel_experiencia': _nivelCobranca,
+          'servicos_valor': valorServico,
+          'servicos_descricao': _servicos_descricao.text.trim(),
+        },
       );
 
       if (!mounted) return;
@@ -615,6 +632,7 @@ class _EditarPerfilState extends State<EditarPerfilProfissional> {
 
                                 Forms.select(
                                   rotulo: "Selecione",
+                                  valorInicial: _servicoDataSelecionado,
                                   opcao: [
                                     'Segunda à sexta',
                                     'Segunda à Sábado',
@@ -638,6 +656,7 @@ class _EditarPerfilState extends State<EditarPerfilProfissional> {
 
                                 Forms.select(
                                   rotulo: "Selecione",
+                                  valorInicial: _servicoValor,
                                   opcao: [
                                     'Total',
                                     'Negociar',
@@ -676,6 +695,7 @@ class _EditarPerfilState extends State<EditarPerfilProfissional> {
 
                                 Forms.select(
                                   rotulo: "Selecione",
+                                  valorInicial: _nivelCobranca,
                                   opcao: [
                                     'Iniciante',
                                     'Intermediário',

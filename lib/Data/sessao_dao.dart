@@ -127,7 +127,7 @@ class SessaoDao {
     }
 
     Future<void> _apagar(Transaction txn) async {
-        for (final tabela in ['sessao', 'endereco', 'pessoaFisica', 'pessoaJuridica', 'usuarios']) {
+        for (final tabela in ['sessao', 'endereco', 'pessoaFisica', 'pessoaJuridica', 'usuarios', 'servicos']) {
             await txn.delete(tabela);
         }
     }

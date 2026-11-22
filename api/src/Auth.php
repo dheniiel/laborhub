@@ -894,6 +894,13 @@ final class Auth
            );
        }
 
+//    error_log(sprintf(
+//        '[perfil] usuario_id=%d tipo=%s servicos=%s',
+//        $id,
+//        var_export($tipo, true),
+//        isset($perfil['servicos']) ? (string) count($perfil['servicos']) : 'ausente'
+//    ));
+
        return $perfil;
    }
 
