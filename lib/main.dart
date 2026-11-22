@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'Telas/escolhaUsuario.dart';
 import 'Telas/login.dart';
 import 'Telas/enderecoTela.dart';
@@ -7,13 +10,25 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // try {
+  //   final token = await FirebaseMessaging.instance.getToken();
+  //   debugPrint('FCM token: $token');
+  // } catch (erro) {
+  //   debugPrint('Erro ao obter token FCM: $erro');
+  // }
+
   runApp(const LaborHUBapp());
 
 }

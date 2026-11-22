@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "570637413667",
+    "project_id": "laborhub-1aea9",
+    "storage_bucket": "laborhub-1aea9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:570637413667:android:b89638a081ac0730b33096",
+        "android_client_info": {
+          "package_name": "com.example.laborhub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQsyLJmkS1-DNDYuWVVp39sE9IEUKgPr8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
