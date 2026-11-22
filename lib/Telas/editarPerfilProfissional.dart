@@ -517,14 +517,28 @@ class _EditarPerfilState extends State<EditarPerfilProfissional> {
                                   validador: Validacao.telefone,
                                 ),
                                 const SizedBox(height: 40),
-                                const Text(
-                                  'Endereço',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontFamily: 'Montserrat',
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black,
-                                  ),
+
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.home_outlined,
+                                      size: 30,
+                                      color: Colors.black,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Expanded(
+                                      child: Text(
+                                        'Endereço',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 20),
                                 _rotulo('Rua'),
@@ -602,14 +616,27 @@ class _EditarPerfilState extends State<EditarPerfilProfissional> {
                                 ),
 
                                 const SizedBox(height: 40),
-                                const Text(
-                                  'Serviços',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontFamily: 'Montserrat',
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black,
-                                  ),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.handyman_outlined,
+                                      size: 30,
+                                      color: Colors.black,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Expanded(
+                                      child: Text(
+                                        'Serviços',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+
+                                    ),
+                                  ],
                                 ),
 
                                 // Servicos Nome

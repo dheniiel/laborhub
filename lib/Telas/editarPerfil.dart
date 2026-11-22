@@ -451,14 +451,27 @@ class _EditarPerfilState extends State<EditarPerfil> {
                                   validador: Validacao.telefone,
                                 ),
                                 const SizedBox(height: 40),
-                                const Text(
-                                  'Endereço',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontFamily: 'Montserrat',
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black,
-                                  ),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.home_outlined,
+                                      size: 30,
+                                      color: Colors.black,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Expanded(
+                                      child: Text(
+                                        'Endereço',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 20),
                                 _rotulo('Rua'),
