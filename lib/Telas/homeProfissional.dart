@@ -168,6 +168,8 @@ class _HomeProfissionalState extends State<Homeprofissional> {
           );
           return;
         }
+        await _perfilRepository.registrarDispositivo();
+        if (!mounted) return;
       }
 
       await _perfilRepository.salvarPreferenciaNotificacoes(ativar);

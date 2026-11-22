@@ -28,6 +28,9 @@ Future<void> main() async {
   // } catch (erro) {
   //   debugPrint('Erro ao obter token FCM: $erro');
   // }
+  FirebaseMessaging.onMessage.listen((mensagem) {
+    debugPrint('Push recebido: ${mensagem.notification?.title}');
+  });
 
   runApp(const LaborHUBapp());
 

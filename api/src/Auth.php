@@ -617,12 +617,23 @@ final class Auth
                 throw $erro;
             }
 
+            $logFcm = sys_get_temp_dir() . '/laborhub-fcm.log';
+
+            error_log(
+                "[FCM] Início. Serviço {$servicoId}, pedido {$solicitacaoId}\n",
+                3,
+                $logFcm
+            );
+
             try {
                 $this->notificarNovaSolicitacao($servicoId, $solicitacaoId);
+                error_log("[FCM] Função terminou sem exceção\n", 3, $logFcm);
             } catch (\Throwable $erro) {
                 error_log(
-                    'Falha no envio FCM da solicitação ' . $solicitacaoId
-                    . ' (' . get_class($erro) . ')'
+                    '[FCM] Falha: ' . get_class($erro)
+                    . ' | código: ' . $erro->getCode() . "\n",
+                    3,
+                    $logFcm
                 );
             }
 
@@ -1309,6 +1320,15 @@ final class Auth
         $consulta->execute([$servicoId]);
 
         $fcmToken = $consulta->fetchColumn();
+
+        if (!is_string($fcmToken) || $fcmToken === '') {
+            error_log('[FCM] Nenhum destinatário habilitado para o serviço ' . $servicoId);
+            return;
+        }
+
+        error_log('[FCM] Iniciando envio da solicitação ' . $solicitacaoId);
+
+        $fcmToken = $consulta->fetchColumn();
         if (!is_string($fcmToken) || $fcmToken === '') {
             return;
         }
@@ -1346,6 +1366,8 @@ final class Auth
                 ],
             ]
         );
+        error_log('[FCM] Firebase aceitou a solicitação ' . $solicitacaoId);
+
     }
 
 
