@@ -20,6 +20,7 @@ dependencies:
   path_provider: ^2.1.6
   bcrypt: ^1.2.0
   currency_text_input_formatter: ^2.3.3
+  permission_handler: 12.0.3
 
 dev_dependencies:
   flutter_test:

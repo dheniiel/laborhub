@@ -71,4 +71,19 @@ class PerfilRepository {
     await _dao.salvarProfissional(sessao.token, body);
     return Usuarios.fromMap(body);
   }
+
+  Future<void> salvarPreferenciaNotificacoes(bool ativo) async {
+    final sessao = await _dao.buscar();
+
+    if (sessao == null) {
+      throw const AuthException('Sua sessão expirou. Entre novamente.', 401);
+    }
+
+    await _api.post(
+      'perfil/notificacoes',
+      {'ativo': ativo},
+      token: sessao.token,
+    );
+  }
+
 }

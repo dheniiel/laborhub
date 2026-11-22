@@ -2,6 +2,9 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:laborhub/Repository/perfil_repository.dart';
+
+import 'package:permission_handler/permission_handler.dart';
 
 import '../Formularios/forms.dart';
 import '../Model/profissional.dart';
@@ -131,6 +134,62 @@ class _HomeProfissionalState extends State<Homeprofissional> {
     }
   }
 
+  final _perfilRepository = PerfilRepository();
+  bool _notificacoesAtivas = false;
+  bool _salvandoNotificacoes = false;
+
+  Future<void> _alternarNotificacoes() async {
+    final ativas = _notificacoesAtivas;
+    if (ativas == null || _salvandoNotificacoes) return;
+
+    final ativar = !ativas;
+    setState(() => _salvandoNotificacoes = true);
+
+    try {
+      if (ativar) {
+        final permissao = await Permission.notification.request();
+        if (!mounted) return;
+
+        if (!permissao.isGranted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Permita notificações nas configurações do celular.',
+              ),
+              action: SnackBarAction(
+                label: 'Configurações',
+                onPressed: () async {
+                  await openAppSettings();
+                },
+              ),
+            ),
+          );
+          return;
+        }
+      }
+
+      await _perfilRepository.salvarPreferenciaNotificacoes(ativar);
+      if (!mounted) return;
+
+      setState(() => _notificacoesAtivas = ativar);
+    } catch (erro) {
+      debugPrint('Erro ao salvar preferência de notificações: $erro');
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível atualizar as notificações.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _salvandoNotificacoes = false);
+      }
+    }
+  }
+
+
+
 
 
 
@@ -165,12 +224,17 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                         ),
                         const Spacer(),
                         IconButton(
-                          icon: const Icon(Icons.notifications, size: 25),
+                          icon: Icon(
+                            _notificacoesAtivas == true
+                                ? Icons.notifications_active
+                                : Icons.notifications_off_outlined,
+                            size: 25,
+                          ),
                           color: Colors.black,
-                          tooltip: 'Notificações',
-                          onPressed: () {
-                            // Navegação para tela de notificações
-                          },
+                          tooltip: _notificacoesAtivas == true
+                              ? 'Desativar notificações'
+                              : 'Ativar notificações',
+                          onPressed: _salvandoNotificacoes ? null : _alternarNotificacoes,
                         ),
                         const SizedBox(width: 4),
                         _Avatar(

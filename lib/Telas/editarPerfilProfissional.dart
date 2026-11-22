@@ -93,6 +93,7 @@ class _EditarPerfilState extends State<EditarPerfilProfissional> {
     super.initState();
     _usuarios_telefone.text = widget.usuario.usuarios_telefone ?? '';
     _carregarPerfil();
+
   }
 
   @override
@@ -128,8 +129,6 @@ class _EditarPerfilState extends State<EditarPerfilProfissional> {
   Future<void> _carregarPerfil() async {
     try {
       final perfil = await _repository.carregarProfissional();
-      debugPrint('Chaves do perfil: ${perfil.keys.toList()}');
-      debugPrint('Tipo de servicos: ${perfil['servicos']?.runtimeType}');
       final pf = perfil['pessoaFisica'] as Map<String, Object?>?;
       final pj = perfil['pessoaJuridica'] as Map<String, Object?>?;
       final endereco = perfil['endereco'] as Map<String, Object?>?;

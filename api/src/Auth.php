@@ -53,6 +53,9 @@ final class Auth
         if ($rota === 'solicitacoes/enviarSolicitacao') {
             return $this->enviarSolicitacao($token, $dados);
         }
+        if ($rota === 'perfil/notificacoes') {
+            return $this->salvarPreferenciaNotificacoes($token, $dados);
+        }
 
         // Contagem para o card.
         if ($rota === 'solicitacoes/listarServicoPendente') {
@@ -1217,6 +1220,24 @@ final class Auth
         ]);
 
         return ['sucesso' => $consulta->rowCount() > 0];
+    }
+
+    // função para salvar preferencia de notificações
+    private function salvarPreferenciaNotificacoes(?string $token, array $dados): array
+    {
+        $usuario = $this->usuarioDaSessao($token);
+        $ativo = $dados['ativo'] ?? null;
+
+        if (!is_bool($ativo)) {
+            throw new ApiError(400, 'O campo ativo deve ser true ou false.');
+        }
+
+        $atualizar = $this->db->prepare(
+            'UPDATE usuarios SET notificacoes_ativas = ? WHERE usuarios_id = ?'
+        );
+        $atualizar->execute([$ativo ? 1 : 0, (int) $usuario['usuarios_id']]);
+
+        return [200, ['notificacoes_ativas' => $ativo]];
     }
 
 

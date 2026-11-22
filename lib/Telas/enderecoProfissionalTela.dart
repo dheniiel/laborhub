@@ -187,6 +187,28 @@ class _EnderecoProfissionalTelaState extends State<EnderecoProfissionalTela> {
                      const SizedBox(height: 30),
 
                      const Padding(
+                       padding: EdgeInsets.only(left: 12),
+                       child: Text(
+                         "CEP",
+                         style: TextStyle(
+                           fontSize: 15,
+                           fontWeight: FontWeight.w600,
+                         ),
+                       ),
+                     ),
+                     const SizedBox(height: 5),
+
+                     Forms(
+                       controlador: _endereco_cep,
+                       tipagemValor: TextInputType.text,
+                       validador: Validacao.cep,
+                       formatadores: [_mascaraCep],
+                       rotulo: "000000-000",
+
+                     ),
+                     const SizedBox(height: 24),
+
+                     const Padding(
                          padding: EdgeInsets.only(left: 12),
                          child: Text(
                            "Rua",
@@ -248,29 +270,6 @@ class _EnderecoProfissionalTelaState extends State<EnderecoProfissionalTela> {
                      ),
                      const SizedBox(height: 24),
 
-
-                     const Padding(
-                       padding: EdgeInsets.only(left: 12),
-                       child: Text(
-                         "CEP",
-                         style: TextStyle(
-                           fontSize: 15,
-                           fontWeight: FontWeight.w600,
-                         ),
-                       ),
-                     ),
-                     const SizedBox(height: 5),
-
-                     Forms(
-                       controlador: _endereco_cep,
-                       tipagemValor: TextInputType.text,
-                       validador: Validacao.cep,
-                       formatadores: [_mascaraCep],
-                       rotulo: "000000-000",
-
-                     ),
-                     const SizedBox(height: 24),
-
                      const Padding(
                        padding: EdgeInsets.only(left: 12),
                        child: Text(
@@ -286,7 +285,7 @@ class _EnderecoProfissionalTelaState extends State<EnderecoProfissionalTela> {
                      Forms(
                        controlador: _endereco_numero,
                        tipagemValor: TextInputType.text,
-                       rotulo: "Informe sua rua",
+                       rotulo: "Número da residência",
 
                      ),
                      const SizedBox(height: 24),
