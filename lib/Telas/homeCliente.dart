@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:laborhub/Repository/perfil_repository.dart';
 import '../Formularios/forms.dart';
 import '../Model/profissional.dart';
 import '../Model/usuarios.dart';
@@ -14,6 +16,7 @@ import 'agendamentos.dart';
 import 'detalhesUsuario.dart';
 import 'encontrarProfissionais.dart';
 import 'menuLateral.dart';
+import '';
 
 
 class HomeCliente extends StatefulWidget {
@@ -154,6 +157,60 @@ class _HomeClienteState extends State<HomeCliente> {
     }).toList();
   }
 
+  final _perfilRepository = PerfilRepository();
+  bool _notificacoesAtivas = false;
+  bool _salvandoNotificacoes = false;
+
+  Future<void> _alternarNotificacoes() async {
+    final ativas = _notificacoesAtivas;
+    if (ativas == null || _salvandoNotificacoes) return;
+
+    final ativar = !ativas;
+    setState(() => _salvandoNotificacoes = true);
+
+    try {
+      if (ativar) {
+        final permissao = await Permission.notification.request();
+        if (!mounted) return;
+
+        if (!permissao.isGranted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Permita notificações nas configurações do celular.',
+              ),
+              action: SnackBarAction(
+                label: 'Configurações',
+                onPressed: () async {
+                  await openAppSettings();
+                },
+              ),
+            ),
+          );
+          return;
+        }
+      }
+
+      await _perfilRepository.salvarPreferenciaNotificacoes(ativar);
+      if (!mounted) return;
+
+      setState(() => _notificacoesAtivas = ativar);
+    } catch (erro) {
+      debugPrint('Erro ao salvar preferência de notificações: $erro');
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível atualizar as notificações.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _salvandoNotificacoes = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final profissionais = _filtrados;
@@ -184,12 +241,17 @@ class _HomeClienteState extends State<HomeCliente> {
                       ),
                       const Spacer(),
                       IconButton(
-                        icon: const Icon(Icons.notifications, size: 25),
+                        icon: Icon(
+                          _notificacoesAtivas == true
+                              ? Icons.notifications_active
+                              : Icons.notifications_off_outlined,
+                          size: 25,
+                        ),
                         color: Colors.black,
-                        tooltip: 'Notificações',
-                        onPressed: () {
-                          // Navegação para tela de notificações
-                        },
+                        tooltip: _notificacoesAtivas == true
+                            ? 'Desativar notificações'
+                            : 'Ativar notificações',
+                        onPressed: _salvandoNotificacoes ? null : _alternarNotificacoes,
                       ),
                       const SizedBox(width: 4),
                       _Avatar(
@@ -278,44 +340,7 @@ class _HomeClienteState extends State<HomeCliente> {
                             ),
                 ),
 
-                // Barra inferior
-                // Padding(
-                //   padding: const EdgeInsets.fromLTRB(44, 4, 44, 12),
-                //   child: Row(
-                //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                //     children: [
-                //       IconButton(
-                //         icon: const Icon(Icons.assignment_outlined, size: 38),
-                //         color: const Color(0xFF424242),
-                //         tooltip: 'Histórico',
-                //         onPressed: _abrirHistorico,
-                //       ),
-                //
-                //       IconButton(
-                //         icon: const Icon(Icons.home, size: 38),
-                //         color: const Color(0xFF3B82F6),
-                //         tooltip: 'Início',
-                //         onPressed: () {
-                //         // Já está na Home
-                //         },
-                //       ),
-                //
-                //       IconButton(
-                //         icon: const Icon(Icons.engineering, size: 38),
-                //         color: const Color(0xFF424242),
-                //         tooltip: 'Profissionais',
-                //         onPressed: _abrirProfissionais,
-                //       ),
-                //
-                //       IconButton(
-                //         icon: const Icon(Icons.event_available, size: 38),
-                //         color: const Color(0xFF424242),
-                //         tooltip: 'Agendamentos',
-                //         onPressed: _abrirAgendamentos,
-                //       ),
-                //     ],
-                //   ),
-                // ),
+
               ],
             ),
           ),
