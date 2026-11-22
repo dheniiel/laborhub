@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../Model/usuarios.dart';
+import '../Data/sessao_dao.dart';
+import '../Repository/auth_api.dart';
+import 'menuLateral.dart';
 
 enum SituacaoHistoricoProfissional {
   finalizado('Finalizados', 'Finalizado'),
@@ -58,14 +61,75 @@ class _HistoricoProfissionalState extends State<HistoricoProfissional> {
   static const _borda = Color(0xFFD9D9D9);
   static const _fonte = 'MontSerrat';
 
-  final _ocultos = <int>{};
+  final _api = AuthApi();
+  final _sessao = SessaoDao();
+  final _excluindo = <int>{};
+  List<ServicoHistoricoProfissional> _servicos = [];
+  bool _carregando = true;
+  String? _erro;
+
+  @override
+  void initState() {
+    super.initState();
+    _servicos = List.of(widget.servicos);
+    _carregar();
+  }
+
+  Future<Map<String, dynamic>> _consultar(
+    String rota,
+    Map<String, Object?> dados,
+  ) async {
+    final sessao = await _sessao.buscar();
+    if (sessao == null ||
+        sessao.usuario.usuarios_id != widget.usuario.usuarios_id) {
+      throw const AuthException('Sua sessão expirou. Entre novamente.', 401);
+    }
+    return _api.post(rota, dados, token: sessao.token);
+  }
+
+  Future<void> _carregar() async {
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+    try {
+      final resposta = await _consultar(
+        'solicitacoes/historico-profissional',
+        {},
+      );
+      final servicos = (resposta['historico'] as List).map((registro) {
+        final item = Map<String, dynamic>.from(registro as Map);
+        return ServicoHistoricoProfissional(
+          id: item['solicitacao_id'] as int,
+          servico: item['servico'] as String,
+          cliente: item['cliente'] as String,
+          data: DateTime.parse(item['data'] as String),
+          situacao: item['situacao'] == 'Finalizado'
+              ? SituacaoHistoricoProfissional.finalizado
+              : SituacaoHistoricoProfissional.recusado,
+          detalhes: item['detalhes'] as String?,
+        );
+      }).toList();
+      if (!mounted) return;
+      setState(() => _servicos = servicos);
+    } catch (erro) {
+      if (!mounted) return;
+      setState(
+        () => _erro = erro is AuthException
+            ? erro.mensagem
+            : 'Não foi possível carregar o histórico.',
+      );
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
+  }
+
   String _pesquisa = '';
   var _situacao = SituacaoHistoricoProfissional.finalizado;
 
   List<ServicoHistoricoProfissional> get _visiveis {
-    final servicos = widget.servicos.where((item) {
-      return !_ocultos.contains(item.id) &&
-          item.situacao == _situacao &&
+    final servicos = _servicos.where((item) {
+      return item.situacao == _situacao &&
           (item.servico.toLowerCase().contains(_pesquisa) ||
               item.cliente.toLowerCase().contains(_pesquisa) ||
               _data(item.data).contains(_pesquisa));
@@ -80,6 +144,7 @@ class _HistoricoProfissionalState extends State<HistoricoProfissional> {
   }
 
   Future<void> _excluir(ServicoHistoricoProfissional item) async {
+    if (_excluindo.contains(item.id)) return;
     final descricao = item.situacao == SituacaoHistoricoProfissional.finalizado
         ? 'Ao excluir este histórico, você não poderá mais consultar os '
               'detalhes deste serviço pelo histórico. Tem certeza?'
@@ -142,8 +207,29 @@ class _HistoricoProfissionalState extends State<HistoricoProfissional> {
       ),
     );
 
-    if (confirmado == true && mounted) {
-      setState(() => _ocultos.add(item.id));
+    if (confirmado != true || !mounted || _excluindo.contains(item.id)) return;
+    setState(() => _excluindo.add(item.id));
+    try {
+      await _consultar('solicitacoes/historico-profissional/ocultar', {
+        'solicitacao_id': item.id,
+      });
+      if (!mounted) return;
+      setState(() => _servicos.removeWhere((servico) => servico.id == item.id));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Histórico excluído.')));
+    } catch (erro) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            erro is AuthException
+                ? erro.mensagem
+                : 'Não foi possível excluir o histórico. Tente novamente.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _excluindo.remove(item.id));
     }
   }
 
@@ -191,7 +277,7 @@ class _HistoricoProfissionalState extends State<HistoricoProfissional> {
           tooltip: 'Excluir histórico de ${item.servico}',
           color: _vermelho,
           icon: const Icon(Icons.delete_outline),
-          onPressed: () => _excluir(item),
+          onPressed: _excluindo.contains(item.id) ? null : () => _excluir(item),
         ),
       ),
     );
@@ -203,133 +289,202 @@ class _HistoricoProfissionalState extends State<HistoricoProfissional> {
     final imagem = File(widget.usuario.usuarios_imagem);
     final temFoto =
         widget.usuario.usuarios_imagem.isNotEmpty && imagem.existsSync();
-
     return Scaffold(
       backgroundColor: Colors.white,
+      drawer: MenuLateral(
+        onEditarPerfil: () => widget.onConfiguracoes?.call(),
+        onSair: () => sairDaConta(context),
+      ),
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        title: CircleAvatar(
-          backgroundColor: const Color(0xFFEFF6FF),
-          backgroundImage: temFoto ? FileImage(imagem) : null,
-          child: temFoto ? null : const Icon(Icons.person, color: _azul),
-        ),
         actions: [
           IconButton(
             tooltip: 'Notificações',
             onPressed: widget.onNotificacoes,
-            icon: const Icon(Icons.notifications),
+            icon: const Icon(Icons.notifications, color: Colors.black),
           ),
-          IconButton(
-            tooltip: 'Configurações',
-            onPressed: widget.onConfiguracoes,
-            icon: const Icon(Icons.settings),
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: widget.onConfiguracoes,
+              child: CircleAvatar(
+                backgroundColor: const Color(0xFFF4F4F4),
+                backgroundImage: temFoto ? FileImage(imagem) : null,
+                child: temFoto ? null : const Icon(Icons.person, color: _azul),
+              ),
+            ),
           ),
         ],
       ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 500),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(34, 32, 34, 20),
+          child: Column(
             children: [
-              const Text(
-                'Veja seus últimos serviços finalizados e recusados.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: _fonte, fontSize: 16),
-              ),
-              const SizedBox(height: 36),
-              const Text(
-                'Pesquise no histórico',
-                style: TextStyle(fontFamily: _fonte, fontSize: 14),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                onChanged: (valor) =>
-                    setState(() => _pesquisa = valor.trim().toLowerCase()),
-                style: const TextStyle(fontFamily: _fonte),
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 10,
-                  ),
-                  hintText: 'Pesquisar',
-                  suffixIcon: const Icon(Icons.search),
-                  suffixIconConstraints: const BoxConstraints(minWidth: 38),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(5),
-                  ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: Text(
+                  'Veja seus últimos serviços\nfinalizados e recusados.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontFamily: _fonte, fontSize: 16),
                 ),
               ),
-              const SizedBox(height: 24),
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final situacao in SituacaoHistoricoProfissional.values)
-                    Semantics(
-                      selected: _situacao == situacao,
-                      child: OutlinedButton(
-                        onPressed: () => setState(() => _situacao = situacao),
-                        style: _situacao == situacao
-                            ? _estiloBotao(Colors.white, _azul, _azul)
-                            : _estiloBotao(Colors.black, Colors.white, _azul),
-                        child: Text(situacao.aba),
+              Container(
+                width: double.infinity,
+                color: _azul,
+                padding: const EdgeInsets.fromLTRB(30, 16, 30, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Pesquise no histórico',
+                      style: TextStyle(fontFamily: _fonte, color: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      onChanged: (valor) => setState(
+                        () => _pesquisa = valor.trim().toLowerCase(),
+                      ),
+                      style: const TextStyle(fontFamily: _fonte),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: const Color(0xFFF4F4F4),
+                        isDense: true,
+                        hintText: 'Pesquisar',
+                        suffixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(5),
+                        ),
                       ),
                     ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
-              if (visiveis.isEmpty)
-                Text(
-                  _pesquisa.isEmpty
-                      ? 'Nenhum serviço ${_situacao.rotulo.toLowerCase()}.'
-                      : 'Nenhum serviço encontrado.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontFamily: _fonte),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+                child: Row(
+                  children: [
+                    for (final situacao in SituacaoHistoricoProfissional.values)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Semantics(
+                            selected: _situacao == situacao,
+                            child: OutlinedButton(
+                              onPressed: () =>
+                                  setState(() => _situacao = situacao),
+                              style: _situacao == situacao
+                                  ? _estiloBotao(Colors.white, _azul, _azul)
+                                  : _estiloBotao(
+                                      Colors.black,
+                                      Colors.white,
+                                      _azul,
+                                    ),
+                              child: Text(situacao.aba),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              for (final item in visiveis)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _card(item),
-                ),
+              ),
+              Expanded(
+                child: _carregando
+                    ? const Center(
+                        child: CircularProgressIndicator(color: _azul),
+                      )
+                    : _erro != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _erro!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontFamily: _fonte),
+                              ),
+                              const SizedBox(height: 12),
+                              TextButton(
+                                onPressed: _carregar,
+                                child: const Text('Tentar novamente'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : visiveis.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            _pesquisa.isEmpty
+                                ? 'Nenhum serviço ${_situacao.rotulo.toLowerCase()}.'
+                                : 'Nenhum serviço encontrado.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: _fonte,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                        itemCount: visiveis.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (_, index) => _card(visiveis[index]),
+                      ),
+              ),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: ColoredBox(
-        color: const Color(0xFFEFF6FF),
-        child: SafeArea(
-          top: false,
+      bottomNavigationBar: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: _azul,
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 16,
+                offset: Offset(0, 5),
+              ),
+            ],
+          ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Semantics(
-                selected: true,
-                label: 'Histórico',
-                child: const Tooltip(
-                  message: 'Histórico',
-                  excludeFromSemantics: true,
-                  child: Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(
-                      Icons.assignment_outlined,
-                      color: _azul,
-                      size: 38,
-                    ),
-                  ),
+              IconButton(
+                tooltip: 'Histórico',
+                isSelected: true,
+                onPressed: () {},
+                icon: const Icon(Icons.assignment_outlined),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  minimumSize: const Size(48, 48),
+                  shape: const CircleBorder(),
                 ),
               ),
               IconButton(
                 tooltip: 'Início',
+                color: Colors.black,
                 onPressed: () => Navigator.maybePop(context),
-                icon: const Icon(Icons.home, size: 36),
+                icon: const Icon(Icons.home_rounded),
               ),
               IconButton(
                 tooltip: 'Agendamentos',
+                color: Colors.black,
                 onPressed: widget.onAgendamentos,
-                icon: const Icon(Icons.event_available, size: 36),
+                icon: const Icon(Icons.event_available_outlined),
               ),
             ],
           ),

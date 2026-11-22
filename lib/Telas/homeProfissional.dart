@@ -104,6 +104,22 @@ class _HomeProfissionalState extends State<Homeprofissional> {
   }
 
 
+  Route<void> _rotaHistorico() => MaterialPageRoute(
+    builder: (context) => HistoricoProfissional(
+      usuario: _usuario,
+      servicos: const [],
+      onConfiguracoes: _abrirEdicaoPerfil,
+      onAgendamentos: () => Navigator.of(context).pushReplacement(_rotaAgendamentos()),
+    ),
+  );
+
+  Route<void> _rotaAgendamentos() => MaterialPageRoute(
+    builder: (context) => Agendamentos.profissional(
+      usuario: _usuario,
+      onHistorico: () => Navigator.of(context).pushReplacement(_rotaHistorico()),
+    ),
+  );
+
   Future<void> _abrirEdicaoPerfil() async {
     final atualizado = await Navigator.of(context).push<Usuarios>(
       MaterialPageRoute(builder: (context) => EditarPerfilProfissional(usuario: _usuario)),
@@ -478,17 +494,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                 icon: const Icon(Icons.assignment_outlined),
                 color: Colors.black,
                 tooltip: 'Histórico',
-                onPressed: () {
-                  Navigator.of(context).push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (_) => HistoricoProfissional(
-                        usuario: _usuario,
-                        servicos: const [],
-                        onConfiguracoes: _abrirEdicaoPerfil,
-                      ),
-                    ),
-                  );
-                },
+                onPressed: () => Navigator.of(context).push(_rotaHistorico()),
               ),
               IconButton(
                 icon: const Icon(Icons.home_rounded),
@@ -506,7 +512,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                 icon: const Icon(Icons.event_available_outlined),
                 color: Colors.black,
                 tooltip: 'Agendamentos',
-                onPressed: () {},
+                onPressed: () => Navigator.of(context).push(_rotaAgendamentos()),
               ),
             ],
           ),

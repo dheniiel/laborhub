@@ -19,9 +19,10 @@ try {
         );
     });
 
-    // IP da conexão; nunca X-Forwarded-For enviado pelo cliente.
-    $auth->limitar('ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'desconhecido'), 60, 900);
-    $resultado = $auth->processar($rota, lerJson(), $_SERVER['REMOTE_ADDR'] ?? 'desconhecido', lerToken());
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'desconhecido';
+    $token = lerToken();
+    $auth->limitarAcesso($rota, $ip, $token);
+    $resultado = $auth->processar($rota, lerJson(), $ip, $token);
     responder($resultado[0], $resultado[1], $resultado[2] ?? null);
 } catch (ApiError $erro) {
     responder($erro->status, ['message' => $erro->getMessage()]);
