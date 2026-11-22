@@ -56,6 +56,21 @@ final class Auth
         if ($rota === 'perfil/notificacoes') {
             return $this->salvarPreferenciaNotificacoes($token, $dados);
         }
+        if ($rota === 'perfil/dispositivo') {
+            return $this->salvarDispositivo($token, $dados);
+        }
+        if ($rota === 'perfil/notificacoes/consultar') {
+            $usuario = $this->usuarioDaSessao($token);
+
+            $consulta = $this->db->prepare(
+                'SELECT notificacoes_ativas FROM usuarios WHERE usuarios_id = ?'
+            );
+            $consulta->execute([(int) $usuario['usuarios_id']]);
+
+            return [200, [
+                'notificacoes_ativas' => (int) $consulta->fetchColumn() === 1,
+            ]];
+        }
 
         // Contagem para o card.
         if ($rota === 'solicitacoes/listarServicoPendente') {
@@ -596,13 +611,23 @@ final class Auth
 
             $vincular->execute([$solicitacaoId, $servicoId]);
 
-            $this->db->commit();
+                $this->db->commit();
+            } catch (\Throwable $erro) {
+                $this->db->rollBack();
+                throw $erro;
+            }
+
+            try {
+                $this->notificarNovaSolicitacao($servicoId, $solicitacaoId);
+            } catch (\Throwable $erro) {
+                error_log(
+                    'Falha no envio FCM da solicitação ' . $solicitacaoId
+                    . ' (' . get_class($erro) . ')'
+                );
+            }
 
             return [201, ['solicitacao_id' => $solicitacaoId]];
-        } catch (Throwable $erro) {
-            $this->db->rollBack();
-            throw $erro;
-        }
+
     }
 
 
@@ -1238,6 +1263,89 @@ final class Auth
         $atualizar->execute([$ativo ? 1 : 0, (int) $usuario['usuarios_id']]);
 
         return [200, ['notificacoes_ativas' => $ativo]];
+    }
+    private function salvarDispositivo(?string $token, array $dados): array
+    {
+        $usuario = $this->usuarioDaSessao($token);
+        $fcmToken = $dados['fcm_token'] ?? null;
+
+        if (!is_string($fcmToken) || $fcmToken === '' ||
+            strlen($fcmToken) > 512 || preg_match('/[^\x21-\x7E]/', $fcmToken)) {
+            throw new ApiError(400, 'Token FCM inválido.');
+        }
+
+        $id = (int) $usuario['usuarios_id'];
+
+        $this->db->beginTransaction();
+        try {
+            $this->db->prepare(
+                'UPDATE usuarios SET fcm_token = NULL
+                 WHERE fcm_token = ? AND usuarios_id <> ?'
+            )->execute([$fcmToken, $id]);
+
+            $this->db->prepare(
+                'UPDATE usuarios SET fcm_token = ? WHERE usuarios_id = ?'
+            )->execute([$fcmToken, $id]);
+
+            $this->db->commit();
+        } catch (\Throwable $erro) {
+            $this->db->rollBack();
+            throw $erro;
+        }
+
+        return [200, ['message' => 'Dispositivo registrado.']];
+    }
+
+    private function notificarNovaSolicitacao(int $servicoId, int $solicitacaoId): void
+    {
+        $consulta = $this->db->prepare(
+            'SELECT u.fcm_token
+             FROM servicos s
+             JOIN usuarios u ON u.usuarios_id = s.servicos_usuarios_id
+             WHERE s.servicos_id = ?
+               AND u.notificacoes_ativas = 1
+               AND u.fcm_token IS NOT NULL'
+        );
+        $consulta->execute([$servicoId]);
+
+        $fcmToken = $consulta->fetchColumn();
+        if (!is_string($fcmToken) || $fcmToken === '') {
+            return;
+        }
+
+        $credenciais = \Google\Auth\ApplicationDefaultCredentials::getCredentials(
+            ['https://www.googleapis.com/auth/firebase.messaging']
+        );
+        $autorizacao = $credenciais->fetchAuthToken();
+        $accessToken = $autorizacao['access_token'] ?? null;
+
+        if (!is_string($accessToken) || $accessToken === '') {
+            throw new \RuntimeException('Autorização FCM indisponível.');
+        }
+
+        $http = new \GuzzleHttp\Client([
+            'connect_timeout' => 3,
+            'timeout' => 5,
+        ]);
+
+        $http->post(
+            'https://fcm.googleapis.com/v1/projects/laborhub-1aea9/messages:send',
+            [
+                'headers' => ['Authorization' => 'Bearer ' . $accessToken],
+                'json' => [
+                    'message' => [
+                        'token' => $fcmToken,
+                        'notification' => [
+                            'title' => 'Nova solicitação',
+                            'body' => 'Você recebeu uma nova solicitação no LaborHub.',
+                        ],
+                        'data' => [
+                            'solicitacao_id' => (string) $solicitacaoId,
+                        ],
+                    ],
+                ],
+            ]
+        );
     }
 
 

@@ -56,6 +56,7 @@ class _HomeProfissionalState extends State<Homeprofissional> {
   void initState() {
     super.initState();
     _carregarPendente();
+    _carregarPreferenciaNotificacoes();
   }
 
 
@@ -135,8 +136,9 @@ class _HomeProfissionalState extends State<Homeprofissional> {
   }
 
   final _perfilRepository = PerfilRepository();
-  bool _notificacoesAtivas = false;
+  // bool _notificacoesAtivas = false;
   bool _salvandoNotificacoes = false;
+  bool? _notificacoesAtivas;
 
   Future<void> _alternarNotificacoes() async {
     final ativas = _notificacoesAtivas;
@@ -189,6 +191,18 @@ class _HomeProfissionalState extends State<Homeprofissional> {
   }
 
 
+  Future<void> _carregarPreferenciaNotificacoes() async {
+    try {
+      final ativa = await _perfilRepository.consultarPreferenciaNotificacoes();
+      if (!mounted) return;
+
+      setState(() => _notificacoesAtivas = ativa);
+    } catch (erro) {
+      debugPrint('Erro ao carregar preferência de notificações: $erro');
+    }
+  }
+
+
 
 
 
@@ -234,7 +248,9 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                           tooltip: _notificacoesAtivas == true
                               ? 'Desativar notificações'
                               : 'Ativar notificações',
-                          onPressed: _salvandoNotificacoes ? null : _alternarNotificacoes,
+                          onPressed: _notificacoesAtivas == null || _salvandoNotificacoes
+                              ? null
+                              : _alternarNotificacoes,
                         ),
                         const SizedBox(width: 4),
                         _Avatar(

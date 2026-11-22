@@ -1,6 +1,7 @@
 import 'auth_api.dart';
 import '../Data/sessao_dao.dart';
 import '../Model/usuarios.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class PerfilRepository {
   final AuthApi _api;
@@ -84,6 +85,35 @@ class PerfilRepository {
       {'ativo': ativo},
       token: sessao.token,
     );
+  }
+
+  Future<void> registrarDispositivo() async {
+    final sessao = await _dao.buscar();
+    if (sessao == null || sessao.expirada) return;
+
+    final fcmToken = await FirebaseMessaging.instance.getToken();
+    if (fcmToken == null) return;
+
+    await _api.post(
+      'perfil/dispositivo',
+      {'fcm_token': fcmToken},
+      token: sessao.token,
+    );
+  }
+
+  Future<bool> consultarPreferenciaNotificacoes() async {
+    final sessao = await _dao.buscar();
+    if (sessao == null || sessao.expirada) {
+      throw const AuthException('Sua sessão expirou. Entre novamente.', 401);
+    }
+
+    final resposta = await _api.post(
+      'perfil/notificacoes/consultar',
+      {},
+      token: sessao.token,
+    );
+
+    return resposta['notificacoes_ativas'] as bool;
   }
 
 }
