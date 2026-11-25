@@ -2,6 +2,7 @@ import 'auth_api.dart';
 import '../Data/sessao_dao.dart';
 import '../Model/usuarios.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'dart:io';
 
 class PerfilRepository {
   final AuthApi _api;
@@ -88,6 +89,8 @@ class PerfilRepository {
   }
 
   Future<void> registrarDispositivo() async {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+    
     final sessao = await _dao.buscar();
     if (sessao == null || sessao.expirada) return;
 

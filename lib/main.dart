@@ -19,19 +19,16 @@ Future<void> main() async {
     databaseFactory = databaseFactoryFfi;
   }
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  final suportaFirebase = Platform.isAndroid || Platform.isIOS;
 
-  // try {
-  //   final token = await FirebaseMessaging.instance.getToken();
-  //   debugPrint('FCM token: $token');
-  // } catch (erro) {
-  //   debugPrint('Erro ao obter token FCM: $erro');
-  // }
-  FirebaseMessaging.onMessage.listen((mensagem) {
-    debugPrint('Push recebido: ${mensagem.notification?.title}');
-  });
+  if (suportaFirebase) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FirebaseMessaging.onMessage.listen((mensagem) {
+      debugPrint('Push recebido: ${mensagem.notification?.title}');
+    });
+  }
 
   runApp(const LaborHUBapp());
 
