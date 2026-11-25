@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:laborhub/Repository/perfil_repository.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../Formularios/forms.dart';
 import '../Model/profissional.dart';
 import '../Model/usuarios.dart';
@@ -89,6 +90,7 @@ class _HomeClienteState extends State<HomeCliente> {
     _pesquisaController.addListener(() => setState(() {}));
     _carregarProfissionais();
     _validarSessao();
+    _carregarPreferenciaNotificacoes();
   }
 
   // Confere a sessão na API ao abrir. Sem conexão, continua com os dados do SQLite.
@@ -158,8 +160,8 @@ class _HomeClienteState extends State<HomeCliente> {
   }
 
   final _perfilRepository = PerfilRepository();
-  bool _notificacoesAtivas = false;
   bool _salvandoNotificacoes = false;
+  bool? _notificacoesAtivas;
 
   Future<void> _alternarNotificacoes() async {
     final ativas = _notificacoesAtivas;
@@ -189,6 +191,8 @@ class _HomeClienteState extends State<HomeCliente> {
           );
           return;
         }
+        // await _perfilRepository.registrarDispositivo();
+        // if (!mounted) return;
       }
 
       await _perfilRepository.salvarPreferenciaNotificacoes(ativar);
@@ -208,6 +212,18 @@ class _HomeClienteState extends State<HomeCliente> {
       if (mounted) {
         setState(() => _salvandoNotificacoes = false);
       }
+    }
+  }
+
+
+  Future<void> _carregarPreferenciaNotificacoes() async {
+    try {
+      final ativa = await _perfilRepository.consultarPreferenciaNotificacoes();
+      if (!mounted) return;
+
+      setState(() => _notificacoesAtivas = ativa);
+    } catch (erro) {
+      debugPrint('Erro ao carregar preferência de notificações: $erro');
     }
   }
 
@@ -251,7 +267,9 @@ class _HomeClienteState extends State<HomeCliente> {
                         tooltip: _notificacoesAtivas == true
                             ? 'Desativar notificações'
                             : 'Ativar notificações',
-                        onPressed: _salvandoNotificacoes ? null : _alternarNotificacoes,
+                        onPressed: _notificacoesAtivas == null || _salvandoNotificacoes
+                            ? null
+                            : _alternarNotificacoes,
                       ),
                       const SizedBox(width: 4),
                       _Avatar(

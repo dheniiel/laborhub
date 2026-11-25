@@ -221,11 +221,6 @@ class _HomeProfissionalState extends State<Homeprofissional> {
   }
 
 
-
-
-
-
-
   @override
   Widget build(BuildContext context) {
     // TODO: implement build

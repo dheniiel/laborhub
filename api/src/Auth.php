@@ -576,22 +576,26 @@ final class Auth
 
             $existente = $this->db->prepare(
                 "SELECT so.solicitacao_id
-                 FROM solicitacao so
+                 FROM solicitacao AS so
+                 JOIN solicitacaoServico AS ss
+                   ON ss.solicitacaoServico_solicitacao_id = so.solicitacao_id
+                 JOIN servicos AS anterior
+                   ON anterior.servicos_id = ss.solicitacaoServico_servicos_id
+                 JOIN servicos AS escolhido
+                   ON escolhido.servicos_usuarios_id = anterior.servicos_usuarios_id
                  WHERE so.solicitacao_usuarios_id = ?
-                   AND (so.solicitacao_status IS NULL OR
-                        so.solicitacao_status NOT IN ('Recusado', 'Recusada', 'Finalizado'))
-                   AND EXISTS (
-                       SELECT 1 FROM solicitacaoServico ss
-                       WHERE ss.solicitacaoServico_solicitacao_id = so.solicitacao_id
-                         AND ss.solicitacaoServico_servicos_id = ?
-                   )
+                   AND escolhido.servicos_id = ?
+                   AND so.solicitacao_status = 'Pendente'
+                   AND so.solicitacao_deletada_em IS NULL
                  LIMIT 1"
             );
+
             $existente->execute([(int) $usuario['usuarios_id'], $servicoId]);
+
             if ($existente->fetchColumn() !== false) {
                 throw new ApiError(
                     409,
-                    'Você já solicitou este serviço. Aguarde a recusa ou a finalização para solicitar novamente.'
+                    'Você já tem uma solicitação pendente com este profissional.'
                 );
             }
 
@@ -1470,28 +1474,24 @@ final class Auth
     private function notificarNovaSolicitacao(int $servicoId, int $solicitacaoId): void
     {
         $consulta = $this->db->prepare(
-            'SELECT u.fcm_token
-             FROM servicos s
-             JOIN usuarios u ON u.usuarios_id = s.servicos_usuarios_id
+            "SELECT u.fcm_token
+             FROM servicos AS s
+             INNER JOIN usuarios AS u
+                 ON u.usuarios_id = s.servicos_usuarios_id
              WHERE s.servicos_id = ?
                AND u.notificacoes_ativas = 1
-               AND u.fcm_token IS NOT NULL'
+               AND u.fcm_token IS NOT NULL
+               AND u.fcm_token <> ''"
         );
         $consulta->execute([$servicoId]);
 
         $fcmToken = $consulta->fetchColumn();
-
-        if (!is_string($fcmToken) || $fcmToken === '') {
-            error_log('[FCM] Nenhum destinatário habilitado para o serviço ' . $servicoId);
+        if (!is_string($fcmToken) || trim($fcmToken) === '') {
+            error_log("[FCM] Serviço {$servicoId} sem destinatário habilitado.");
             return;
         }
 
-        error_log('[FCM] Iniciando envio da solicitação ' . $solicitacaoId);
-
-        $fcmToken = $consulta->fetchColumn();
-        if (!is_string($fcmToken) || $fcmToken === '') {
-            return;
-        }
+        error_log("[FCM] Iniciando envio da solicitação {$solicitacaoId}.");
 
         $credenciais = \Google\Auth\ApplicationDefaultCredentials::getCredentials(
             ['https://www.googleapis.com/auth/firebase.messaging']
@@ -1508,13 +1508,15 @@ final class Auth
             'timeout' => 5,
         ]);
 
-        $http->post(
+        $resposta = $http->post(
             'https://fcm.googleapis.com/v1/projects/laborhub-1aea9/messages:send',
             [
-                'headers' => ['Authorization' => 'Bearer ' . $accessToken],
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $accessToken,
+                ],
                 'json' => [
                     'message' => [
-                        'token' => $fcmToken,
+                        'token' => trim($fcmToken),
                         'notification' => [
                             'title' => 'Nova solicitação',
                             'body' => 'Você recebeu uma nova solicitação no LaborHub.',
@@ -1526,8 +1528,11 @@ final class Auth
                 ],
             ]
         );
-        error_log('[FCM] Firebase aceitou a solicitação ' . $solicitacaoId);
 
+        error_log(
+            "[FCM] Firebase aceitou o envio da solicitação {$solicitacaoId}. "
+            . 'HTTP ' . $resposta->getStatusCode()
+        );
     }
 
 
