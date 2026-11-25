@@ -102,7 +102,7 @@ class SolicitacaoRepository {
   }
 
 
-  Future<void> recusarSolicitacao(int solicitacaoId, String motivo) async {
+  Future<void> recusarSolicitacao(int solicitacaoId, String? motivo) async {
     await _api.post(
       'solicitacoes/recusarSolicitacao',
       {'solicitacao_id': solicitacaoId,

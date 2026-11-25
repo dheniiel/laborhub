@@ -1356,7 +1356,15 @@ final class Auth
         if (!is_int($id) || $id <= 0) {
             throw new ApiError(400, 'Solicitação inválida.');
         }
-        $motivo = $status === 'Recusado' ? $this->texto($dados, 'motivo', 250) : null;
+        $motivo = null;
+
+        if ($status === 'Recusado') {
+            $motivoInformado = $dados['motivo'] ?? '';
+
+            if (!is_string($motivoInformado) || trim($motivoInformado) !== '') {
+                $motivo = $this->texto($dados, 'motivo', 250);
+            }
+        }
         $origem = $status === 'Finalizado' ? 'Ativo' : 'Pendente';
 
         $this->db->beginTransaction();

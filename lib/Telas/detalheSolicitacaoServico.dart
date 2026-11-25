@@ -49,15 +49,11 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
 
 
   // Recusando solicitação
-  Future<void> _recusarSolicitacao (int solicitacaoId, String motivo) async {
-
+  Future<void> _recusarSolicitacao(int solicitacaoId, String motivo) async {
     await SolicitacaoRepository().recusarSolicitacao(
-      solicitacaoId, motivo,
-
+      solicitacaoId,
+      motivo.isEmpty ? null : motivo,
     );
-
-
-
   }
 
   // Aceitando solicitação
@@ -485,11 +481,6 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
                                                   onPressed: enviando
                                                       ? null
                                                       : () async {
-                                                    if (!(_formKey.currentState
-                                                        ?.validate() ??
-                                                        false)) {
-                                                      return;
-                                                    }
 
                                                     setStateModal(() {
                                                       enviando = true;
