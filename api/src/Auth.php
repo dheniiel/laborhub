@@ -44,6 +44,16 @@ final class Auth
         if ($rota === 'solicitacoes') {
             return $this->listarSolicitacoes($token);
         }
+        if ($rota === 'solicitacoes/historico-profissional') {
+            return $this->listarHistoricoProfissional($token);
+        }
+        if ($rota === 'solicitacoes/historico-profissional/ocultar') {
+            return $this->ocultarHistoricoProfissional($token, $dados);
+        }
+
+        if ($rota === 'solicitacoes/agendamentos-profissional') {
+            return $this->listarAgendamentosProfissional($token);
+        }
         if ($rota === 'solicitacoes/cancelar') {
             return $this->cancelarSolicitacao($token, $dados);
         }
@@ -74,14 +84,8 @@ final class Auth
 
         // Contagem para o card.
         if ($rota === 'solicitacoes/listarServicoPendente') {
-            $usuarioId = filter_var(
-                $dados['usuario_id'] ?? null,
-                FILTER_VALIDATE_INT
-            );
-
-            if ($usuarioId === false || $usuarioId === null || $usuarioId <= 0) {
-                throw new ApiError(400, 'ID do usuário inválido.');
-            }
+            $usuario = $this->usuarioDaSessao($token);
+            $usuarioId = (int) $usuario['usuarios_id'];
 
             return [
                 200,
@@ -93,14 +97,8 @@ final class Auth
 
         // Listagem dos pedidos recebidos.
         if ($rota === 'solicitacoes/solicitacaoPendente') {
-            $usuarioId = filter_var(
-                $dados['usuario_id'] ?? null,
-                FILTER_VALIDATE_INT
-            );
-
-            if ($usuarioId === false || $usuarioId === null || $usuarioId <= 0) {
-                throw new ApiError(400, 'ID do usuário inválido.');
-            }
+            $usuario = $this->usuarioDaSessao($token);
+            $usuarioId = (int) $usuario['usuarios_id'];
 
             return [
                 200,
@@ -112,14 +110,8 @@ final class Auth
 
         // Contagem para o card.
         if ($rota === 'solicitacoes/listarServicoAtivo') {
-            $usuarioId = filter_var(
-                $dados['usuario_id'] ?? null,
-                FILTER_VALIDATE_INT
-            );
-
-            if ($usuarioId === false || $usuarioId === null || $usuarioId <= 0) {
-                throw new ApiError(400, 'ID do usuário inválido.');
-            }
+            $usuario = $this->usuarioDaSessao($token);
+            $usuarioId = (int) $usuario['usuarios_id'];
 
             return [
                 200,
@@ -131,14 +123,8 @@ final class Auth
 
         // Listagem dos pedidos ativo.
         if ($rota === 'solicitacoes/SolicitacaoProfissionalAtivo') {
-            $usuarioId = filter_var(
-                $dados['usuario_id'] ?? null,
-                FILTER_VALIDATE_INT
-            );
-
-            if ($usuarioId === false || $usuarioId === null || $usuarioId <= 0) {
-                throw new ApiError(400, 'ID do usuário inválido.');
-            }
+            $usuario = $this->usuarioDaSessao($token);
+            $usuarioId = (int) $usuario['usuarios_id'];
 
             return [
                 200,
@@ -149,30 +135,15 @@ final class Auth
         }
 
         if ($rota === 'solicitacoes/recusarSolicitacao') {
-            $resultado = $this->recusarSolicitacao(
-                (int) ($dados['solicitacao_id'] ?? 0),
-                (string) ($dados['motivo'] ?? '')
-            );
-
-            return [200, $resultado];
+            return [200, $this->alterarSituacaoSolicitacao($token, $dados, 'Recusado')];
         }
-
         if ($rota === 'solicitacoes/aceitarSolicitacao') {
-            $resultado = $this->aceitarSolicitacao(
-                (int) ($dados['solicitacao_id'] ?? 0),
-
-            );
-            return [200, $resultado];
+            return [200, $this->alterarSituacaoSolicitacao($token, $dados, 'Ativo')];
         }
         if ($rota === 'solicitacoes/finalizarSolicitacao') {
-
-            $conclusao = date('Y-m-d H:i:s');
-            $resultado = $this->finalizarSolicitacao(
-                (int) ($dados['solicitacao_id'] ?? 0),
-                $conclusao
-            );
-            return [200, $resultado];
+            return [200, $this->alterarSituacaoSolicitacao($token, $dados, 'Finalizado')];
         }
+
         if ($rota === 'profissional/avaliacoes') {
             return $this->listarAvaliacoesProfissional($token, $dados);
         }
@@ -190,6 +161,34 @@ final class Auth
     }
 
     /** Limite persistente de tentativas por chave (IP ou email). */
+    public function limitarAcesso(string $rota, string $ip, ?string $token): void
+    {
+        $consultas = [
+            'auth/session',
+            'profissionais',
+            'profissional/avaliacoes',
+            'solicitacoes',
+            'solicitacoes/listarServicoPendente',
+            'solicitacoes/listarServicoAtivo',
+            'solicitacoes/solicitacaoPendente',
+            'solicitacoes/SolicitacaoProfissionalAtivo',
+            'solicitacoes/historico-profissional',
+            'solicitacoes/agendamentos-profissional',
+        ];
+        if ($token !== null && in_array($rota, $consultas, true)) {
+            try {
+                $usuario = $this->usuarioDaSessao($token);
+            } catch (ApiError $erro) {
+                $this->limitar('ip:' . $ip, 60, 900);
+                throw $erro;
+            }
+            // A Home consulta quatro rotas. O orçamento de leitura acompanha a conta.
+            $this->limitar('consultas:usuario:' . $usuario['usuarios_id'], 120, 60);
+            return;
+        }
+        $this->limitar('ip:' . $ip, 60, 900);
+    }
+
     public function limitar(string $chave, int $maximo, int $segundos): void
     {
         $agora = time();
@@ -543,6 +542,14 @@ final class Auth
         $this->db->beginTransaction();
 
         try {
+            // Serializa envios do mesmo cliente, inclusive requisições simultâneas.
+            $bloqueio = $this->db->prepare(
+                'SELECT usuarios_id FROM usuarios WHERE usuarios_id = ? FOR UPDATE'
+            );
+            $bloqueio->execute([(int) $usuario['usuarios_id']]);
+            $bloqueio->fetchColumn();
+
+
             // Confere se o serviço está ativo e se o endereço
             // pertence ao profissional que oferece esse serviço.
             $consulta = $this->db->prepare(
@@ -566,6 +573,28 @@ final class Auth
                     'Serviço ou endereço do profissional inválido.'
                 );
             }
+
+            $existente = $this->db->prepare(
+                "SELECT so.solicitacao_id
+                 FROM solicitacao so
+                 WHERE so.solicitacao_usuarios_id = ?
+                   AND (so.solicitacao_status IS NULL OR
+                        so.solicitacao_status NOT IN ('Recusado', 'Recusada', 'Finalizado'))
+                   AND EXISTS (
+                       SELECT 1 FROM solicitacaoServico ss
+                       WHERE ss.solicitacaoServico_solicitacao_id = so.solicitacao_id
+                         AND ss.solicitacaoServico_servicos_id = ?
+                   )
+                 LIMIT 1"
+            );
+            $existente->execute([(int) $usuario['usuarios_id'], $servicoId]);
+            if ($existente->fetchColumn() !== false) {
+                throw new ApiError(
+                    409,
+                    'Você já solicitou este serviço. Aguarde a recusa ou a finalização para solicitar novamente.'
+                );
+            }
+
 
             // Cadastra a solicitação usando o cliente identificado pelo token.
             $inserir = $this->db->prepare(
@@ -716,7 +745,8 @@ final class Auth
                COALESCE(so.solicitacao_data_atual, DATE(so.solicitacao_criada_em)) AS solicitacao_data_atual,
                so.solicitacao_conclusao,
                so.solicitacao_quantidade,
-               so.solicitacao_status,
+               CASE WHEN so.solicitacao_status = 'Recusada' THEN 'Recusado'
+                    ELSE so.solicitacao_status END AS solicitacao_status,
                so.solicitacao_motivo,
                so.solicitacao_observacao,
                SUM(se.servicos_valor) * so.solicitacao_quantidade AS servicos_valor,
@@ -740,13 +770,134 @@ final class Auth
              LEFT JOIN avaliacao av ON av.avaliacao_solicitacao_id = so.solicitacao_id
              WHERE so.solicitacao_usuarios_id = ?
                AND so.solicitacao_deletada_em IS NULL
-               AND so.solicitacao_status IN ('Finalizado', 'Pendente', 'Recusado')
+               AND so.solicitacao_status IN ('Finalizado', 'Pendente', 'Ativo', 'Recusado', 'Recusada')
              GROUP BY so.solicitacao_id
              ORDER BY solicitacao_data DESC"
         );
         $consulta->execute([$usuario['usuarios_id']]);
 
         return [200, ['solicitacoes' => array_map(fn(array $linha): array => [
+            'servicos_valor' => (float) $linha['servicos_valor'],
+        ] + $linha, $consulta->fetchAll())]];
+    }
+
+    private function listarHistoricoProfissional(?string $token): array
+    {
+        $usuario = $this->usuarioDaSessao($token);
+        $consulta = $this->db->prepare(
+            "SELECT so.solicitacao_id,
+                    COALESCE(so.solicitacao_conclusao, so.solicitacao_data,
+                             DATE(so.solicitacao_criada_em)) AS data,
+                    CASE WHEN so.solicitacao_status = 'Finalizado'
+                         THEN 'Finalizado' ELSE 'Recusado' END AS situacao,
+                    COALESCE(so.solicitacao_motivo, so.solicitacao_observacao, '') AS detalhes,
+                    itens.servico,
+                    COALESCE(
+                        (SELECT MIN(NULLIF(TRIM(CONCAT_WS(' ', pf.pf_nome, pf.pf_sobrenome)), ''))
+                         FROM pessoaFisica pf WHERE pf.pf_usuarios_id = so.solicitacao_usuarios_id),
+                        (SELECT MIN(NULLIF(pj.pj_nomeFantasia, ''))
+                         FROM pessoaJuridica pj WHERE pj.pj_usuarios_id = so.solicitacao_usuarios_id),
+                        'Cliente') AS cliente
+             FROM solicitacao so
+             JOIN (
+                 SELECT ss.solicitacaoServico_solicitacao_id AS solicitacao_id,
+                        COALESCE(GROUP_CONCAT(DISTINCT se.servicos_nome
+                            ORDER BY se.servicos_nome SEPARATOR ', '), 'Serviço') AS servico
+                 FROM solicitacaoServico ss
+                 JOIN servicos se ON se.servicos_id = ss.solicitacaoServico_servicos_id
+                 WHERE se.servicos_usuarios_id = ?
+                 GROUP BY ss.solicitacaoServico_solicitacao_id
+             ) itens ON itens.solicitacao_id = so.solicitacao_id
+             LEFT JOIN historico_profissional_oculto oculto
+               ON oculto.solicitacao_id = so.solicitacao_id AND oculto.profissional_id = ?
+             WHERE so.solicitacao_deletada_em IS NULL
+               AND so.solicitacao_status IN ('Finalizado', 'Recusado', 'Recusada')
+               AND oculto.solicitacao_id IS NULL
+             ORDER BY data DESC, so.solicitacao_id DESC"
+        );
+        $consulta->execute([$usuario['usuarios_id'], $usuario['usuarios_id']]);
+        return [200, ['historico' => $consulta->fetchAll()]];
+    }
+
+    private function ocultarHistoricoProfissional(?string $token, array $dados): array
+    {
+        $usuario = $this->usuarioDaSessao($token);
+        $id = $dados['solicitacao_id'] ?? null;
+        if (!is_int($id) || $id <= 0) {
+            throw new ApiError(400, 'Solicitação inválida.');
+        }
+
+        // O vínculo é sempre conferido no banco usando o usuário da sessão.
+        $consulta = $this->db->prepare(
+            "INSERT INTO historico_profissional_oculto (profissional_id, solicitacao_id)
+             SELECT ?, so.solicitacao_id FROM solicitacao so
+             WHERE so.solicitacao_id = ?
+               AND so.solicitacao_deletada_em IS NULL
+               AND so.solicitacao_status IN ('Finalizado', 'Recusado', 'Recusada')
+               AND EXISTS (
+                   SELECT 1 FROM solicitacaoServico ss
+                   JOIN servicos se ON se.servicos_id = ss.solicitacaoServico_servicos_id
+                   WHERE ss.solicitacaoServico_solicitacao_id = so.solicitacao_id
+                     AND se.servicos_usuarios_id = ?
+               )
+             ON DUPLICATE KEY UPDATE
+               ocultado_em = historico_profissional_oculto.ocultado_em"
+        );
+        $consulta->execute([$usuario['usuarios_id'], $id, $usuario['usuarios_id']]);
+        $confirmacao = $this->db->prepare(
+            'SELECT 1 FROM historico_profissional_oculto
+             WHERE profissional_id = ? AND solicitacao_id = ?'
+        );
+        $confirmacao->execute([$usuario['usuarios_id'], $id]);
+        if (!$confirmacao->fetchColumn()) {
+            throw new ApiError(404, 'Serviço não encontrado no seu histórico.');
+        }
+        return [200, ['sucesso' => true]];
+    }
+
+
+    private function listarAgendamentosProfissional(?string $token): array
+    {
+        $usuario = $this->usuarioDaSessao($token);
+        $consulta = $this->db->prepare(
+            "SELECT
+               so.solicitacao_id,
+               COALESCE(so.solicitacao_data, so.solicitacao_conclusao,
+                        DATE(so.solicitacao_criada_em)) AS solicitacao_data,
+               so.solicitacao_conclusao,
+               so.solicitacao_status,
+               COALESCE(so.solicitacao_data_atual, DATE(so.solicitacao_criada_em)) AS solicitacao_data_atual,
+               so.solicitacao_quantidade,
+               so.solicitacao_observacao,
+               itens.servicos_valor * so.solicitacao_quantidade AS servicos_valor,
+               itens.servicos_nome,
+               COALESCE(
+                   (SELECT MIN(NULLIF(TRIM(CONCAT_WS(' ', pf.pf_nome, pf.pf_sobrenome)), ''))
+                    FROM pessoaFisica pf WHERE pf.pf_usuarios_id = cliente.usuarios_id),
+                   (SELECT MIN(NULLIF(pj.pj_nomeFantasia, ''))
+                    FROM pessoaJuridica pj WHERE pj.pj_usuarios_id = cliente.usuarios_id),
+                   'Cliente'
+               ) AS cliente_nome,
+               cliente.usuarios_imagem AS cliente_imagem
+             FROM solicitacao so
+             JOIN (
+                 SELECT ss.solicitacaoServico_solicitacao_id AS solicitacao_id,
+                        COALESCE(SUM(se.servicos_valor), 0) AS servicos_valor,
+                        COALESCE(GROUP_CONCAT(DISTINCT se.servicos_nome
+                            ORDER BY se.servicos_nome SEPARATOR ', '), '') AS servicos_nome
+                 FROM solicitacaoServico ss
+                 JOIN servicos se ON se.servicos_id = ss.solicitacaoServico_servicos_id
+                 WHERE se.servicos_usuarios_id = ?
+                 GROUP BY ss.solicitacaoServico_solicitacao_id
+             ) itens ON itens.solicitacao_id = so.solicitacao_id
+             LEFT JOIN usuarios cliente ON cliente.usuarios_id = so.solicitacao_usuarios_id
+             WHERE so.solicitacao_deletada_em IS NULL
+               AND so.solicitacao_status IN ('Ativo', 'Finalizado')
+             ORDER BY solicitacao_data DESC, so.solicitacao_id DESC"
+        );
+        $consulta->execute([$usuario['usuarios_id']]);
+
+        return [200, ['solicitacoes' => array_map(fn (array $linha): array => [
             'servicos_valor' => (float) $linha['servicos_valor'],
         ] + $linha, $consulta->fetchAll())]];
     }
@@ -1198,65 +1349,66 @@ final class Auth
     }
 
 
-    private function recusarSolicitacao(
-        int $solicitacaoId,
-        string $motivo
-    ): array {
-        $consulta = $this->db->prepare(
-            "UPDATE solicitacao
-             SET solicitacao_status = 'Recusado',
-                 solicitacao_motivo = :motivo
-             WHERE solicitacao_id = :solicitacaoId
-               AND solicitacao_status = 'Pendente'
-               AND solicitacao_deletada_em IS NULL"
-        );
-
-        $consulta->execute([
-            'motivo' => $motivo,
-            'solicitacaoId' => $solicitacaoId,
-        ]);
-
-        return ['sucesso' => true];
-    }
-
-    private function aceitarSolicitacao(int $solicitacaoId): array
+    private function alterarSituacaoSolicitacao(?string $token, array $dados, string $status): array
     {
-        $consulta = $this->db->prepare(
-            "UPDATE solicitacao
-             SET solicitacao_status = 'Ativo'
-             WHERE solicitacao_id = :solicitacaoId
-               AND solicitacao_status = 'Pendente'
-               AND solicitacao_deletada_em IS NULL"
-        );
+        $usuario = $this->usuarioDaSessao($token);
+        $id = $dados['solicitacao_id'] ?? null;
+        if (!is_int($id) || $id <= 0) {
+            throw new ApiError(400, 'Solicitação inválida.');
+        }
+        $motivo = $status === 'Recusado' ? $this->texto($dados, 'motivo', 250) : null;
+        $origem = $status === 'Finalizado' ? 'Ativo' : 'Pendente';
 
-        $consulta->execute([
-            'solicitacaoId' => $solicitacaoId,
-        ]);
+        $this->db->beginTransaction();
+        try {
+            $consulta = $this->db->prepare(
+                'SELECT so.solicitacao_status
+                 FROM solicitacao so
+                 WHERE so.solicitacao_id = ?
+                   AND so.solicitacao_deletada_em IS NULL
+                   AND EXISTS (
+                       SELECT 1 FROM solicitacaoServico ss
+                       JOIN servicos se ON se.servicos_id = ss.solicitacaoServico_servicos_id
+                       WHERE ss.solicitacaoServico_solicitacao_id = so.solicitacao_id
+                         AND se.servicos_usuarios_id = ?
+                   )
+                 FOR UPDATE'
+            );
+            $consulta->execute([$id, (int) $usuario['usuarios_id']]);
+            $atual = $consulta->fetchColumn();
+            if ($atual === false) {
+                throw new ApiError(404, 'Solicitação não encontrada para este profissional.');
+            }
+            // Repetir uma confirmação após falha de conexão mantém o resultado.
+            if ($atual === $status || ($status === 'Recusado' && $atual === 'Recusada')) {
+                $this->db->commit();
+                return ['sucesso' => true];
+            }
+            if ($atual !== $origem) {
+                throw new ApiError(409, 'O status da solicitação mudou. Atualize a tela.');
+            }
 
-        return ['sucesso' => true];
+            $conclusao = $status === 'Finalizado'
+                ? (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d')
+                : null;
+            $atualizar = $this->db->prepare(
+                'UPDATE solicitacao
+                 SET solicitacao_status = ?,
+                     solicitacao_status_profissional = ?,
+                     solicitacao_atualizada_em = UTC_TIMESTAMP(),
+                     solicitacao_motivo = COALESCE(?, solicitacao_motivo),
+                     solicitacao_conclusao = COALESCE(?, solicitacao_conclusao)
+                 WHERE solicitacao_id = ?'
+            );
+            $atualizar->execute([$status, $status, $motivo, $conclusao, $id]);
+            $this->db->commit();
+            return ['sucesso' => true];
+        } catch (Throwable $erro) {
+            $this->db->rollBack();
+            throw $erro;
+        }
     }
 
-    private function finalizarSolicitacao(
-        int $solicitacaoId,
-        string $conclusao
-    ): array {
-        $consulta = $this->db->prepare(
-            "UPDATE solicitacao
-         SET solicitacao_status = 'Finalizado',
-             solicitacao_conclusao = :conclusao,
-             solicitacao_status_profissional = 'Finalizado'
-         WHERE solicitacao_id = :solicitacaoId
-           AND solicitacao_status = 'Ativo'
-           AND solicitacao_deletada_em IS NULL"
-        );
-
-        $consulta->execute([
-            'solicitacaoId' => $solicitacaoId,
-            'conclusao' => $conclusao,
-        ]);
-
-        return ['sucesso' => $consulta->rowCount() > 0];
-    }
 
     // função para salvar preferencia de notificações
     private function salvarPreferenciaNotificacoes(?string $token, array $dados): array

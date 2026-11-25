@@ -25,6 +25,9 @@ class Solicitacao {
   final String? avaliacao_descricao;
 
   bool get avaliado => avaliacao_notas != null;
+  final String? clienteNome;
+  final String? clienteImagem;
+  final String? servicosNome;
 
   const Solicitacao({
     required this.solicitacao_id,
@@ -47,6 +50,9 @@ class Solicitacao {
     this.avaliacao_notas,
     this.avaliacao_descricao,
 
+    this.clienteNome,
+    this.clienteImagem,
+    this.servicosNome,
   });
 
   factory Solicitacao.fromMap(Map<String, Object?> map) {
@@ -60,11 +66,14 @@ class Solicitacao {
       solicitacao_quantidade: map['solicitacao_quantidade'] as int,
       solicitacao_status: map['solicitacao_status'] as String,
       solicitacao_motivo: map['solicitacao_motivo'] as String?,
-      solicitacao_observacao: map['solicitacao_observacao'] as String,
+      solicitacao_observacao: map['solicitacao_observacao'] as String?,
       servicos_valor: (map['servicos_valor'] as num).toDouble(),
       servicos_tipo_cobranca: (map['servicos_tipo_cobranca'] as String?) ?? '',
-      profissional_nome: map['profissional_nome'] as String,
-      profissional_profissao: map['profissional_profissao'] as String,
+      profissional_nome: map['profissional_nome'] as String? ?? '',
+      clienteNome: map['cliente_nome'] as String?,
+      clienteImagem: map['cliente_imagem'] as String?,
+      servicosNome: map['servicos_nome'] as String?,
+      profissional_profissao: map['profissional_profissao'] as String? ?? '',
       profissional_imagem: map['profissional_imagem'] as String? ?? '',
       profissional_telefone: map['profissional_telefone'] as String? ?? '',
       profissional_email: map['profissional_email'] as String? ?? '',
