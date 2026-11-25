@@ -66,6 +66,30 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
 
   }
 
+  // Calendario para escolher serviço
+  Future<void> _escolherDataServico() async {
+    final hoje = DateUtils.dateOnly(DateTime.now());
+    final ultimaData = DateTime(hoje.year, hoje.month, hoje.day + 60);
+
+    final dataEscolhida = await showDatePicker(
+      context: context,
+      initialDate: hoje,
+      firstDate: hoje,
+      lastDate: ultimaData,
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+      helpText: 'Escolha a data do serviço',
+      cancelText: 'Cancelar',
+      confirmText: 'Confirmar',
+      locale: const Locale('pt', 'BR'),
+    );
+
+    if (!mounted || dataEscolhida == null) return;
+
+    final dia = dataEscolhida.day.toString().padLeft(2, '0');
+    final mes = dataEscolhida.month.toString().padLeft(2, '0');
+    _servicos_data.text = '$dia/$mes/${dataEscolhida.year}';
+  }
+
 
 
   final _mascaraData = MaskTextInputFormatter(
@@ -549,8 +573,10 @@ class _DetalhesUsuarioProfissional extends State<DetalhesUsuario> {
                                                 controlador: _servicos_data,
                                                 tipagemValor: TextInputType.datetime,
                                                 rotulo: 'dd/mm/aaaa',
-                                                formatadores: [_mascaraData],
                                                 validador: Validacao.servicosData,
+                                                somenteLeitura: true,
+                                                icone: Icons.calendar_today_outlined,
+                                                onTap: _escolherDataServico,
                                               ),
                                               const SizedBox(height: 24),
 

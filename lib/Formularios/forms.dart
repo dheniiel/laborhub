@@ -14,6 +14,9 @@ class Forms extends StatefulWidget {
   final int maxLinha;
   final IconData? icone;
 
+  final bool somenteLeitura;
+  final VoidCallback? onTap;
+
   final List<String>? opcao;
   final ValueChanged<String?>? onChanged;
   final String? valorInicial;
@@ -29,6 +32,8 @@ class Forms extends StatefulWidget {
     this.ocultarTexto = false,
     this.maxLinha = 1,
     this.icone,
+    this.somenteLeitura = false,
+    this.onTap,
   }) : opcao = null, onChanged = null, valorInicial = null;
 
 
@@ -44,7 +49,9 @@ class Forms extends StatefulWidget {
         formatadores = null,
         ocultarTexto = false,
         maxLinha = 1,
-        icone = null;
+        icone = null,
+        somenteLeitura = false,
+        onTap = null;
 
 
   @override
@@ -162,6 +169,12 @@ class _FormsState extends State<Forms> {
       autocorrect: !widget.ocultarTexto,
       enableSuggestions: !widget.ocultarTexto,
       autovalidateMode: AutovalidateMode.onUserInteraction,
+
+      //para calendarios
+      readOnly: widget.somenteLeitura,
+      onTap: widget.onTap,
+
+
       cursorColor: const Color(0xFF3B82F6),
       style: _estiloTexto,
       decoration: _decoracao(

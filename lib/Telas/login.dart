@@ -147,26 +147,28 @@ class _LoginState extends State<Login> {
                               const Spacer(flex: 5),
 
 
-                              // Image.asset(
-                              //   'Assets/Images/laborHub.png',
-                              //   height: 100,
-                              //   fit: BoxFit.contain,
-                              // ),
+                              Image.asset(
+                                'lib/Assets/Images/LogoHUB.png',
 
-
-                              const Text(
-                                'Login',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontFamily: 'Montserrat',
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.black,
-                                ),
+                                height: 100,
+                                width: 100,
+                                fit: BoxFit.contain,
                               ),
 
-                              const Spacer(flex: 6),
 
+                              // const Text(
+                              //   'Login',
+                              //   textAlign: TextAlign.center,
+                              //   style: TextStyle(
+                              //     fontSize: 28,
+                              //     fontFamily: 'Montserrat',
+                              //     fontWeight: FontWeight.w700,
+                              //     color: Colors.black,
+                              //   ),
+                              // ),
+
+                              const Spacer(flex: 5),
+                              // const SizedBox(height: 36),
                               const Padding(
                                 padding: EdgeInsets.only(left: 4),
                                 child: Text(
@@ -266,7 +268,7 @@ class _LoginState extends State<Login> {
                                     padding: EdgeInsets.zero,
                                     elevation: 0,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(4),
+                                      borderRadius: BorderRadius.circular(50),
                                     ),
                                   ),
                                   child: _carregando
@@ -311,7 +313,7 @@ class _LoginState extends State<Login> {
                                       color: Color(0xFF858585),
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(4),
+                                      borderRadius: BorderRadius.circular(50),
                                     ),
                                   ),
                                   child: const Text(

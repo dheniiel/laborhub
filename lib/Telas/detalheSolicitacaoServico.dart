@@ -373,7 +373,7 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
                       ],
 
                        Padding(
-                        padding: EdgeInsetsGeometry.only(left: 10),
+                        padding: EdgeInsetsGeometry.only(left: 1),
                         child: Text(
                           widget.solicitacao['cliente_solicitacao_observacao'],
                           textAlign: TextAlign.justify,

@@ -272,19 +272,20 @@ class _RecuperarSenhaState extends State<RecuperarSenha> {
                                 backgroundColor: const Color(0xFF3B82F6),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(50),
                                 ),
                               ),
                               child: _carregando
                                   ? const SizedBox(
                                       width: 20,
                                       height: 20,
+
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
                                         color: Colors.white,
                                       ),
                                     )
-                                  : Text(_etapa == 2 ? 'Redefinir' : 'Enviar'),
+                                  : Text(_etapa == 2 ? 'Redefinir' : 'Enviar', style: TextStyle(fontSize: 18),),
                             ),
                           ),
                           if (_etapa > 0)

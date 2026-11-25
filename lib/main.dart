@@ -7,6 +7,7 @@ import 'Telas/login.dart';
 import 'Telas/enderecoTela.dart';
 import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 
 
@@ -46,6 +47,11 @@ class LaborHUBapp extends StatelessWidget {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Login(),
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: [
+        Locale('pt', 'BR'),
+        Locale('en'),
+      ],
     );
   }
 

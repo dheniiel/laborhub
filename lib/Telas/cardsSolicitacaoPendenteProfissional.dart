@@ -92,7 +92,7 @@ class CardsSolicitacaopendenteprofissional extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 19,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
