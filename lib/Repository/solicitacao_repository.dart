@@ -122,16 +122,21 @@ class SolicitacaoRepository {
     );
   }
 
-  Future<void> finalizarSolicitacao(int solicitacaoId) async {
+  Future<void> finalizarSolicitacao(
+      int solicitacaoId,
+      double valorServico,
+      String? descricao,
+      ) async {
     await _api.post(
       'solicitacoes/finalizarSolicitacao',
-      {'solicitacao_id': solicitacaoId,
-
+      {
+        'solicitacao_id': solicitacaoId,
+        'valor': valorServico,
+        'descricao': descricao,
       },
       token: await _token(),
     );
   }
-
 
 
 

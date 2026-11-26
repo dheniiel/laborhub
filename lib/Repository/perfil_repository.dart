@@ -89,13 +89,19 @@ class PerfilRepository {
   }
 
   Future<void> registrarDispositivo() async {
-    if (!Platform.isAndroid && !Platform.isIOS) return;
-    
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      throw UnsupportedError('Notificações indisponíveis nesta plataforma.');
+    }
+
     final sessao = await _dao.buscar();
-    if (sessao == null || sessao.expirada) return;
+    if (sessao == null || sessao.expirada) {
+      throw StateError('Entre novamente para ativar as notificações.');
+    }
 
     final fcmToken = await FirebaseMessaging.instance.getToken();
-    if (fcmToken == null) return;
+    if (fcmToken == null || fcmToken.isEmpty) {
+      throw StateError('O Firebase ainda não disponibilizou o token.');
+    }
 
     await _api.post(
       'perfil/dispositivo',

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'detalheSolicitacaoServico.dart';
 import '../Repository/solicitacao_repository.dart';
+import 'package:laborhub/Formularios/forms.dart';
+import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
 
 class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
 
@@ -13,8 +15,14 @@ class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
   final String? imagemUrl;
   final String? descricao;
   final int idSolicitacao;
+  final String telefone;
   final Future<void> Function() onAtualizar;
   // final  onVer;
+  final _mascaraValor = CurrencyTextInputFormatter.currency(
+    locale: 'pt_BR',
+    decimalDigits: 2,
+    symbol: 'R\$',
+  );
 
 
    CardsSolicitacaoAtivaProfissional ({
@@ -29,20 +37,23 @@ class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
     this.descricao,
      required this.idSolicitacao,
      required this.onAtualizar,
+     required this.telefone,
   });
 
   final agora = DateTime.now();
 
-
-  Future<void> finalizarSolicitacao (int solicitacaoId) async {
+  Future<void> finalizarSolicitacao(
+      int solicitacaoId,
+      double valorServico, [
+        String? descricao,
+      ]) async {
+    final texto = descricao?.trim();
 
     await SolicitacaoRepository().finalizarSolicitacao(
       solicitacaoId,
-
+      valorServico,
+      texto == null || texto.isEmpty ? null : texto,
     );
-
-
-
   }
 
   String _formatarData(String valor) {
@@ -120,132 +131,149 @@ class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
                     Align(
                       alignment: Alignment.centerRight,
                       child: FilledButton(
-                        onPressed: () async {
-                          bool enviando = false;
-                          final messenger = ScaffoldMessenger.of(context);
-
-                         final finalizou =  await showDialog<bool>(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (dialogContext) {
-                              return StatefulBuilder(
-                                builder: (modalContext, setStateModal) {
-                                  return PopScope(
-                                    canPop: !enviando,
-                                    child: AlertDialog(
-                                      backgroundColor: Colors.white,
-                                      title: const Text(
-                                        'Finalizar solicitação',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      content: const Text(
-                                        'Deseja realmente finalizar esta solicitação?',
-                                        textAlign: TextAlign.center,
-
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: enviando
-                                              ? null
-                                              : () => Navigator.of(dialogContext).pop(),
-                                          child: const Text('Não'),
-                                        ),
-                                        FilledButton(
-                                          onPressed: enviando
-                                              ? null
-                                              : () async {
-                                            setStateModal(() {
-                                              enviando = true;
-                                            });
-
-                                            try {
-                                              await finalizarSolicitacao(
-                                                idSolicitacao
-                                              );
-                                            } catch (erro, stackTrace) {
-                                              if (!modalContext.mounted) return;
-
-                                              setStateModal(() {
-                                                enviando = false;
-                                              });
-
-                                              messenger.showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    'Não foi possível finalizar: $erro',
-                                                  ),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-
-                                              debugPrint('ERRO AO RECUSAR: $erro');
-                                              debugPrintStack(stackTrace: stackTrace);
-                                              return;
-                                            }
-
-                                            if (!dialogContext.mounted ||
-                                                !context.mounted) {
-                                              return;
-                                            }
-
-                                            Navigator.of(dialogContext).pop(true);
-
-                                            messenger.showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Solicitação finalizada com sucesso!',
-                                                ),
-                                                backgroundColor: Colors.green,
-                                              ),
-                                            );
-
-                                          },
-                                          style: FilledButton.styleFrom(
-                                            backgroundColor: const Color(0xFF3B82F6),
-                                            minimumSize: const Size(100, 40),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(5),
-                                            ),
-                                          ),
-                                          child: enviando
-                                              ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                              : const Text('Sim'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          );
-                          if (finalizou == true && context.mounted) {
-                            await onAtualizar();
-                          }
-                        },
+                        onPressed: () => _verDetalhesServico(context),
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xff3b82f6),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 30,
-                            vertical: 10,
-                          ),
+                          backgroundColor: const Color(0xFF3B82F6),
+                          minimumSize: const Size(100, 40),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)
+                            borderRadius: BorderRadius.circular(5),
                           ),
                         ),
-                        child: const Text('Finalizar'),
+                        child: const Text('Ver detalhes'),
                       ),
-                    )
+                    ),
+
+
+
+                    // Align(
+                    //   alignment: Alignment.centerRight,
+                    //   child: FilledButton(
+                    //     onPressed: () async {
+                    //       bool enviando = false;
+                    //       final messenger = ScaffoldMessenger.of(context);
+                    //
+                    //      final finalizou =  await showDialog<bool>(
+                    //         context: context,
+                    //         barrierDismissible: false,
+                    //         builder: (dialogContext) {
+                    //           return StatefulBuilder(
+                    //             builder: (modalContext, setStateModal) {
+                    //               return PopScope(
+                    //                 canPop: !enviando,
+                    //                 child: AlertDialog(
+                    //                   backgroundColor: Colors.white,
+                    //                   title: const Text(
+                    //                     'Finalizar solicitação',
+                    //                     textAlign: TextAlign.center,
+                    //                     style: TextStyle(
+                    //                       fontSize: 20,
+                    //                       fontWeight: FontWeight.w600,
+                    //                     ),
+                    //                   ),
+                    //                   content: const Text(
+                    //                     'Deseja realmente finalizar esta solicitação?',
+                    //                     textAlign: TextAlign.center,
+                    //
+                    //                   ),
+                    //                   actions: [
+                    //                     TextButton(
+                    //                       onPressed: enviando
+                    //                           ? null
+                    //                           : () => Navigator.of(dialogContext).pop(),
+                    //                       child: const Text('Não'),
+                    //                     ),
+                    //                     FilledButton(
+                    //                       onPressed: enviando
+                    //                           ? null
+                    //                           : () async {
+                    //                         setStateModal(() {
+                    //                           enviando = true;
+                    //                         });
+                    //
+                    //                         try {
+                    //                           await finalizarSolicitacao(
+                    //                             idSolicitacao
+                    //                           );
+                    //                         } catch (erro, stackTrace) {
+                    //                           if (!modalContext.mounted) return;
+                    //
+                    //                           setStateModal(() {
+                    //                             enviando = false;
+                    //                           });
+                    //
+                    //                           messenger.showSnackBar(
+                    //                             SnackBar(
+                    //                               content: Text(
+                    //                                 'Não foi possível finalizar: $erro',
+                    //                               ),
+                    //                               backgroundColor: Colors.red,
+                    //                             ),
+                    //                           );
+                    //
+                    //                           debugPrint('ERRO AO RECUSAR: $erro');
+                    //                           debugPrintStack(stackTrace: stackTrace);
+                    //                           return;
+                    //                         }
+                    //
+                    //                         if (!dialogContext.mounted ||
+                    //                             !context.mounted) {
+                    //                           return;
+                    //                         }
+                    //
+                    //                         Navigator.of(dialogContext).pop(true);
+                    //
+                    //                         messenger.showSnackBar(
+                    //                           const SnackBar(
+                    //                             content: Text(
+                    //                               'Solicitação finalizada com sucesso!',
+                    //                             ),
+                    //                             backgroundColor: Colors.green,
+                    //                           ),
+                    //                         );
+                    //
+                    //                       },
+                    //                       style: FilledButton.styleFrom(
+                    //                         backgroundColor: const Color(0xFF3B82F6),
+                    //                         minimumSize: const Size(100, 40),
+                    //                         shape: RoundedRectangleBorder(
+                    //                           borderRadius: BorderRadius.circular(5),
+                    //                         ),
+                    //                       ),
+                    //                       child: enviando
+                    //                           ? const SizedBox(
+                    //                         width: 20,
+                    //                         height: 20,
+                    //                         child: CircularProgressIndicator(
+                    //                           strokeWidth: 2,
+                    //                           color: Colors.white,
+                    //                         ),
+                    //                       )
+                    //                           : const Text('Sim'),
+                    //                     ),
+                    //                   ],
+                    //                 ),
+                    //               );
+                    //             },
+                    //           );
+                    //         },
+                    //       );
+                    //       if (finalizou == true && context.mounted) {
+                    //         await onAtualizar();
+                    //       }
+                    //     },
+                    //     style: FilledButton.styleFrom(
+                    //       backgroundColor: const Color(0xff3b82f6),
+                    //       padding: const EdgeInsets.symmetric(
+                    //         horizontal: 30,
+                    //         vertical: 10,
+                    //       ),
+                    //       shape: RoundedRectangleBorder(
+                    //           borderRadius: BorderRadius.circular(10)
+                    //       ),
+                    //     ),
+                    //     child: const Text('Finalizar'),
+                    //   ),
+                    // )
 
                   ],
                 ),
@@ -274,5 +302,211 @@ class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
       );
 
     }
+
+
+  Future<void> _verDetalhesServico(BuildContext context) async {
+    final valorController = TextEditingController();
+    final descricaoController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    double? lerValorServico(String? texto) {
+      final valor = (texto ?? '')
+          .trim()
+          .replaceFirst(RegExp(r'^R\$\s*'), '');
+
+      // Aceita 1250,50 e 1.250,50.
+      if (!RegExp(r'^(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d{1,2})?$')
+          .hasMatch(valor)) {
+        return null;
+      }
+
+      final numero = double.tryParse(
+        valor.replaceAll('.', '').replaceAll(',', '.'),
+      );
+
+      if (numero == null || numero > 99999999.99) return null;
+      return numero;
+    }
+
+    var enviando = false;
+    String? erroEnvio;
+    Future<dynamic>? fechamento;
+
+    final finalizou = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      useSafeArea: true,
+      builder: (sheetContext) {
+        fechamento = ModalRoute.of(sheetContext)?.completed;
+
+        return StatefulBuilder(
+          builder: (sheetContext, atualizarSheet) {
+            return PopScope(
+              canPop: !enviando,
+              child: SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    24,
+                    24,
+                    24,
+                    24 + MediaQuery.of(sheetContext).viewInsets.bottom,
+                  ),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Detalhes do serviço',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text('Cliente: $nome'),
+                        Text('Endereço: $endereco'),
+                        Text("Telefone: $telefone"),
+                        Text("Data solicitada:  ${_formatarData(dataSolicitacao)}"),
+                        Text("Data para serviço: ${_formatarData(dataServico)}"),
+                        Text("Descrição: $descricao"),
+                        const SizedBox(height: 24),
+
+                        const Text(
+                          'Valor final',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Forms(
+                          controlador: valorController,
+                          tipagemValor: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          formatadores: [_mascaraValor],
+                          rotulo: "R\$ 0,00",
+                          validador: (texto) => lerValorServico(texto) == null
+                              ? 'Informe o valor aplicado ao serviço.'
+                              : null,
+                        ),
+                        const SizedBox(height: 24),
+
+                        const Text(
+                          'Descrição da conclusão (opcional)',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Forms(
+                          controlador: descricaoController,
+                          tipagemValor: TextInputType.multiline,
+                          rotulo: 'Descreva o serviço realizado',
+                          validador: (_) => null,
+                          maxLinha: 5,
+                        ),
+
+                        if (erroEnvio != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            erroEnvio!,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+
+                        FilledButton(
+                          onPressed: enviando
+                              ? null
+                              : () async {
+                            debugPrint('[Finalizar] Botão pressionado');
+
+                            final formulario = formKey.currentState;
+                            if (formulario == null) {
+                              debugPrint('[Finalizar] formKey não está ligada ao Form');
+                              return;
+                            }
+
+                            if (!formulario.validate()) {
+                              debugPrint('[Finalizar] Validação do formulário falhou');
+                              return;
+                            }
+
+                            final valorServico = lerValorServico(valorController.text);
+                            if (valorServico == null) {
+                              debugPrint('[Finalizar] Valor inválido: "${valorController.text}"');
+                              return;
+                            }
+
+                            final descricao = descricaoController.text.trim();
+
+                            atualizarSheet(() {
+                              enviando = true;
+                              erroEnvio = null;
+                            });
+
+                            try {
+                              debugPrint('[Finalizar] Chamando a API');
+                              await finalizarSolicitacao(
+                                idSolicitacao,
+                                valorServico,
+                                descricao.isEmpty ? null : descricao,
+                              );
+                              debugPrint('[Finalizar] API retornou sem erro');
+
+                              if (!sheetContext.mounted) return;
+                              Navigator.of(sheetContext).pop(true);
+                            } catch (erro) {
+                              debugPrint('[Finalizar] Erro ao finalizar: $erro');
+                              if (!sheetContext.mounted) return;
+
+                              atualizarSheet(() {
+                                enviando = false;
+                                erroEnvio = 'Não foi possível finalizar o serviço.';
+                              });
+                            }
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF3B82F6),
+                            minimumSize: const Size(100, 40),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                          child: Text(enviando ? 'Finalizando...' : 'Finalizar'),
+                        ),
+                        TextButton(
+                          onPressed: enviando
+                              ? null
+                              : () => Navigator.of(sheetContext).pop(false),
+                          child: const Text('Voltar'),
+                        ),
+                      ],
+                    ),
+
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    await fechamento;
+    valorController.dispose();
+    descricaoController.dispose();
+
+    if (finalizou == true && context.mounted) {
+      await onAtualizar();
+    }
+  }
 
 }

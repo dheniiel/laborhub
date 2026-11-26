@@ -3,8 +3,9 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:laborhub/Repository/perfil_repository.dart';
-
+import 'dart:async';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../Formularios/forms.dart';
 import '../Model/profissional.dart';
@@ -52,11 +53,24 @@ class _HomeProfissionalState extends State<Homeprofissional> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
 
+  // Declare este campo dentro do State da HomeProfissional.
+  StreamSubscription<RemoteMessage>? _pushSubscription;
+
   @override
   void initState() {
     super.initState();
     _carregarPendente();
     _carregarPreferenciaNotificacoes();
+
+    _pushSubscription = FirebaseMessaging.onMessage.listen((mensagem) {
+      debugPrint('[Push] Recebido com o app aberto | id=${mensagem.messageId}');
+    });
+  }
+
+  @override
+  void dispose() {
+    _pushSubscription?.cancel();
+    super.dispose();
   }
 
 
@@ -158,6 +172,10 @@ class _HomeProfissionalState extends State<Homeprofissional> {
 
   Future<void> _alternarNotificacoes() async {
     final ativas = _notificacoesAtivas;
+    debugPrint(
+      '[Push] Clique no sino | ativa=$_notificacoesAtivas '
+          '| salvando=$_salvandoNotificacoes',
+    );
     if (ativas == null || _salvandoNotificacoes) return;
 
     final ativar = !ativas;
@@ -166,6 +184,8 @@ class _HomeProfissionalState extends State<Homeprofissional> {
     try {
       if (ativar) {
         final permissao = await Permission.notification.request();
+        debugPrint('[Push] Solicitando permissão');
+        debugPrint('[Push] Resultado da permissão: $permissao');
         if (!mounted) return;
 
         if (!permissao.isGranted) {
@@ -184,11 +204,15 @@ class _HomeProfissionalState extends State<Homeprofissional> {
           );
           return;
         }
+        debugPrint('[Push] Registrando dispositivo');
         await _perfilRepository.registrarDispositivo();
+        debugPrint('[Push] Registro retornou sem erro');
         if (!mounted) return;
       }
 
+      debugPrint('[Push] Salvando preferência: $ativar');
       await _perfilRepository.salvarPreferenciaNotificacoes(ativar);
+      debugPrint('[Push] Chamada de preferência concluída: $ativar');
       if (!mounted) return;
 
       setState(() => _notificacoesAtivas = ativar);
@@ -457,6 +481,8 @@ class _HomeProfissionalState extends State<Homeprofissional> {
                               descricao: ativos['cliente_solicitacao_observacao'],
                               idSolicitacao:  ativos['cliente_solicitacao_id'],
                               onAtualizar: _carregarPendente,
+                              telefone: ativos['cliente_telefone'] ?? "Sem telefone",
+
 
                             ),
 

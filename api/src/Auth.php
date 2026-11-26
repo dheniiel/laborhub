@@ -1371,6 +1371,31 @@ final class Auth
         }
         $origem = $status === 'Finalizado' ? 'Ativo' : 'Pendente';
 
+        $valorFinal = null;
+        $descricaoConclusao = null;
+
+        if ($status === 'Finalizado') {
+            $valor = $dados['valor'] ?? null;
+
+            if (
+                (!is_int($valor) && !is_float($valor) && !is_string($valor))
+                || !preg_match('/\A\d{1,8}(?:\.\d{1,2})?\z/', (string) $valor)
+            ) {
+                throw new ApiError(400, 'Informe um valor final válido.');
+            }
+
+            $valorFinal = (string) $valor;
+
+            $descricao = $dados['descricao'] ?? null;
+
+            if ($descricao !== null && !is_string($descricao)) {
+                throw new ApiError(400, 'A descrição da conclusão deve ser um texto.');
+            }
+
+            $descricao = trim($descricao ?? '');
+            $descricaoConclusao = $descricao === '' ? null : $descricao;
+        }
+
         $this->db->beginTransaction();
         try {
             $consulta = $this->db->prepare(
@@ -1409,10 +1434,26 @@ final class Auth
                      solicitacao_status_profissional = ?,
                      solicitacao_atualizada_em = UTC_TIMESTAMP(),
                      solicitacao_motivo = COALESCE(?, solicitacao_motivo),
-                     solicitacao_conclusao = COALESCE(?, solicitacao_conclusao)
+                     solicitacao_conclusao = COALESCE(?, solicitacao_conclusao),
+                     valor_final = CASE WHEN ? = \'Finalizado\' THEN ? ELSE valor_final END,
+                     descricao_conclusao = CASE
+                         WHEN ? = \'Finalizado\' THEN ?
+                         ELSE descricao_conclusao
+                     END
                  WHERE solicitacao_id = ?'
             );
-            $atualizar->execute([$status, $status, $motivo, $conclusao, $id]);
+
+            $atualizar->execute([
+                $status,
+                $status,
+                $motivo,
+                $conclusao,
+                $status,
+                $valorFinal,
+                $status,
+                $descricaoConclusao,
+                $id,
+            ]);
             $this->db->commit();
             return ['sucesso' => true];
         } catch (Throwable $erro) {
@@ -1471,69 +1512,101 @@ final class Auth
         return [200, ['message' => 'Dispositivo registrado.']];
     }
 
-    private function notificarNovaSolicitacao(int $servicoId, int $solicitacaoId): void
-    {
-        $consulta = $this->db->prepare(
-            "SELECT u.fcm_token
-             FROM servicos AS s
-             INNER JOIN usuarios AS u
-                 ON u.usuarios_id = s.servicos_usuarios_id
-             WHERE s.servicos_id = ?
-               AND u.notificacoes_ativas = 1
-               AND u.fcm_token IS NOT NULL
-               AND u.fcm_token <> ''"
-        );
-        $consulta->execute([$servicoId]);
+   private function notificarNovaSolicitacao(int $servicoId, int $solicitacaoId): void
+   {
+       $log = "[FCM] Solicitação {$solicitacaoId} | serviço {$servicoId}";
+       $etapa = 'consulta ao banco';
 
-        $fcmToken = $consulta->fetchColumn();
-        if (!is_string($fcmToken) || trim($fcmToken) === '') {
-            error_log("[FCM] Serviço {$servicoId} sem destinatário habilitado.");
-            return;
-        }
+       try {
+           $consulta = $this->db->prepare(
+               "SELECT u.fcm_token
+                FROM servicos AS s
+                INNER JOIN usuarios AS u
+                    ON u.usuarios_id = s.servicos_usuarios_id
+                WHERE s.servicos_id = ?
+                  AND u.notificacoes_ativas = 1
+                  AND u.fcm_token IS NOT NULL
+                  AND u.fcm_token <> ''"
+           );
+           $consulta->execute([$servicoId]);
 
-        error_log("[FCM] Iniciando envio da solicitação {$solicitacaoId}.");
+           $fcmToken = $consulta->fetchColumn();
 
-        $credenciais = \Google\Auth\ApplicationDefaultCredentials::getCredentials(
-            ['https://www.googleapis.com/auth/firebase.messaging']
-        );
-        $autorizacao = $credenciais->fetchAuthToken();
-        $accessToken = $autorizacao['access_token'] ?? null;
+           if (!is_string($fcmToken) || trim($fcmToken) === '') {
+               error_log("{$log} | profissional sem token ou com notificações desligadas");
+               return;
+           }
 
-        if (!is_string($accessToken) || $accessToken === '') {
-            throw new \RuntimeException('Autorização FCM indisponível.');
-        }
+           $etapa = 'autenticação OAuth';
+           error_log("{$log} | destinatário encontrado. Obtendo autorização OAuth");
 
-        $http = new \GuzzleHttp\Client([
-            'connect_timeout' => 3,
-            'timeout' => 5,
-        ]);
+           $credenciais = \Google\Auth\ApplicationDefaultCredentials::getCredentials(
+               ['https://www.googleapis.com/auth/firebase.messaging']
+           );
+           $autorizacao = $credenciais->fetchAuthToken();
+           $accessToken = $autorizacao['access_token'] ?? null;
 
-        $resposta = $http->post(
-            'https://fcm.googleapis.com/v1/projects/laborhub-1aea9/messages:send',
-            [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $accessToken,
-                ],
-                'json' => [
-                    'message' => [
-                        'token' => trim($fcmToken),
-                        'notification' => [
-                            'title' => 'Nova solicitação',
-                            'body' => 'Você recebeu uma nova solicitação no LaborHub.',
-                        ],
-                        'data' => [
-                            'solicitacao_id' => (string) $solicitacaoId,
-                        ],
-                    ],
-                ],
-            ]
-        );
+           if (!is_string($accessToken) || $accessToken === '') {
+               error_log("{$log} | autenticação OAuth não retornou um token");
+               return;
+           }
 
-        error_log(
-            "[FCM] Firebase aceitou o envio da solicitação {$solicitacaoId}. "
-            . 'HTTP ' . $resposta->getStatusCode()
-        );
-    }
+           $etapa = 'envio ao Firebase';
+           error_log("{$log} | OAuth obtido. Enviando ao Firebase");
+
+           $http = new \GuzzleHttp\Client([
+               'connect_timeout' => 3,
+               'timeout' => 5,
+               'http_errors' => false,
+           ]);
+
+           $resposta = $http->post(
+               'https://fcm.googleapis.com/v1/projects/laborhub-1aea9/messages:send',
+               [
+                   'headers' => [
+                       'Authorization' => 'Bearer ' . $accessToken,
+                   ],
+                   'json' => [
+                       'message' => [
+                           'token' => trim($fcmToken),
+                           'notification' => [
+                               'title' => 'Nova solicitação',
+                               'body' => 'Você recebeu uma nova solicitação no LaborHub.',
+                           ],
+                           'data' => [
+                               'solicitacao_id' => (string) $solicitacaoId,
+                           ],
+                       ],
+                   ],
+               ]
+           );
+
+           $codigoHttp = $resposta->getStatusCode();
+           $json = json_decode((string) $resposta->getBody(), true);
+
+           if ($codigoHttp >= 200 && $codigoHttp < 300) {
+               error_log("{$log} | Firebase aceitou o envio. HTTP {$codigoHttp}");
+               return;
+           }
+
+           $status = $json['error']['status'] ?? 'sem status';
+           $codigoFcm = 'sem código específico';
+
+           foreach ($json['error']['details'] ?? [] as $detalhe) {
+               if (isset($detalhe['errorCode'])) {
+                   $codigoFcm = $detalhe['errorCode'];
+                   break;
+               }
+           }
+
+           error_log("{$log} | HTTP {$codigoHttp} | {$status} | FCM {$codigoFcm}");
+       } catch (\Throwable $erro) {
+           error_log(
+               "{$log} | falha em {$etapa} | "
+               . get_class($erro) . ' | código ' . $erro->getCode()
+           );
+       }
+   }
 
 
 
