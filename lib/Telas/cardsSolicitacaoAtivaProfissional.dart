@@ -142,139 +142,6 @@ class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
                         child: const Text('Ver detalhes'),
                       ),
                     ),
-
-
-
-                    // Align(
-                    //   alignment: Alignment.centerRight,
-                    //   child: FilledButton(
-                    //     onPressed: () async {
-                    //       bool enviando = false;
-                    //       final messenger = ScaffoldMessenger.of(context);
-                    //
-                    //      final finalizou =  await showDialog<bool>(
-                    //         context: context,
-                    //         barrierDismissible: false,
-                    //         builder: (dialogContext) {
-                    //           return StatefulBuilder(
-                    //             builder: (modalContext, setStateModal) {
-                    //               return PopScope(
-                    //                 canPop: !enviando,
-                    //                 child: AlertDialog(
-                    //                   backgroundColor: Colors.white,
-                    //                   title: const Text(
-                    //                     'Finalizar solicitação',
-                    //                     textAlign: TextAlign.center,
-                    //                     style: TextStyle(
-                    //                       fontSize: 20,
-                    //                       fontWeight: FontWeight.w600,
-                    //                     ),
-                    //                   ),
-                    //                   content: const Text(
-                    //                     'Deseja realmente finalizar esta solicitação?',
-                    //                     textAlign: TextAlign.center,
-                    //
-                    //                   ),
-                    //                   actions: [
-                    //                     TextButton(
-                    //                       onPressed: enviando
-                    //                           ? null
-                    //                           : () => Navigator.of(dialogContext).pop(),
-                    //                       child: const Text('Não'),
-                    //                     ),
-                    //                     FilledButton(
-                    //                       onPressed: enviando
-                    //                           ? null
-                    //                           : () async {
-                    //                         setStateModal(() {
-                    //                           enviando = true;
-                    //                         });
-                    //
-                    //                         try {
-                    //                           await finalizarSolicitacao(
-                    //                             idSolicitacao
-                    //                           );
-                    //                         } catch (erro, stackTrace) {
-                    //                           if (!modalContext.mounted) return;
-                    //
-                    //                           setStateModal(() {
-                    //                             enviando = false;
-                    //                           });
-                    //
-                    //                           messenger.showSnackBar(
-                    //                             SnackBar(
-                    //                               content: Text(
-                    //                                 'Não foi possível finalizar: $erro',
-                    //                               ),
-                    //                               backgroundColor: Colors.red,
-                    //                             ),
-                    //                           );
-                    //
-                    //                           debugPrint('ERRO AO RECUSAR: $erro');
-                    //                           debugPrintStack(stackTrace: stackTrace);
-                    //                           return;
-                    //                         }
-                    //
-                    //                         if (!dialogContext.mounted ||
-                    //                             !context.mounted) {
-                    //                           return;
-                    //                         }
-                    //
-                    //                         Navigator.of(dialogContext).pop(true);
-                    //
-                    //                         messenger.showSnackBar(
-                    //                           const SnackBar(
-                    //                             content: Text(
-                    //                               'Solicitação finalizada com sucesso!',
-                    //                             ),
-                    //                             backgroundColor: Colors.green,
-                    //                           ),
-                    //                         );
-                    //
-                    //                       },
-                    //                       style: FilledButton.styleFrom(
-                    //                         backgroundColor: const Color(0xFF3B82F6),
-                    //                         minimumSize: const Size(100, 40),
-                    //                         shape: RoundedRectangleBorder(
-                    //                           borderRadius: BorderRadius.circular(5),
-                    //                         ),
-                    //                       ),
-                    //                       child: enviando
-                    //                           ? const SizedBox(
-                    //                         width: 20,
-                    //                         height: 20,
-                    //                         child: CircularProgressIndicator(
-                    //                           strokeWidth: 2,
-                    //                           color: Colors.white,
-                    //                         ),
-                    //                       )
-                    //                           : const Text('Sim'),
-                    //                     ),
-                    //                   ],
-                    //                 ),
-                    //               );
-                    //             },
-                    //           );
-                    //         },
-                    //       );
-                    //       if (finalizou == true && context.mounted) {
-                    //         await onAtualizar();
-                    //       }
-                    //     },
-                    //     style: FilledButton.styleFrom(
-                    //       backgroundColor: const Color(0xff3b82f6),
-                    //       padding: const EdgeInsets.symmetric(
-                    //         horizontal: 30,
-                    //         vertical: 10,
-                    //       ),
-                    //       shape: RoundedRectangleBorder(
-                    //           borderRadius: BorderRadius.circular(10)
-                    //       ),
-                    //     ),
-                    //     child: const Text('Finalizar'),
-                    //   ),
-                    // )
-
                   ],
                 ),
               )
@@ -372,7 +239,8 @@ class CardsSolicitacaoAtivaProfissional extends StatelessWidget {
                         Text('Endereço: $endereco'),
                         Text("Telefone: $telefone"),
                         Text("Data solicitada:  ${_formatarData(dataSolicitacao)}"),
-                        Text("Data para serviço: ${_formatarData(dataServico)}"),
+                        Text("Data para serviço: ${_formatarData(dataServico)}", textAlign: TextAlign.justify,),
+                        const SizedBox(height: 4),
                         Text("Descrição: $descricao"),
                         const SizedBox(height: 24),
 
