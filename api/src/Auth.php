@@ -679,65 +679,89 @@ final class Auth
     /** Serviços de profissionais ativos, no formato de Profissional.fromMap. */
     private function listarProfissionais(?string $token): array
     {
-        $this->usuarioDaSessao($token);
-        $linhas = $this->db->query(
-            "SELECT
-               COALESCE(CONCAT(pf.pf_nome, ' ', pf.pf_sobrenome), pj.pj_nomeFantasia, '') AS profissional_nome,
-               se.servicos_id as profissional_servicos_id,
-               COALESCE(se.servicos_nome, '') AS profissional_profissao,
-               COALESCE(e.endereco_cidade, '') AS profissional_cidade,
-               COALESCE(e.endereco_uf, '') AS profissional_uf,
-               e.endereco_id AS profissional_endereco_id,
-               COALESCE(av.media, 0) AS profissional_avaliacao,
-               COALESCE(av.total, 0) AS profissional_total_avaliacoes,
-               COALESCE(se.servicos_descricao, '') AS profissional_observacao,
-               COALESCE(se.servicos_valor, 0) AS profissional_preco,
-               u.usuarios_id AS profissional_usuarios_id,
-               COALESCE(u.usuarios_imagem, '') AS profissional_imagem,
-               COALESCE(u.usuarios_telefone, '') AS profissional_telefone,
-               COALESCE(u.usuarios_email, '') as profissional_email,
-               COALESCE(se.servicos_data, '') AS profissional_data,
-               COALESCE(se.servicos_tipo_cobranca, '') AS profissional_tipo_cobranca,
-               COALESCE(se.servicos_nivel_experiencia, '') AS profissional_experiencia,
-               COALESCE(se.servicos_nome, '') AS profissional_servicos_nome,
-               COALESCE(av.estrelas_5, 0) AS estrelas_5,
-               COALESCE(av.estrelas_4, 0) AS estrelas_4,
-               COALESCE(av.estrelas_3, 0) AS estrelas_3,
-               COALESCE(av.estrelas_2, 0) AS estrelas_2,
-               COALESCE(av.estrelas_1, 0) AS estrelas_1
+        $cliente = $this->usuarioDaSessao($token);
+        $clienteId = (int) $cliente['usuarios_id'];
+        error_log('[listarProfissionais] clienteId=' . $clienteId);
 
-             FROM servicos se
-             JOIN usuarios u ON u.usuarios_id = se.servicos_usuarios_id
-             LEFT JOIN pessoaFisica pf ON pf.pf_usuarios_id = u.usuarios_id
-             LEFT JOIN pessoaJuridica pj ON pj.pj_usuarios_id = u.usuarios_id
-             JOIN endereco e ON e.endereco_id =
-               (SELECT MIN(endereco_id) FROM endereco WHERE endereco_usuarios_id = u.usuarios_id)
-             LEFT JOIN (
-               SELECT
-                 avaliado_usuarios_id,
-                 ROUND(AVG(avaliacao_notas), 1) AS media,
-                 COUNT(*) AS total,
-                 SUM(avaliacao_notas = 5) AS estrelas_5,
-                 SUM(avaliacao_notas = 4) AS estrelas_4,
-                 SUM(avaliacao_notas = 3) AS estrelas_3,
-                 SUM(avaliacao_notas = 2) AS estrelas_2,
-                 SUM(avaliacao_notas = 1) AS estrelas_1
-               FROM avaliacao
-               GROUP BY avaliado_usuarios_id
-             ) av ON av.avaliado_usuarios_id = u.usuarios_id
-             WHERE u.usuarios_ativo = 1 AND u.usuarios_deletado_em IS NULL
-               AND COALESCE(pf.pf_tipo, pj.pj_tipo) = 'Profissional'
-             ORDER BY profissional_nome"
-        )->fetchAll();
+        $sql = <<<'SQL'
+            SELECT
+              COALESCE(CONCAT(pf.pf_nome, ' ', pf.pf_sobrenome), pj.pj_nomeFantasia, '') AS profissional_nome,
+              se.servicos_id AS profissional_servicos_id,
+              COALESCE(se.servicos_nome, '') AS profissional_profissao,
+              COALESCE(e.endereco_cidade, '') AS profissional_cidade,
+              COALESCE(e.endereco_uf, '') AS profissional_uf,
+              e.endereco_id AS profissional_endereco_id,
+              COALESCE(av.media, 0) AS profissional_avaliacao,
+              COALESCE(av.total, 0) AS profissional_total_avaliacoes,
+              COALESCE(se.servicos_descricao, '') AS profissional_observacao,
+              COALESCE(se.servicos_valor, 0) AS profissional_preco,
+              u.usuarios_id AS profissional_usuarios_id,
+              COALESCE(u.usuarios_imagem, '') AS profissional_imagem,
+              COALESCE(u.usuarios_telefone, '') AS profissional_telefone,
+              COALESCE(u.usuarios_email, '') AS profissional_email,
+              COALESCE(se.servicos_data, '') AS profissional_data,
+              COALESCE(se.servicos_tipo_cobranca, '') AS profissional_tipo_cobranca,
+              COALESCE(se.servicos_nivel_experiencia, '') AS profissional_experiencia,
+              COALESCE(se.servicos_nome, '') AS profissional_servicos_nome,
+              COALESCE(av.estrelas_5, 0) AS estrelas_5,
+              COALESCE(av.estrelas_4, 0) AS estrelas_4,
+              COALESCE(av.estrelas_3, 0) AS estrelas_3,
+              COALESCE(av.estrelas_2, 0) AS estrelas_2,
+              COALESCE(av.estrelas_1, 0) AS estrelas_1
+            FROM servicos se
+            JOIN usuarios u ON u.usuarios_id = se.servicos_usuarios_id
+            LEFT JOIN pessoaFisica pf ON pf.pf_usuarios_id = u.usuarios_id
+            LEFT JOIN pessoaJuridica pj ON pj.pj_usuarios_id = u.usuarios_id
+            JOIN endereco e ON e.endereco_id = (
+              SELECT MIN(ep.endereco_id)
+              FROM endereco ep
+              WHERE ep.endereco_usuarios_id = u.usuarios_id
+            )
+            LEFT JOIN (
+              SELECT
+                avaliado_usuarios_id,
+                ROUND(AVG(avaliacao_notas), 1) AS media,
+                COUNT(*) AS total,
+                SUM(avaliacao_notas = 5) AS estrelas_5,
+                SUM(avaliacao_notas = 4) AS estrelas_4,
+                SUM(avaliacao_notas = 3) AS estrelas_3,
+                SUM(avaliacao_notas = 2) AS estrelas_2,
+                SUM(avaliacao_notas = 1) AS estrelas_1
+              FROM avaliacao
+              GROUP BY avaliado_usuarios_id
+            ) av ON av.avaliado_usuarios_id = u.usuarios_id
+            WHERE u.usuarios_ativo = 1
+              AND u.usuarios_deletado_em IS NULL
+              AND COALESCE(pf.pf_tipo, pj.pj_tipo) = 'Profissional'
+              AND e.endereco_uf = (
+                SELECT ec.endereco_uf
+                FROM endereco ec
+                WHERE ec.endereco_usuarios_id = :cliente_id
+                ORDER BY ec.endereco_id ASC
+                LIMIT 1
+              )
+            ORDER BY profissional_avaliacao ASC,
+                     profissional_total_avaliacoes DESC,
+                     profissional_nome ASC
+            SQL;
 
-        // DECIMAL chega como texto no PDO: converte para número, como o app espera.
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':cliente_id', $clienteId, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        $linhas = $stmt->fetchAll();
+
+        error_log(
+            '[listarProfissionais] UFs na ordem da API: '
+            . json_encode(array_column($linhas, 'profissional_uf'), JSON_UNESCAPED_UNICODE)
+        );
+
         return [200, ['profissionais' => array_map(fn(array $linha): array => [
             'profissional_avaliacao' => (float) $linha['profissional_avaliacao'],
             'profissional_total_avaliacoes' => (int) $linha['profissional_total_avaliacoes'],
             'profissional_preco' => (float) $linha['profissional_preco'],
         ] + $linha, $linhas)]];
     }
-
     /** Solicitações do cliente logado, no formato de Solicitacao.fromMap. */
     private function listarSolicitacoes(?string $token): array
     {
