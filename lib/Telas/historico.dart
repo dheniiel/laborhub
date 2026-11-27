@@ -498,8 +498,10 @@ class _CardSolicitacao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final valorFinal = solicitacao.valor_final;
     // Cor do botão, texto de destaque, cor do destaque e rótulo do botão por status.
     final (
+
       corBotao,
       destaque,
       corDestaque,
@@ -507,9 +509,9 @@ class _CardSolicitacao extends StatelessWidget {
     ) = switch (solicitacao.solicitacao_status) {
       'Finalizado' => (
       const Color(0xFF3B82F6),
-      solicitacao.servicos_tipo_cobranca == 'Negociar'
-          ? solicitacao.servicos_tipo_cobranca
-          : 'R\$ ${_moeda(solicitacao.servicos_valor)} - ${solicitacao.servicos_tipo_cobranca}',
+      valorFinal != null && valorFinal != 0.0
+          ? 'R\$ ${_moeda(valorFinal)}'
+          : 'Não informado!',
       const Color(0xFF22C55E),
       'Detalhar',
       ),

@@ -749,6 +749,8 @@ final class Auth
                COALESCE(so.solicitacao_data_atual, DATE(so.solicitacao_criada_em)) AS solicitacao_data_atual,
                so.solicitacao_conclusao,
                so.solicitacao_quantidade,
+               so.valor_final as valor_final,
+               so.descricao_conclusao as descricao_conclusao,
                CASE WHEN so.solicitacao_status = 'Recusada' THEN 'Recusado'
                     ELSE so.solicitacao_status END AS solicitacao_status,
                so.solicitacao_motivo,
@@ -873,7 +875,9 @@ final class Auth
                COALESCE(so.solicitacao_data_atual, DATE(so.solicitacao_criada_em)) AS solicitacao_data_atual,
                so.solicitacao_quantidade,
                so.solicitacao_observacao,
-               itens.servicos_valor * so.solicitacao_quantidade AS servicos_valor,
+               so.valor_final AS valor_final,
+               so.descricao_conclusao AS descricao_conclusao,
+               itens.servicos_valor AS servicos_valor,
                itens.servicos_nome,
                COALESCE(
                    (SELECT MIN(NULLIF(TRIM(CONCAT_WS(' ', pf.pf_nome, pf.pf_sobrenome)), ''))

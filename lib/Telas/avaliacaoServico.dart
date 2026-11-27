@@ -131,10 +131,10 @@ class _AvaliacaoServicoState extends State<AvaliacaoServico> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(100),
                           child: Container(
-                            width: 140,
-                            height: 140,
+                            width: 80,
+                            height: 80,
                             color: const Color(0xFFF4F4F4),
                             child: temFoto
                                 ? Image.file(File(caminho), fit: BoxFit.cover)
@@ -157,7 +157,7 @@ class _AvaliacaoServicoState extends State<AvaliacaoServico> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 22,
+                                  fontSize: 20,
                                   fontFamily: 'Montserrat',
                                   color: Colors.black,
                                 ),
@@ -199,7 +199,7 @@ class _AvaliacaoServicoState extends State<AvaliacaoServico> {
                       ],
                     ),
 
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 30),
 
                     Center(
                       child: Text(
@@ -337,42 +337,73 @@ class _AvaliacaoServicoState extends State<AvaliacaoServico> {
                       ),
                     ],
 
-                    const SizedBox(height: 26),
+                    const SizedBox(height: 10),
 
-                    if (!_avaliado)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton(
-                          onPressed: _enviando ? null : _enviar,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF3B82F6),
-                            minimumSize: const Size(136, 40),
-                            textStyle: const TextStyle(
-                              fontSize: 18,
-                              fontFamily: 'Montserrat',
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5),
-                            ),
+                    // Ver Comentario
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: InkWell(
+                        onTap: () {
+                          _abrirComentarios(context, solicitacao.descricao_conclusao);
+                        },
+                        child: const Text(
+                          'Ver descrição',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontFamily: 'Montserrat',
+                            color: Color(0xFF3B82F6),
+                            decoration: TextDecoration.underline,
+                            decorationColor: Color(0xFF3B82F6),
                           ),
-                          child: _enviando
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Color(0xFF3B82F6),
-                                  ),
-                                )
-                              : const Text('Enviar'),
                         ),
                       ),
+                    ),
+
+
                   ],
                 ),
               ),
             ),
           ),
         ),
+
+        bottomNavigationBar: _avaliado
+            ? null
+            : SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _enviando ? null : _enviar,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B82F6),
+                  minimumSize: const Size(136, 40),
+                  textStyle: const TextStyle(
+                    fontSize: 18,
+                    fontFamily: 'Montserrat',
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+                child: _enviando
+                    ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF3B82F6),
+                  ),
+                )
+                    : const Text('Enviar'),
+              ),
+            ),
+          ),
+        ),
+
+
       ),
     );
   }
@@ -398,7 +429,7 @@ Widget _rotuloValor(String rotulo, String valor) {
         ],
       ),
       style: const TextStyle(
-        fontSize: 13,
+        fontSize: 12,
         fontFamily: 'Montserrat',
         color: Colors.black,
       ),
@@ -410,4 +441,65 @@ Widget _rotuloValor(String rotulo, String valor) {
 String _data(DateTime data) {
   String doisDigitos(int numero) => numero.toString().padLeft(2, '0');
   return '${doisDigitos(data.day)}/${doisDigitos(data.month)}/${data.year}';
+}
+
+void _abrirComentarios(BuildContext context, String? descricao_conclusao) {
+
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: const Color(0xFFF4F2FC),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+    ),
+    builder: (sheetContext) {
+      return FractionallySizedBox(
+        heightFactor: 0.40,
+        child: SafeArea(
+          top: false,
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Descrição',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Fechar descrição',
+                          onPressed: () => Navigator.pop(sheetContext),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Text(
+                      descricao_conclusao?.trim().isNotEmpty == true
+                          ? descricao_conclusao!.trim()
+                          : 'Nenhuma descrição de conclusão foi informada.',
+                      textAlign: TextAlign.justify,
+                    ),
+
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    },
+  );
 }

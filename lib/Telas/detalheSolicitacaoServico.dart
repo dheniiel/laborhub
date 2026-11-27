@@ -588,7 +588,6 @@ class _DetalhesUsuarioProfissional extends State<DetalhesSolicitacaoServico> {
 
                     ),
                   ),
-
                 ),
 
                 const SizedBox(width: 30),

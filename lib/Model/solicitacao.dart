@@ -10,6 +10,8 @@ class Solicitacao {
   final String? solicitacao_observacao;
   final double servicos_valor;
   final String servicos_tipo_cobranca;
+  final double? valor_final;
+  final String? descricao_conclusao;
 
   // Dados do profissional exibidos no card e nos detalhes.
   final String profissional_nome;
@@ -49,6 +51,8 @@ class Solicitacao {
     required this.profissional_uf,
     this.avaliacao_notas,
     this.avaliacao_descricao,
+    this.valor_final,
+    this.descricao_conclusao,
 
     this.clienteNome,
     this.clienteImagem,
@@ -69,6 +73,9 @@ class Solicitacao {
       solicitacao_observacao: map['solicitacao_observacao'] as String?,
       servicos_valor: (map['servicos_valor'] as num).toDouble(),
       servicos_tipo_cobranca: (map['servicos_tipo_cobranca'] as String?) ?? '',
+      valor_final: double.tryParse(map['valor_final']?.toString() ?? ''),
+      descricao_conclusao: map['descricao_conclusao'] as String?,
+
       profissional_nome: map['profissional_nome'] as String? ?? '',
       clienteNome: map['cliente_nome'] as String?,
       clienteImagem: map['cliente_imagem'] as String?,
