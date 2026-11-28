@@ -25,14 +25,26 @@ class ServicoHistoricoProfissional {
     required this.data,
     required this.situacao,
     this.detalhes,
+    this.imagemCliente = '',
+    this.dataSolicitacao,
+    this.dataAgendada,
+    this.dataConclusao,
+    this.descricao,
+    this.motivoRecusa,
   });
 
   final int id;
   final String servico;
   final String cliente;
+  final String imagemCliente;
   final DateTime data;
   final SituacaoHistoricoProfissional situacao;
   final String? detalhes;
+  final DateTime? dataSolicitacao;
+  final DateTime? dataAgendada;
+  final DateTime? dataConclusao;
+  final String? descricao;
+  final String? motivoRecusa;
 }
 
 class HistoricoProfissional extends StatefulWidget {
@@ -103,11 +115,23 @@ class _HistoricoProfissionalState extends State<HistoricoProfissional> {
           id: item['solicitacao_id'] as int,
           servico: item['servico'] as String,
           cliente: item['cliente'] as String,
+          imagemCliente: item['cliente_imagem'] as String? ?? '',
           data: DateTime.parse(item['data'] as String),
           situacao: item['situacao'] == 'Finalizado'
               ? SituacaoHistoricoProfissional.finalizado
               : SituacaoHistoricoProfissional.recusado,
           detalhes: item['detalhes'] as String?,
+          dataSolicitacao: DateTime.tryParse(
+            (item['data_solicitacao'] ?? item['criada_em']) as String? ?? '',
+          ),
+          dataAgendada: DateTime.tryParse(
+            item['data_agendada'] as String? ?? '',
+          ),
+          dataConclusao: DateTime.tryParse(
+            item['data_conclusao'] as String? ?? '',
+          ),
+          descricao: item['descricao'] as String?,
+          motivoRecusa: item['motivo_recusa'] as String?,
         );
       }).toList();
       if (!mounted) return;
@@ -132,7 +156,14 @@ class _HistoricoProfissionalState extends State<HistoricoProfissional> {
       return item.situacao == _situacao &&
           (item.servico.toLowerCase().contains(_pesquisa) ||
               item.cliente.toLowerCase().contains(_pesquisa) ||
-              _data(item.data).contains(_pesquisa));
+              [
+                item.data,
+                item.dataSolicitacao,
+                item.dataAgendada,
+                item.dataConclusao,
+              ].whereType<DateTime>().any(
+                (data) => _data(data).contains(_pesquisa),
+              ));
     }).toList();
     return servicos..sort((a, b) => b.data.compareTo(a.data));
   }
@@ -246,6 +277,8 @@ class _HistoricoProfissionalState extends State<HistoricoProfissional> {
   }
 
   Widget _card(ServicoHistoricoProfissional item) {
+    final foto = File(item.imagemCliente);
+    final temFoto = item.imagemCliente.isNotEmpty && foto.existsSync();
     final cor = item.situacao == SituacaoHistoricoProfissional.finalizado
         ? const Color(0xFF187342)
         : _vermelho;
@@ -255,8 +288,13 @@ class _HistoricoProfissionalState extends State<HistoricoProfissional> {
         borderRadius: BorderRadius.circular(5),
       ),
       child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: const Color(0xFFF4F4F4),
+          backgroundImage: temFoto ? FileImage(foto) : null,
+          child: temFoto ? null : const Icon(Icons.person, color: _azul),
+        ),
         title: Text(
-          item.servico,
+          item.cliente,
           style: const TextStyle(
             fontFamily: _fonte,
             fontWeight: FontWeight.w600,
@@ -265,12 +303,24 @@ class _HistoricoProfissionalState extends State<HistoricoProfissional> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(item.cliente),
-            Text(_data(item.data)),
+            Text(
+              'Solicitado em: ${item.dataSolicitacao == null ? 'Não informada' : _data(item.dataSolicitacao!)}',
+            ),
+            Text(
+              'Agendado para: ${item.dataAgendada == null ? 'Não informada' : _data(item.dataAgendada!)}',
+            ),
+            if (item.situacao == SituacaoHistoricoProfissional.finalizado)
+              Text(
+                'Finalizado em: ${item.dataConclusao == null ? 'Não informada' : _data(item.dataConclusao!)}',
+              ),
             Text(item.situacao.rotulo, style: TextStyle(color: cor)),
-            if (item.detalhes case final String detalhes
-                when detalhes.isNotEmpty)
-              Text(detalhes),
+            Text(
+              'Descrição: ${item.descricao?.trim().isNotEmpty == true ? item.descricao!.trim() : 'Não informada'}',
+            ),
+            if (item.situacao == SituacaoHistoricoProfissional.recusado)
+              Text(
+                'Motivo da recusa: ${item.motivoRecusa?.trim().isNotEmpty == true ? item.motivoRecusa!.trim() : 'Não informado'}',
+              ),
           ],
         ),
         trailing: IconButton(

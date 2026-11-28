@@ -755,14 +755,22 @@ final class Auth
                     CASE WHEN so.solicitacao_status = 'Finalizado'
                          THEN 'Finalizado' ELSE 'Recusado' END AS situacao,
                     COALESCE(so.solicitacao_motivo, so.solicitacao_observacao, '') AS detalhes,
+                    so.solicitacao_data_atual AS data_solicitacao,
+                    so.solicitacao_criada_em AS criada_em,
+                    so.solicitacao_data AS data_agendada,
+                    so.solicitacao_conclusao AS data_conclusao,
+                    so.solicitacao_observacao AS descricao,
+                    so.solicitacao_motivo AS motivo_recusa,
                     itens.servico,
                     COALESCE(
                         (SELECT MIN(NULLIF(TRIM(CONCAT_WS(' ', pf.pf_nome, pf.pf_sobrenome)), ''))
                          FROM pessoaFisica pf WHERE pf.pf_usuarios_id = so.solicitacao_usuarios_id),
                         (SELECT MIN(NULLIF(pj.pj_nomeFantasia, ''))
                          FROM pessoaJuridica pj WHERE pj.pj_usuarios_id = so.solicitacao_usuarios_id),
-                        'Cliente') AS cliente
+                        'Cliente') AS cliente,
+                    COALESCE(cliente.usuarios_imagem, '') AS cliente_imagem
              FROM solicitacao so
+             LEFT JOIN usuarios cliente ON cliente.usuarios_id = so.solicitacao_usuarios_id
              JOIN (
                  SELECT ss.solicitacaoServico_solicitacao_id AS solicitacao_id,
                         COALESCE(GROUP_CONCAT(DISTINCT se.servicos_nome
